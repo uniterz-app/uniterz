@@ -50,6 +50,10 @@ import {
   firstGameDayKeyInMonth,
 } from "../../../../../lib/games/gameDayIndex";
 import { useGameDayIndex } from "../../../../../lib/games/useGameDayIndex";
+import { useTeamGameDayKeys } from "../../../../../lib/games/useTeamGameDayKeys";
+import { favoriteTeamGamesFirst } from "../../../../../lib/games/favoriteTeamGamesFirst";
+import { getTeamPrimaryColor } from "../../../../../lib/team-colors";
+import { useMyNbaFavoritesNative } from "../profile/useMyNbaFavoritesNative";
 import { useGameDayCounts } from "../../../../../lib/games/useGameDayCounts";
 import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
 import {
@@ -853,7 +857,7 @@ export default function GamesHomeScreen({
   const {
     loading,
     error,
-    games,
+    games: dayGames,
     windowGameIds,
     peerGamesForSeries,
     dateKeysWithGames,
@@ -866,6 +870,23 @@ export default function GamesHomeScreen({
     goNextDay,
     pullRefresh,
   } = useTodayGames({ enabled: true, timeZone: dayTimeZone });
+  const { favorites: nbaFavorites } = useMyNbaFavoritesNative();
+  const favoriteTeamId =
+    selectedLeague === "nba" ? nbaFavorites.favoriteNbaTeamId : null;
+  const games = useMemo(
+    () => favoriteTeamGamesFirst(dayGames, favoriteTeamId),
+    [dayGames, favoriteTeamId]
+  );
+  const favoriteTeamDayKeys = useTeamGameDayKeys({
+    league: selectedLeague,
+    season: GAME_SCHEDULE_SEASON,
+    teamId: favoriteTeamId,
+    timeZone: dayTimeZone,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const favoriteTeamColor = favoriteTeamId
+    ? getTeamPrimaryColor("nba", favoriteTeamId)
+    : null;
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const onPullRefresh = useCallback(async () => {
     setPullRefreshing(true);
@@ -3250,6 +3271,8 @@ export default function GamesHomeScreen({
           entranceEnabled={dayStripEntranceEnabled}
           reduceMotion={reduceMotion}
           motionKey={headerMotionKey}
+          markedKeys={favoriteTeamDayKeys}
+          markColor={favoriteTeamColor}
         />
       )}
       </View>
@@ -3676,6 +3699,8 @@ export default function GamesHomeScreen({
           const d = parseDateKeyInTimeZone(key, dayTimeZone);
           if (d) selectDateManually(d);
         }}
+        markedKeys={favoriteTeamDayKeys}
+        markColor={favoriteTeamColor}
       />
       <GamesRightEdgeTabsNative
         onOpenStanding={() => navigation.navigate("Standings")}

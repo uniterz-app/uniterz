@@ -57,6 +57,31 @@ export function dailyScoreLeadersCopy(lang: LocalizedLang) {
         de: `${n} ${n === 1 ? "Tipp" : "Tipps"}`,
         ar: `${n} توقعات`,
       }),
+    myLabel: "MY RANK",
+    myRankOf: (total: number) =>
+      L(lang, {
+        ja: `/ ${total.toLocaleString("ja-JP")}人`,
+        en: `of ${total.toLocaleString("en-US")}`,
+        ko: `/ ${total.toLocaleString("ko-KR")}명`,
+        zh: `/ ${total.toLocaleString("zh-CN")}人`,
+        es: `de ${total.toLocaleString("es-ES")}`,
+        pt: `de ${total.toLocaleString("pt-BR")}`,
+        fr: `sur ${total.toLocaleString("fr-FR")}`,
+        de: `von ${total.toLocaleString("de-DE")}`,
+        ar: `من ${total}`,
+      }),
+    myRankSuffix: L(lang, { ja: "位", en: "", ko: "위", zh: "名", es: "", pt: "", fr: "", de: "", ar: "" }),
+    myNoScore: L(lang, {
+      ja: "この試合日の対象の予想はまだありません",
+      en: "No counted picks from you on this slate",
+      ko: "이 경기일에 집계된 내 예측이 아직 없습니다",
+      zh: "你在这个比赛日还没有计入的预测",
+      es: "Aún no tienes picks contabilizados en esta jornada",
+      pt: "Você ainda não tem palpites contabilizados nesta rodada",
+      fr: "Aucun de vos pronostics n'est encore comptabilisé ce jour",
+      de: "Noch keine gewerteten Tipps von dir an diesem Spieltag",
+      ar: "لا توجد لك توقعات محتسبة في هذا اليوم بعد",
+    }),
     hitsLabel: (wins: number, posts: number) =>
       L(lang, {
         ja: `${wins}/${posts} 的中`,

@@ -1,22 +1,12 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { unstable_cache } from "next/cache";
-import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
+import type { DailyScoreDivision } from "@/lib/rankings/dailyScoreLeaders/buildDailyScoreLeaders";
 import {
-  loadDailyScoreLeadersAdmin,
-  selectDailyScoreBoardRows,
-} from "@/lib/rankings/dailyScoreLeaders/loadDailyScoreLeadersAdmin";
-import type {
-  DailyScoreDivision,
-  DailyScoreLeadersPayload,
-} from "@/lib/rankings/dailyScoreLeaders/buildDailyScoreLeaders";
+  loadLatestDailyScoreSlate,
+  selectDailyScoreBoardRowsCached,
+} from "@/lib/rankings/dailyScoreLeaders/dailyScoreLeadersServerCache";
 import { clientErrorResponse } from "@/lib/security/clientErrorResponse";
-import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
-import { resolveLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
-import { loadGameDayIndex } from "@/lib/games/server/gameDayIndexAdmin";
-import { TIMEZONE_ET } from "@/lib/time/zonedTime";
-import { DAILY_SCORE_LEADERS_PLANS_TAG } from "@/lib/rankings/dailyScoreLeaders/dailyScoreLeadersCacheTags";
 
 export const runtime = "nodejs";
 
@@ -33,99 +23,10 @@ async function optionalUid(req: Request): Promise<string | null> {
   }
 }
 
-class DayNotCompleteError extends Error {
-  constructor(readonly payload: DailyScoreLeadersPayload) {
-    super("day_not_complete");
-  }
-}
-
-/** 試合中の日: onGameFinalV2 → /api/internal/revalidate/daily-score-leaders で破棄。時間失効は取りこぼし用の保険 */
-function loadLiveCached(dateKey: string, timeZone: string) {
-  return unstable_cache(
-    () => loadDailyScoreLeadersAdmin(getAdminDb(), { dateKey, timeZone }),
-    ["uniterz-daily-score-leaders", "v5", dateKey, timeZone],
-    { revalidate: 1800, tags: ["uniterz-daily-score-leaders"] }
-  )();
-}
-
-/**
- * 全試合 settle 済みの日は結果が変わらないので無期限キャッシュ（以後 Firestore を読まない）。
- * 未完了の日は throw してキャッシュさせず、上のライブキャッシュを返す。
- */
-async function loadCached(
-  dateKey: string,
-  timeZone: string
-): Promise<DailyScoreLeadersPayload> {
-  try {
-    return await unstable_cache(
-      async () => {
-        const payload = await loadLiveCached(dateKey, timeZone);
-        if (!payload.complete) throw new DayNotCompleteError(payload);
-        return payload;
-      },
-      ["uniterz-daily-score-leaders-complete", "v5", dateKey, timeZone],
-      { revalidate: false }
-    )();
-  } catch (e) {
-    if (e instanceof DayNotCompleteError) return e.payload;
-    throw e;
-  }
-}
-
-/** 確定日の無期限キャッシュ後に Pro 化・解約・スキン変更した人も反映するため、plan 依存部分だけ短い間隔で作り直す */
-function selectBoardRowsCached(
-  candidates: DailyScoreLeadersPayload["boards"][DailyScoreDivision],
-  dateKey: string,
-  division: DailyScoreDivision
-) {
-  const candidatesKey = createHash("sha1")
-    .update(candidates.map((r) => `${r.uid}:${r.points}`).join(","))
-    .digest("hex");
-  return unstable_cache(
-    () => selectDailyScoreBoardRows(candidates, division, getAdminDb()),
-    [
-      "uniterz-daily-score-leaders-plans",
-      "v5",
-      dateKey,
-      division,
-      candidatesKey,
-    ],
-    { revalidate: 300, tags: [DAILY_SCORE_LEADERS_PLANS_TAG] }
-  )();
-}
-
-/** NBA の試合日は米国東部の暦日。全ユーザーが同じ試合日のランキングを見る */
-const SLATE_TIME_ZONE = TIMEZONE_ET;
-
-function loadNbaGameDayIndexCached() {
-  return unstable_cache(
-    async () =>
-      loadGameDayIndex(getAdminDb(), {
-        league: "nba",
-        season: GAME_SCHEDULE_SEASON,
-      }),
-    ["game-day-index", "nba", GAME_SCHEDULE_SEASON],
-    {
-      revalidate: 3600,
-      tags: ["game-day-index", `game-day-index:nba:${GAME_SCHEDULE_SEASON}`],
-    }
-  )();
-}
-
-/**
- * 開始済みで最新の試合日（Result Drop / TODAY スタッツと同じ基準）。
- * 次の試合日の最初の試合が始まるまで、試合の無い日も前の試合日を出し続ける。
- */
-async function loadLatestSlate(): Promise<DailyScoreLeadersPayload> {
-  const index = await loadNbaGameDayIndexCached();
-  const slateKey = resolveLatestNbaSlateDateKey(index.startMs);
-  return loadCached(slateKey, SLATE_TIME_ZONE);
-}
-
 /**
  * GET /api/uniterz/daily-leaders?division=standard|open
  * 最新の NBA 試合日（米国東部）の確定 posts から、ユーザーの合計ポイント Top50。
- * division=open（PRO LEAGUE）は Bearer + Pro 必須。
+ * division=open（PRO LEAGUE）は Bearer + Pro 必須。自分の順位は `/api/uniterz/daily-leaders/me`。
  */
 export async function GET(req: Request) {
   try {
@@ -143,10 +44,10 @@ export async function GET(req: Request) {
       }
     }
 
-    const payload = await loadLatestSlate();
+    const payload = await loadLatestDailyScoreSlate();
 
     const { boards, ...meta } = payload;
-    const rows = await selectBoardRowsCached(boards[division], meta.dateKey, division);
+    const rows = await selectDailyScoreBoardRowsCached(boards[division], meta.dateKey, division);
     const body = { ...meta, division, rows };
 
     // URL に日付が無く、次の試合日が始まると中身が切り替わるので CDN は短く（サーバー側は確定日を無期限キャッシュ）

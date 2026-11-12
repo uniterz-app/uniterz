@@ -55,6 +55,21 @@ async function main() {
     }).length;
   };
 
+  const byCountry = new Map<string, number>();
+  const byLanguage = new Map<string, number>();
+  const usersSnap = await db
+    .collection("users")
+    .select("countryCode", "language", "chineseScript")
+    .get();
+  for (const d of usersSnap.docs) {
+    if (!cohort.has(d.id)) continue;
+    const country = String(d.get("countryCode") || "(none)");
+    const lang = String(d.get("language") || "(none)");
+    const langKey = lang === "zh" && d.get("chineseScript") === "hant" ? "zh-Hant" : lang;
+    byCountry.set(country, (byCountry.get(country) ?? 0) + 1);
+    byLanguage.set(langKey, (byLanguage.get(langKey) ?? 0) + 1);
+  }
+
   const [standings, awards, referrals, favorites] = await Promise.all([
     countSubmitted("seasonStandingsPredictions"),
     countSubmitted("seasonAwardsPredictions"),
@@ -95,6 +110,14 @@ async function main() {
   });
   console.log("signups by day (JST)");
   for (const k of [...byDay.keys()].sort()) console.log(`  ${k} ${byDay.get(k)}`);
+  const printRanked = (title: string, m: Map<string, number>) => {
+    console.log(title);
+    for (const [k, n] of [...m.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`  ${k} ${n} (${pct(n)})`);
+    }
+  };
+  printRanked("by country (users.countryCode)", byCountry);
+  printRanked("by language (users.language)", byLanguage);
 }
 
 main().catch((e) => {
