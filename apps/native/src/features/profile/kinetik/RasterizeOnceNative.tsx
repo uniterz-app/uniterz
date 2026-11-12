@@ -4,8 +4,36 @@
  * サムネ一括焼き用に同時キャプチャは最大 8 件。
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Image, InteractionManager, Platform, PixelRatio, View } from "react-native";
-import { captureRef } from "react-native-view-shot";
+import {
+  Image,
+  InteractionManager,
+  Platform,
+  PixelRatio,
+  TurboModuleRegistry,
+  View,
+} from "react-native";
+
+type CaptureRef = (
+  view: View,
+  options: {
+    format: "png";
+    quality: number;
+    result: "tmpfile";
+    pixelRatio: number;
+  }
+) => Promise<string>;
+
+/**
+ * 今の開発ビルドに RNViewShot が無いと、import した瞬間に画面全体が落ちる。
+ * 無いときは SVG のまま出す。
+ */
+function loadCaptureRef(): CaptureRef | null {
+  if (TurboModuleRegistry.get("RNViewShot") == null) return null;
+  const mod = require("react-native-view-shot") as { captureRef: CaptureRef };
+  return mod.captureRef;
+}
+
+const captureRef = loadCaptureRef();
 
 const MAX_CACHE = 48;
 /** Android は同時焼きが多いとタブ遷移中に固まる */
@@ -96,6 +124,7 @@ function captureRaster(
   };
 
   job.promise = (async () => {
+    if (!captureRef) return null;
     await acquireCaptureSlot();
     try {
       if (job.abort) return null;

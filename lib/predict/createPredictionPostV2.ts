@@ -29,6 +29,7 @@ import {
   parseMarketSide,
   readLiveMarketCounts,
 } from "@/lib/predict/liveGameMarket";
+import { prepareSmartMoneyDelta } from "@/lib/predict/smartMoneyMarketServer";
 import { isNbaPickupGame } from "@/lib/nba/isPickupGame";
 import { GAME_PREDICTORS_COLLECTION } from "@/lib/games/server/gamePredictors";
 
@@ -284,6 +285,11 @@ export async function createPredictionPostV2(input: {
       const patch = side
         ? applyLiveMarketDelta(readLiveMarketCounts(gameData), side, 1)
         : null;
+      const writeSmartMoney =
+        side && league === "nba"
+          ? await prepareSmartMoneyDelta(tx, adminDb, { uid, gameId: input.gameId })
+          : null;
+      writeSmartMoney?.({ to: side });
       tx.set(predictorsRef, { uids: FieldValue.arrayUnion(uid) }, { merge: true });
       tx.set(
         gameRef,

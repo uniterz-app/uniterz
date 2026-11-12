@@ -523,6 +523,13 @@ export async function buildNbaPeriodRankingSnapshots(
     }
   }
 
+  try {
+    const { buildNbaSmartMoneyMarkets } = await import("./buildNbaSmartMoneyMarkets");
+    await buildNbaSmartMoneyMarkets(now);
+  } catch (err) {
+    console.error("[buildNbaPeriodRankingSnapshots] smart money markets failed", err);
+  }
+
   if (options.grants === false) return;
 
   try {

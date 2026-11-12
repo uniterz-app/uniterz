@@ -265,6 +265,27 @@ function matchPrefRows(lang: LocalizedLang): PrefRowCopy[] {
       }),
     },
     {
+      key: "rankingUpdated",
+      title: L(lang, {
+        ja: "ランキング更新",
+        en: "Ranking update",
+        ko: "랭킹 업데이트",
+        zh: "排名更新",
+        es: "Actualización de ranking",
+        pt: "Atualização de ranking",
+        fr: "Mise à jour du classement",
+      }),
+      desc: L(lang, {
+        ja: "試合がある日の 16:00（日本時間）に、累積ランキングが更新されたとき",
+        en: "When cumulative rankings refresh at 16:00 JST on game days",
+        ko: "경기가 있는 날 16:00(일본 시간)에 누적 랭킹이 갱신될 때",
+        zh: "有比赛的日子，日本时间 16:00 累计排名更新时",
+        es: "Cuando el ranking acumulado se actualiza a las 16:00 JST en días de partido",
+        pt: "Quando o ranking acumulado atualiza às 16:00 JST em dias de jogo",
+        fr: "Quand le classement cumulé est mis à jour à 16:00 JST les jours de match",
+      }),
+    },
+    {
       key: "unitReward",
       title: L(lang, {
         ja: "Unit 付与",

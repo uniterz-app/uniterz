@@ -8,6 +8,27 @@ import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativeP
 import { PRO_INSIGHT_NARRATIVE_SAMPLE } from "../../../../../../lib/predict/proInsightNarrativeSample";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import PredictProInsightSmartMarketNative from "./PredictProInsightSmartMarketNative";
+import {
+  sanitizeSmartMoneyMarket,
+  type SmartMoneyMarket,
+} from "../../../../../../lib/predict/smartMoneyMarket";
+
+const SMART_MARKET_SAMPLE = sanitizeSmartMoneyMarket({
+  weekLabel: "2026-11-02",
+  home: 23,
+  away: 11,
+  draw: 0,
+  cohortSize: 48,
+}) as SmartMoneyMarket;
+
+const SMART_MARKET_EMPTY_SAMPLE = sanitizeSmartMoneyMarket({
+  weekLabel: "2026-11-02",
+  home: 0,
+  away: 0,
+  draw: 0,
+  cohortSize: 48,
+}) as SmartMoneyMarket;
 
 type Props = {
   language: string;
@@ -60,6 +81,18 @@ export default function ProInsightNarrativePreviewScreenNative({
             language={gamesLang}
             homeTeamName="Lakers"
             awayTeamName="Celtics"
+            smartMarket={SMART_MARKET_SAMPLE}
+          />
+        </View>
+        <View style={styles.card}>
+          <PredictProInsightSmartMarketNative
+            market={SMART_MARKET_EMPTY_SAMPLE}
+            language={gamesLang}
+            homeTeamId={brief.homeTeamId}
+            awayTeamId={brief.awayTeamId}
+            homeTeamName="Lakers"
+            awayTeamName="Celtics"
+            standalone
           />
         </View>
       </ScrollView>
