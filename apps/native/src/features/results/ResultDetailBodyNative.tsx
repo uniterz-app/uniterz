@@ -434,6 +434,9 @@ function ScoreBreakdownPanel({
             label: ja ? "Upsetボーナス" : "Upset bonus",
             value: b.upsetBonus,
             color: SCORE_BREAKDOWN_COLORS.upset,
+            sub: ja
+              ? `定額 · アップセット得点 ${Math.round(b.upsetPoints)}`
+              : `Flat · Upset pts ${Math.round(b.upsetPoints)}`,
           },
         ]
       : []),

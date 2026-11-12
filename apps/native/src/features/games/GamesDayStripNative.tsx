@@ -28,6 +28,9 @@ type GamesDayStripNativeProps = {
   onSelect: (date: Date) => void;
   entranceEnabled: boolean;
   reduceMotion: boolean;
+  /** お気に入りチームが試合する日（日付キー）と点の色 */
+  markedKeys?: ReadonlySet<string> | null;
+  markColor?: string | null;
 };
 
 /** Web `DayStrip` 相当：全試合日・横スクロール・中央スナップ選択 */
@@ -38,6 +41,8 @@ export default function GamesDayStripNative({
   onSelect,
   entranceEnabled,
   reduceMotion,
+  markedKeys,
+  markColor,
 }: GamesDayStripNativeProps) {
   const scrollRef = useRef<ScrollView>(null);
   const chipLayouts = useRef<Map<number, { x: number; width: number }>>(new Map());
@@ -209,6 +214,7 @@ export default function GamesDayStripNative({
               selected={selected}
               isToday={isTodayChip}
               onPress={() => handleChipPress(day)}
+              markColor={markColor && markedKeys?.has(dayKey) ? markColor : null}
             />
           </Animated.View>
         );

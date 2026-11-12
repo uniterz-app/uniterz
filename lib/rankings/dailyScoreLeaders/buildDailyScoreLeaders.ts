@@ -57,6 +57,16 @@ export type DailyScoreLeadersResponse = Omit<DailyScoreLeadersPayload, "boards">
   rows: DailyScoreLeaderRow[];
 };
 
+/** GET /api/uniterz/daily-leaders/me — その試合日の自分の順位。対象の予想が無ければ me は null */
+export type DailyScoreMeResponse = {
+  ok: true;
+  dateKey: string;
+  division: DailyScoreDivision;
+  /** division の参加人数（PRO LEAGUE は Pro だけ） */
+  total: number;
+  me: { rank: number; points: number; posts: number; wins: number } | null;
+};
+
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
