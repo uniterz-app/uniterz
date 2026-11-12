@@ -511,7 +511,12 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     justifyContent: "flex-start",
-    paddingHorizontal: spacing.md,
+    paddingRight: spacing.md,
+    /**
+     * 左の余白はスクロールの中に置く。
+     * 左辺 PICK UP は枠の外へ 8px 出るので、枠の外だと ScrollView に切られる。
+     */
+    paddingLeft: 0,
   },
   scroll: {
     width: "100%",
@@ -519,6 +524,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     alignItems: "stretch",
     paddingTop: spacing.sm,
+    paddingLeft: spacing.md,
   },
   modalContent: {
     width: "100%",

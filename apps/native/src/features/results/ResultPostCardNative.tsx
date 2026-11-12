@@ -209,6 +209,7 @@ function ResultPostCardNativeInner({
   gameRoundMeta = null,
   compactSpacing = false,
   compactFace = false,
+  spotlightPlayId = 0,
   tutorialTargetId,
 }: {
   post: PostWithMillis;
@@ -230,6 +231,8 @@ function ResultPostCardNativeInner({
   compactSpacing?: boolean;
   /** カード面の余白・文字を一段詰める（プロフィール Result Drop） */
   compactFace?: boolean;
+  /** 0 より大きいと、今日の最初へ着地したカードを一度光らせる */
+  spotlightPlayId?: number;
   pkScore?: { home: number; away: number } | null;
   /** games.marketBias / market 補完（marketMeta 未埋め込みの投稿向け） */
   gameMarket?: { homeRate: number; awayRate: number } | null;
@@ -713,7 +716,7 @@ function ResultPostCardNativeInner({
   /** 新カード面（WC 以外）。判定前も含む */
   if (!isWcCard) {
     return (
-      <Animated.View
+      <View
         collapsable={false}
         onLayout={
           tutorialTargetId
@@ -723,8 +726,10 @@ function ResultPostCardNativeInner({
         style={[
           styles.listRowOuter,
           compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
-          entrance.cardShellMotionStyle,
         ]}
+      >
+      <Animated.View
+        style={[styles.cardPressBleed, entrance.cardShellMotionStyle]}
       >
         <AnimatedResultCardPressable
           collapsable={false}
@@ -791,6 +796,7 @@ function ResultPostCardNativeInner({
                   topLabelAlign={sharing ? "start" : "center"}
                   compact={compactFace && !sharing}
                   othersCall={othersCall}
+                  flashPlayId={spotlightPlayId}
                 />
               </ShareBrandFrameSealNative>
             </View>
@@ -798,11 +804,12 @@ function ResultPostCardNativeInner({
           </View>
         </AnimatedResultCardPressable>
       </Animated.View>
+      </View>
     );
   }
 
   return (
-    <Animated.View
+    <View
       collapsable={false}
       onLayout={
         tutorialTargetId
@@ -812,9 +819,9 @@ function ResultPostCardNativeInner({
       style={[
         styles.listRowOuter,
         compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
-        entrance.cardShellMotionStyle,
       ]}
     >
+    <Animated.View style={[styles.cardPressBleed, entrance.cardShellMotionStyle]}>
       <AnimatedResultCardPressable
         collapsable={false}
         delayPressIn={0}
@@ -856,6 +863,7 @@ function ResultPostCardNativeInner({
         paint={lineFramePaint}
         animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
         drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
+        flashPlayId={spotlightPlayId}
       >
       <ResultGlassShellNative
         borderColor={shellBorderColor}
@@ -1123,6 +1131,7 @@ function ResultPostCardNativeInner({
       </View>
       </AnimatedResultCardPressable>
     </Animated.View>
+    </View>
   );
 }
 
@@ -1168,6 +1177,7 @@ const ResultPostCardNative = memo(
     if (prev.siblingOverlayOpen !== next.siblingOverlayOpen) return false;
     if (prev.compactSpacing !== next.compactSpacing) return false;
     if (prev.compactFace !== next.compactFace) return false;
+    if ((prev.spotlightPlayId ?? 0) !== (next.spotlightPlayId ?? 0)) return false;
     if (prev.tutorialTargetId !== next.tutorialTargetId) return false;
     if (prev.pkScore !== next.pkScore) return false;
     if (prev.gameMarket !== next.gameMarket) return false;
@@ -1203,6 +1213,15 @@ const styles = StyleSheet.create({
   resultCardPressable: {
     flexShrink: 0,
     position: "relative",
+    overflow: "visible",
+  },
+  /**
+   * 押下の scale はレイアウト枠で子を切る。
+   * 左辺 PICK UP（translateX -8）を枠の中に収めて切らない。
+   */
+  cardPressBleed: {
+    marginLeft: -14,
+    paddingLeft: 14,
     overflow: "visible",
   },
   cardShell: {

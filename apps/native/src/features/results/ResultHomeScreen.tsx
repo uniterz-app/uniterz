@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Platform, Pressable, RefreshControl, SectionList, StyleSheet, Text, View, type ViewStyle,
+  Platform, RefreshControl, SectionList, StyleSheet, Text, View, type ViewStyle,
   type RefreshControlProps,
 } from "react-native";
 import { useNavigation, useFocusEffect, useRoute, useIsFocused } from "@react-navigation/native";
@@ -11,10 +11,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RouteProp } from "@react-navigation/native";
 import type { MainTabParamList, ResultStackParamList } from "../../navigation/types";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import Animated, {
-  useReducedMotion,
-} from "react-native-reanimated";
+import { useReducedMotion } from "react-native-reanimated";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
@@ -22,6 +19,7 @@ import {
   resolveLocalizedLang,
 } from "../../../../../lib/i18n/localize";
 import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
@@ -52,17 +50,13 @@ import {
 } from "../games/matchCardTypography";
 import { resolveTeamJerseyPalette, resolveTeamPrimaryColor } from "../games/teamColors";
 import { toCompactTeamName } from "../games/gameCardDisplayUtils";
-import type { PostWithMillis, ResultDayGroup } from "./nativeResultModel";
+import type { PostWithMillis } from "./nativeResultModel";
 import { canDismissResultListPostNow, mergeResultDayPosts } from "./nativeResultModel";
-import ResultListFiltersNative, {
-  type ResultFilterState,
-} from "./ResultListFiltersNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
-import {
-  DEFAULT_RESULT_LIST_FILTERS,
-  isDefaultResultListFilters,
-  postMatchesResultListFilters,
-} from "../../../../../lib/result/resultListFilterMatch";
+import { formatResultDateLabel } from "../../../../../lib/result/result-page-data";
+import { isResultPostPickup } from "../../../../../lib/result/isResultPostPickup";
+import { peekGameDocCacheForResult } from "../../../../../lib/result/resultDetailFirestoreCache";
+import ResultListQuickActionsNative from "./ResultListQuickActionsNative";
 import { peekResultPostsListCache } from "../../../../../lib/result/resultPostsListCache";
 import CornerMenuClusterNative from "../../ui/CornerMenuClusterNative";
 import CyberChamferButtonNative from "../../ui/CyberChamferButtonNative";
@@ -82,7 +76,6 @@ import {
   MOBILE_RESULT_STAT_VALUE_W,
   NUMERIC_FONT,
   resultCardShellNative,
-  resultFilterBarNative,
 } from "./resultMobileUiNative";
 import { isResultPostLiveGame, isResultPostMatchStarted } from "../../../../../lib/result/resultLiveGame";
 import { useResultPendingPollActive } from "../../../../../lib/result/useResultPendingPollActive";
@@ -121,7 +114,6 @@ import { RESULT_CYBER_FRAME_STROKE_WIDTH } from "./resultCyberFrameNativeMetrics
 import { useNativeResultPosts } from "./useNativeResultPosts";
 import {
   useResultEntranceArmed,
-  useResultFilterBarEntrance,
   useResultPostCardEntrance,
   type ResultStatRowEntranceMeta,
 } from "./useResultHomeEntrance";
@@ -131,60 +123,25 @@ const JERSEY_SIZE_RESULT = MOBILE_RESULT_JERSEY_SIZE;
 
 const NUMERIC_FONT_FAMILY = NUMERIC_FONT;
 const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
+/** フローティングボタン列（高さ 44 + 上下 padding 6）。ジャンプ先がこの列に隠れない */
+const RESULT_QUICK_ACTIONS_FLOAT_H = 64;
 /** Firestore は数値フィールドが文字列で返ることがあるため Number に寄せる */
 function ResultListHeaderBlock({
   cacheCapped,
   hintText,
-  filterLabel,
-  filterCollapseLabel,
-  entranceArmed,
-  onFilterPress,
-  filterPanelOpen,
-  filterActive,
-  filterPanel,
   leagueTabs,
+  quickActions,
 }: {
   cacheCapped: boolean;
   hintText: string;
-  filterLabel: string;
-  filterCollapseLabel: string;
-  entranceArmed: boolean;
-  onFilterPress: () => void;
-  filterPanelOpen: boolean;
-  filterActive: boolean;
-  filterPanel?: React.ReactNode;
   leagueTabs?: React.ReactNode;
+  quickActions?: React.ReactNode;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
-  const filterMotion = useResultFilterBarEntrance(entranceArmed, reduceMotion);
   return (
     <View style={styles.headerBlock}>
       {leagueTabs}
       {cacheCapped ? <Text style={styles.hint}>{hintText}</Text> : null}
-      <View style={styles.listRowOuter}>
-        <Animated.View style={filterMotion}>
-          <Pressable
-            style={({ pressed }) => [
-              resultFilterBarNative.bar,
-              styles.filterBarRow,
-              pressed && resultFilterBarNative.barPressed,
-            ]}
-            onPress={onFilterPress}
-          >
-            <MaterialCommunityIcons
-              name="chevron-down"
-              size={16}
-              color="rgba(255,255,255,0.6)"
-              style={filterPanelOpen ? styles.filterChevronOpen : undefined}
-            />
-            <Text style={resultFilterBarNative.text}>
-              {filterPanelOpen ? filterCollapseLabel : filterLabel}
-            </Text>
-            {filterActive ? <View style={styles.filterActiveDot} /> : null}
-          </Pressable>
-        </Animated.View>
-        {filterPanelOpen ? filterPanel : null}
-      </View>
+      <View style={styles.listRowOuter}>{quickActions}</View>
     </View>
   );
 }
@@ -192,12 +149,18 @@ function ResultListHeaderBlock({
 function ResultDayHeader({
   dateLabel,
   dayPoints,
+  pickupPoints,
+  splitByPickup,
   entranceActive,
   sectionStaggerIndex,
   leadGap = false,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
+  /** 同じ日の PICK UP だけ。null は対象試合なし */
+  pickupPoints: NativeDayPointsHeader;
+  /** Pro は ALL と PICK UP の2行。Free は PICK UP の1行 */
+  splitByPickup: boolean;
   entranceActive: boolean;
   sectionStaggerIndex: number;
   /** 前セクションの最終カードとの間（SectionSeparator の代わり） */
@@ -214,6 +177,8 @@ function ResultDayHeader({
       <ResultDayStripNative
         dateLabel={dateLabel}
         dayPoints={dayPoints}
+        pickupPoints={pickupPoints}
+        splitByPickup={splitByPickup}
         entranceActive={entranceActive}
         sectionStaggerIndex={sectionStaggerIndex}
       />
@@ -227,10 +192,20 @@ type SectionT = {
   dateLabel: string;
   pending: PostWithMillis[];
   final: PostWithMillis[];
+  /** PICK UP 絞り込み前。日付帯の ALL / PICK UP 集計用 */
+  summaryPending: PostWithMillis[];
+  summaryFinal: PostWithMillis[];
   data: PostWithMillis[];
   /** リスト全体でのカード入場スタッガー用の先頭インデックス */
   baseFlatIndex: number;
 };
+
+function resultListPostIsPickup(post: PostWithMillis): boolean {
+  return isResultPostPickup(
+    post,
+    peekGameDocCacheForResult(typeof post.gameId === "string" ? post.gameId : null)
+  );
+}
 
 export default function ResultHomeScreen({
   bottomReserveY = 0,
@@ -253,10 +228,10 @@ export default function ResultHomeScreen({
   const { language } = useNativeUserLanguageFromAuth();
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
+  const { isPro } = useNativeUserPlan(uid);
 
   const t = useMemo(() => {
     const lang = resolveLocalizedLang(language);
-    const r = i18nT(lang).results;
     const profile = i18nT(lang).profile;
     return {
       empty: profile.noStatsYet,
@@ -278,8 +253,6 @@ export default function ResultHomeScreen({
         pt: "Puxe para atualizar",
         fr: "Tirez pour actualiser",
       }),
-      filterFold: r.filterTitle,
-      filterClose: r.filterClose,
     };
   }, [language]);
 
@@ -350,52 +323,53 @@ export default function ResultHomeScreen({
     return () => clearInterval(id);
   }, [hasPendingSettlement, listTickActive]);
 
-  const [resultFilters, setResultFilters] = useState<ResultFilterState>({
-    ...DEFAULT_RESULT_LIST_FILTERS,
-    detailOpen: false,
-  });
+  /** Pro だけ ALL を混ぜて見られる。Free は PICK UP 固定 */
+  const [pickupOnly, setPickupOnly] = useState(false);
+  const restrictToPickup = !isPro || pickupOnly;
+  /** 絞り込み列が画面外に出たら、下に同じボタンを出す */
+  const [quickActionsPinned, setQuickActionsPinned] = useState(false);
 
   const filteredGrouped = useMemo(() => {
     const base = grouped
       .map((g) => {
-        const filterPost = (p: PostWithMillis) => {
-          if (
-            !postMatchesResultListFilters(
-              p as Parameters<typeof postMatchesResultListFilters>[0],
-              resultFilters
-            )
-          ) {
-            return false;
-          }
+        const passesBase = (p: PostWithMillis) => {
           if (showResultLeagueTabs) {
             const league = (p.leagueId ?? p.league) as string | undefined;
             if (leagueTab === "nba" && league === "wc") return false;
           }
           return true;
         };
-        const pending = g.pending.filter(filterPost);
-        const final = g.final.filter(filterPost);
-        return { ...g, pending, final };
+        const summaryPending = g.pending.filter(passesBase);
+        const summaryFinal = g.final.filter(passesBase);
+        const pending = restrictToPickup
+          ? summaryPending.filter(resultListPostIsPickup)
+          : summaryPending;
+        const final = restrictToPickup
+          ? summaryFinal.filter(resultListPostIsPickup)
+          : summaryFinal;
+        return { ...g, pending, final, summaryPending, summaryFinal };
       })
       .filter((g) => g.pending.length > 0 || g.final.length > 0);
 
     return base;
   }, [
     grouped,
-    resultFilters,
+    restrictToPickup,
     leagueTab,
     showResultLeagueTabs,
   ]);
 
   const sections: SectionT[] = useMemo(() => {
     let baseFlatIndex = 0;
-    return filteredGrouped.map((g: ResultDayGroup) => {
+    return filteredGrouped.map((g) => {
       const data = mergeResultDayPosts(g);
       const section: SectionT = {
         title: g.dateLabel,
         dateLabel: g.dateLabel,
         pending: g.pending,
         final: g.final,
+        summaryPending: g.summaryPending,
+        summaryFinal: g.summaryFinal,
         data,
         baseFlatIndex,
       };
@@ -403,6 +377,158 @@ export default function ResultHomeScreen({
       return section;
     });
   }, [filteredGrouped]);
+
+  useEffect(() => {
+    if (sections.length === 0) {
+      setQuickActionsPinned(false);
+    }
+  }, [sections.length]);
+
+  /** 日付帯と同じ TZ・同じ表記の「今日」 */
+  const todayLabel = useMemo(
+    () => formatResultDateLabel(listNowTick, language),
+    [language, listNowTick]
+  );
+  const todaySectionIndex = useMemo(
+    () => sections.findIndex((section) => section.dateLabel === todayLabel),
+    [sections, todayLabel]
+  );
+  /**
+   * `scrollToLocation` の itemIndex は、0 が日付帯、1 が先頭カード。
+   * 着地は今日のセクションの最後のカード。次の日の日付帯の直前。
+   */
+  const todayBottomJumpRef = useRef<{
+    sectionIndex: number;
+    itemIndex: number;
+    postId: string;
+    /** 一番早い試合。日付帯の高さが未計測のときの着地 */
+    cardSectionIndex: number;
+    cardItemIndex: number;
+    /** 次の日の日付帯の上端を、下のボタン列の直前に置く */
+    aboveNextBar: boolean;
+  } | null>(null);
+  const jumpAttemptsRef = useRef(0);
+  const listViewportHRef = useRef(0);
+  const sectionsForJumpRef = useRef(sections);
+  sectionsForJumpRef.current = sections;
+  const reduceMotion = useReducedMotion() ?? false;
+  const [jumpSpotlight, setJumpSpotlight] = useState<{
+    id: string;
+    play: number;
+  } | null>(null);
+  const spotlightArmRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spotlightClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const armJumpSpotlight = useCallback(
+    (postId: string, animated: boolean) => {
+      if (spotlightArmRef.current) clearTimeout(spotlightArmRef.current);
+      spotlightArmRef.current = setTimeout(() => {
+        setJumpSpotlight((prev) => ({
+          id: postId,
+          play: (prev?.play ?? 0) + 1,
+        }));
+        if (spotlightClearRef.current) clearTimeout(spotlightClearRef.current);
+        spotlightClearRef.current = setTimeout(
+          () => setJumpSpotlight(null),
+          reduceMotion ? 320 : 860
+        );
+      }, animated ? 480 : 40);
+    },
+    [reduceMotion]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (spotlightArmRef.current) clearTimeout(spotlightArmRef.current);
+      if (spotlightClearRef.current) clearTimeout(spotlightClearRef.current);
+    };
+  }, []);
+
+  const scrollTodayBottom = useCallback(
+    (animated: boolean) => {
+      const target = todayBottomJumpRef.current;
+      const list = resultListRef.current;
+      if (!target || !list) return;
+      const chrome = bottomReserveY + RESULT_QUICK_ACTIONS_FLOAT_H;
+      const viewportH = listViewportHRef.current;
+      const aboveBar = target.aboveNextBar && viewportH > 0;
+      const sectionIndex = aboveBar ? target.sectionIndex : target.cardSectionIndex;
+      const itemIndex = aboveBar ? 0 : target.cardItemIndex;
+      const landed = sectionsForJumpRef.current[sectionIndex];
+      const landedCount = landed?.data.length ?? 0;
+      if (!aboveBar && (landedCount <= 0 || itemIndex < 1 || itemIndex > landedCount)) {
+        todayBottomJumpRef.current = null;
+        return;
+      }
+      if (aboveBar && !landed) {
+        todayBottomJumpRef.current = null;
+        return;
+      }
+      list.scrollToLocation({
+        sectionIndex,
+        itemIndex,
+        animated,
+        viewPosition: aboveBar ? 0 : 1,
+        /**
+         * 次の日の日付帯は、タブバーとフローティング列の裏に隠す。
+         * 日付帯が無い、または高さが未計測のときは、一番早い試合の下端をその位置に揃える。
+         */
+        viewOffset: aboveBar ? viewportH - chrome : -chrome,
+      });
+      if (target.postId.length > 0) {
+        armJumpSpotlight(target.postId, animated);
+      }
+    },
+    [armJumpSpotlight, bottomReserveY]
+  );
+
+  const jumpToTodayBottom = useCallback(() => {
+    if (todaySectionIndex < 0) return;
+    const data = sections[todaySectionIndex]?.data ?? [];
+    if (data.length <= 0) return;
+    const cardIndex = data.length - 1;
+    const postId = data[cardIndex]?.id;
+    if (typeof postId !== "string" || postId.length === 0) return;
+    const nextSectionIndex = todaySectionIndex + 1;
+    const sitsOnNextBar = cardIndex === data.length - 1 && nextSectionIndex < sections.length;
+    const cardItemIndex = cardIndex + 1;
+    todayBottomJumpRef.current = {
+      sectionIndex: sitsOnNextBar ? nextSectionIndex : todaySectionIndex,
+      itemIndex: sitsOnNextBar ? 0 : cardItemIndex,
+      postId,
+      cardSectionIndex: todaySectionIndex,
+      cardItemIndex,
+      aboveNextBar: sitsOnNextBar,
+    };
+    jumpAttemptsRef.current = 0;
+    scrollTodayBottom(!reduceMotion);
+  }, [reduceMotion, scrollTodayBottom, sections, todaySectionIndex]);
+
+  const onScrollToTodayBottomFailed = useCallback(
+    (info: {
+      index: number;
+      highestMeasuredFrameIndex: number;
+      averageItemLength: number;
+    }) => {
+      if (!todayBottomJumpRef.current) return;
+      if (jumpAttemptsRef.current >= 24) return;
+      jumpAttemptsRef.current += 1;
+      /** 未計測の先は平均高さでは届かない。測れたセルの次まで進めて測り直す */
+      const nextMeasured = Math.min(
+        info.index,
+        Math.max(0, info.highestMeasuredFrameIndex) + 1
+      );
+      const offset = Math.max(0, info.averageItemLength * nextMeasured);
+      resultListRef.current?.getScrollResponder()?.scrollTo({
+        y: offset,
+        animated: false,
+      });
+      setTimeout(() => {
+        scrollTodayBottom(false);
+      }, 48);
+    },
+    [scrollTodayBottom]
+  );
 
   const visiblePostsFlat = useMemo(
     () => sections.flatMap((s) => s.data),
@@ -443,11 +569,6 @@ export default function ResultHomeScreen({
     setInitialSectionIdSet(new Set(sections.map((s) => `${s.dateLabel}:${s.baseFlatIndex}`)));
   }, [sections, initialSectionIdSet]);
 
-  const onFilterPress = useCallback(() => {
-    setResultFilters((f) => ({ ...f, detailOpen: !f.detailOpen }));
-  }, []);
-
-  /** Web `/games/[id]/predict?edit=1` と同様：予想タブのスコア編集へ遷移 */
   const openPredictEditFromResult = useCallback(
     (post: PostWithMillis) => {
       const gameId =
@@ -488,24 +609,64 @@ export default function ResultHomeScreen({
     [tabNavigation]
   );
 
+  const quickActionCopy = useMemo(() => {
+    const lang = resolveLocalizedLang(language);
+    return {
+      jump: L(lang, {
+        ja: "今日の最初",
+        en: "START OF TODAY",
+        zh: "今日最早",
+        ko: "오늘 처음",
+        es: "INICIO DE HOY",
+        pt: "INÍCIO DE HOJE",
+        fr: "DÉBUT DU JOUR",
+        de: "HEUTE ANFANG",
+        ar: "بداية اليوم",
+      }),
+      jumpA11y: L(lang, {
+        ja: "今日の最初の試合へ移動",
+        en: "Jump to the first game today",
+        zh: "跳到今天最早一场",
+        ko: "오늘 첫 경기로 이동",
+        es: "Ir al primer partido de hoy",
+        pt: "Ir ao primeiro jogo de hoje",
+        fr: "Aller au premier match du jour",
+        de: "Zum ersten Spiel von heute",
+        ar: "الانتقال إلى أول مباراة اليوم",
+      }),
+      pickupA11y: L(lang, {
+        ja: "PICK UP の試合だけ表示",
+        en: "Show PICK UP games only",
+        zh: "只显示 PICK UP 比赛",
+        ko: "PICK UP 경기만 보기",
+        es: "Ver solo partidos PICK UP",
+        pt: "Ver só jogos PICK UP",
+        fr: "Voir seulement les matchs PICK UP",
+        de: "Nur PICK UP Spiele zeigen",
+        ar: "عرض مباريات PICK UP فقط",
+      }),
+    };
+  }, [language]);
+
+  const quickActions = (
+    <ResultListQuickActionsNative
+      jumpLabel={quickActionCopy.jump}
+      jumpAccessibilityLabel={quickActionCopy.jumpA11y}
+      jumpDisabled={todaySectionIndex < 0}
+      onJump={jumpToTodayBottom}
+      showPickupToggle={isPro}
+      pickupActive={pickupOnly}
+      pickupAccessibilityLabel={quickActionCopy.pickupA11y}
+      onTogglePickup={() => setPickupOnly((on) => !on)}
+    />
+  );
+
   const listHeader = (
     <ResultListHeaderBlock
       cacheCapped={postsCacheCapped}
       hintText={t.cacheHint}
-      filterLabel={t.filterFold}
-      filterCollapseLabel={t.filterClose}
-      entranceArmed={entranceArmed}
-      onFilterPress={onFilterPress}
-      filterPanelOpen={resultFilters.detailOpen}
-      filterActive={!isDefaultResultListFilters(resultFilters)}
       leagueTabs={null}
-      filterPanel={
-        <ResultListFiltersNative
-          language={language}
-          filters={resultFilters}
-          onChange={setResultFilters}
-        />
-      }
+      quickActions={quickActions}
     />
   );
 
@@ -579,8 +740,14 @@ export default function ResultHomeScreen({
 
   /** 下端はスクロール内容側のパディングのみ（親に付けるとナビ下が塗りつぶされリストが届かない） */
   const listContentWithBottomPad = useMemo(
-    () => [styles.listContent, { paddingTop: listTopPad, paddingBottom: bottomReserveY }],
-    [bottomReserveY, listTopPad]
+    () => [
+      styles.listContent,
+      {
+        paddingTop: listTopPad,
+        paddingBottom: bottomReserveY + (quickActionsPinned ? RESULT_QUICK_ACTIONS_FLOAT_H : 0),
+      },
+    ],
+    [bottomReserveY, listTopPad, quickActionsPinned]
   );
 
   return (
@@ -610,7 +777,13 @@ export default function ResultHomeScreen({
           scrollEnabled={tutorialListScrollEnabled && detailPostId == null}
           onScrollY={(y) => {
             resultScrollYRef.current = y;
+            const pinned = y > 120;
+            setQuickActionsPinned((prev) => (prev === pinned ? prev : pinned));
           }}
+          onListLayout={(height) => {
+            if (height > 0) listViewportHRef.current = height;
+          }}
+          onScrollToIndexFailed={onScrollToTodayBottomFailed}
           ListFooterComponent={
             loading && sections.some((s) => s.data.length > 0) ? (
               <View style={styles.footer}>
@@ -637,7 +810,25 @@ export default function ResultHomeScreen({
             return (
               <ResultDayHeader
                 dateLabel={section.dateLabel}
-                dayPoints={dayPointsHeaderForNative(section.final, section.pending, language)}
+                dayPoints={
+                  isPro
+                    ? dayPointsHeaderForNative(
+                        section.summaryFinal,
+                        section.summaryPending,
+                        language
+                      )
+                    : dayPointsHeaderForNative(
+                        section.summaryFinal.filter(resultListPostIsPickup),
+                        section.summaryPending.filter(resultListPostIsPickup),
+                        language
+                      )
+                }
+                pickupPoints={dayPointsHeaderForNative(
+                  section.summaryFinal.filter(resultListPostIsPickup),
+                  section.summaryPending.filter(resultListPostIsPickup),
+                  language
+                )}
+                splitByPickup={isPro}
                 entranceActive={
                   entranceArmed && isInitialHeader
                 }
@@ -672,11 +863,34 @@ export default function ResultHomeScreen({
                 onOpenDetail={onOpenResultDetail}
                 onRequestDeleteConfirm={requestDeleteConfirm}
                 onRequestPredictEdit={openPredictEditFromResult}
+                spotlightPlayId={
+                  jumpSpotlight?.id === item.id ? jumpSpotlight.play : 0
+                }
               />
             );
           }}
         />
       )}
+      {quickActionsPinned && detailPostId == null && sections.length > 0 ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.quickActionsFloat, { bottom: Math.max(8, bottomReserveY - 6) }]}
+        >
+          <View style={styles.listRowOuter}>
+            <ResultListQuickActionsNative
+              floating
+              jumpLabel={quickActionCopy.jump}
+              jumpAccessibilityLabel={quickActionCopy.jumpA11y}
+              jumpDisabled={todaySectionIndex < 0}
+              onJump={jumpToTodayBottom}
+              showPickupToggle={isPro}
+              pickupActive={pickupOnly}
+              pickupAccessibilityLabel={quickActionCopy.pickupA11y}
+              onTogglePickup={() => setPickupOnly((on) => !on)}
+            />
+          </View>
+        </View>
+      ) : null}
     </View>
       <ResultDetailScreen
         visible={detailPostId != null}
@@ -705,6 +919,8 @@ function ResultSectionListWithVisibility({
   ListEmptyComponent,
   scrollEnabled,
   onScrollY,
+  onListLayout,
+  onScrollToIndexFailed,
   ListFooterComponent,
   refreshControl,
   onEndReached,
@@ -719,6 +935,12 @@ function ResultSectionListWithVisibility({
   ListEmptyComponent: ReactElement | null;
   scrollEnabled: boolean;
   onScrollY: (y: number) => void;
+  onListLayout?: (height: number) => void;
+  onScrollToIndexFailed?: (info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => void;
   ListFooterComponent: ReactElement | null;
   refreshControl: ReactElement<RefreshControlProps>;
   onEndReached: () => void;
@@ -753,10 +975,14 @@ function ResultSectionListWithVisibility({
         onScrollY(e.nativeEvent.contentOffset.y);
         onVis?.(e);
       }}
+      onLayout={(e) => {
+        onListLayout?.(e.nativeEvent.layout.height);
+      }}
       ListFooterComponent={ListFooterComponent}
       refreshControl={refreshControl}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.4}
+      onScrollToIndexFailed={onScrollToIndexFailed}
       renderSectionHeader={renderSectionHeader}
       renderItem={renderItem}
       SectionSeparatorComponent={null}
@@ -790,6 +1016,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
   },
+  quickActionsFloat: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    zIndex: 30,
+    paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
+  },
   listContent: {
     /** Web `/mobile/result` の px-[18px]（親 mainArea xs=8 を差し引く） */
     paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
@@ -797,22 +1030,6 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     marginBottom: MOBILE_RESULT_SECTION_GAP,
-  },
-  filterBarRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 8,
-  },
-  filterChevronOpen: {
-    transform: [{ rotate: "180deg" }],
-  },
-  filterActiveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#FFFFFF",
-    marginLeft: "auto",
   },
   hint: {
     marginBottom: 6,
@@ -824,30 +1041,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
     maxWidth: MOBILE_RESULT_CARD_MAX_W,
-  },
-  filterBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(34,211,238,0.34)",
-    backgroundColor: "rgba(8,11,18,0.84)",
-    shadowColor: "#22d3ee",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  filterBarPressed: {
-    opacity: 0.88,
-  },
-  filterBarText: {
-    color: "rgba(224,250,254,0.88)",
-    fontSize: 13,
-    fontWeight: "600",
   },
   centered: {
     flex: 1,
