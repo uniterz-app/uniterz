@@ -15,7 +15,7 @@ import { markPushPermissionPrimerDismissedNative } from "../../notifications/pus
 import { registerNativePushTokenFlow } from "../../notifications/registerPushTokenNative";
 import {
   InteractionManager,
-  Platform, Pressable, FlatList, RefreshControl, StyleSheet, Text, View,
+  Platform, Pressable, FlatList, RefreshControl, ScrollView, StyleSheet, Text, View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ListRenderItemInfo,
@@ -23,9 +23,7 @@ import {
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
 import Animated, {
   FadeIn,
-  FadeInDown,
   FadeOut,
-  FadeOutDown,
   useReducedMotion,
 } from "react-native-reanimated";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
@@ -38,6 +36,8 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
 import { colors, radius, spacing, typography } from "../../theme/tokens";
 import { toDateKeyInTimeZone } from "../../utils/date";
 import {
@@ -118,9 +118,9 @@ import {
 } from "../../../../../lib/predict/batchPredict";
 import { batchPredictCopy } from "../../../../../lib/predict/batchPredictCopy";
 import { nbaAskCopy } from "../../../../../lib/nba/ask/nbaAskCopy";
-
-/** 1.0.4 ストア版はまとめて入力を出さない（入口ボタンだけ止める） */
-const BATCH_PREDICT_ENTRY_ENABLED = false;
+import BatchDayEntryNative, {
+  type BatchDayEntryRow,
+} from "./BatchDayEntryNative";
 import { isNbaPickupGame } from "../../../../../lib/nba/isPickupGame";
 import { fetchLeagueTeamStats } from "../../../../../lib/nba/leagueTeamStats/fetchLeagueTeamStatsClient";
 import {
@@ -273,6 +273,7 @@ import type { GameCardCenterBlock } from "./gameCardCenterTypes";
 import { formatTeamRecordForCard } from "./teamRecordDisplay";
 import { useTeamRecordMap } from "./useTeamRecordMap";
 import GamesRightEdgeTabsNative from "./GamesRightEdgeTabsNative";
+import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
 import { useTodayUniterzUnreadNative } from "./stats/useTodayUniterzUnreadNative";
 import { TODAY_UNITERZ_POLL_MS } from "../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
@@ -923,26 +924,35 @@ export default function GamesHomeScreen({
     return batchDayRows.filter((row) => shown.has(row.gameId));
   }, [batchDayRows, batchListGames]);
   const batchCopy = useMemo(() => batchPredictCopy(language), [language]);
+  const batchEntryRows = useMemo((): BatchDayEntryRow[] => {
+    const byId = new Map(
+      batchListGames.map((game) => [String(game.id ?? ""), game])
+    );
+    return batchPredictRows.map((row) => {
+      const game = byId.get(row.gameId);
+      const homeTeamId =
+        (game?.home as { teamId?: string } | undefined)?.teamId ??
+        (game?.homeTeamId as string | undefined) ??
+        "";
+      const awayTeamId =
+        (game?.away as { teamId?: string } | undefined)?.teamId ??
+        (game?.awayTeamId as string | undefined) ??
+        "";
+      return {
+        ...row,
+        homeTeamId,
+        awayTeamId,
+        homePpg: homeTeamId ? teamPpg[homeTeamId] : undefined,
+        awayPpg: awayTeamId ? teamPpg[awayTeamId] : undefined,
+        overrideCandidates: game?.topScorerCandidates,
+      };
+    });
+  }, [batchListGames, batchPredictRows, teamPpg]);
   const batchBuilt = useMemo(
     () => buildBatchPredictItems(batchPredictRows, batchScores, batchScorers),
     [batchPredictRows, batchScores, batchScorers]
   );
   const batchReady = batchBuilt.items.length >= 2;
-  const batchEligibleIds = useMemo(
-    () => new Set(batchPredictRows.map((row) => row.gameId)),
-    [batchPredictRows]
-  );
-  /** undefined = 表示順で先頭の入力可能カードを自動で選ぶ。null = ユーザーが選択を外した */
-  const [batchFocusPick, setBatchFocusPick] = useState<string | null | undefined>(undefined);
-  const batchFocusedId = useMemo(() => {
-    if (batchFocusPick === null) return null;
-    if (batchFocusPick && batchEligibleIds.has(batchFocusPick)) return batchFocusPick;
-    for (const game of batchListGames) {
-      const id = String(game.id ?? "");
-      if (batchEligibleIds.has(id)) return id;
-    }
-    return null;
-  }, [batchFocusPick, batchEligibleIds, batchListGames]);
 
   useEffect(() => {
     if (!batchMode) return;
@@ -2984,23 +2994,6 @@ export default function GamesHomeScreen({
     []
   );
   const tutorialRegisterPickupLabel = tutorialPhase === "gamesPickup";
-  const batchScoreDragLocks = useRef(0);
-  const listScrollAllowedRef = useRef(true);
-  listScrollAllowedRef.current =
-    !welcomeResting && tutorialUserScrollEnabled;
-  const setBatchScoreDragging = useCallback((locked: boolean) => {
-    batchScoreDragLocks.current = Math.max(
-      0,
-      batchScoreDragLocks.current + (locked ? 1 : -1)
-    );
-    const allow =
-      batchScoreDragLocks.current === 0 && listScrollAllowedRef.current;
-    (
-      mainScrollRef.current as {
-        setNativeProps?: (props: { scrollEnabled: boolean }) => void;
-      } | null
-    )?.setNativeProps?.({ scrollEnabled: allow });
-  }, []);
 
   const cardListProps: GameCardListProps = useMemo(
     () => ({
@@ -3030,20 +3023,7 @@ export default function GamesHomeScreen({
       tutorialRegisterPickupLabel,
       shellVariant: "lineFrame",
       pickupMark: "left",
-      batchEdit: batchMode && isProUser
-        ? {
-            ids: batchEligibleIds,
-            scores: batchScores,
-            onChange: setBatchSide,
-            scorers: batchScorers,
-            onScorer: setBatchScorer,
-            teamPpg,
-            onScoreDrag: setBatchScoreDragging,
-            focusedId: batchFocusedId,
-            onFocus: setBatchFocusPick,
-            tieLabel: batchCopy.tieShort,
-          }
-        : null,
+      batchEdit: null,
     }),
     [
       games,
@@ -3063,15 +3043,6 @@ export default function GamesHomeScreen({
       teamRecordById,
       tutorialPhase,
       tutorialRegisterPickupLabel,
-      batchMode,
-      isProUser,
-      batchEligibleIds,
-      batchScores,
-      batchScorers,
-      teamPpg,
-      setBatchScoreDragging,
-      batchFocusedId,
-      batchCopy,
     ]
   );
 
@@ -3287,33 +3258,7 @@ export default function GamesHomeScreen({
           {t.fetchError}: {error}
         </Text>
       ) : null}
-      {BATCH_PREDICT_ENTRY_ENABLED && batchDayRows.length >= 2 && fUser && !planLoading ? (
-        batchMode && isProUser ? (
-          <Animated.View
-            entering={reduceMotion ? undefined : FadeIn.duration(200)}
-            exiting={reduceMotion ? undefined : FadeOut.duration(160)}
-            style={{ marginBottom: 6 }}
-          >
-            <CyberSlantedTabBarNative fill>
-              <CyberSlantedTabNative
-                label={batchCopy.close}
-                active={false}
-                compact
-                onPress={() => {
-                  setBatchMessage(null);
-                  setBatchPickupOnly(false);
-                  setBatchMode(false);
-                }}
-              />
-              <CyberSlantedTabNative
-                label="PICK UP"
-                active={batchPickupOnly}
-                compact
-                onPress={() => setBatchPickupOnly((on) => !on)}
-              />
-            </CyberSlantedTabBarNative>
-          </Animated.View>
-        ) : (
+      {batchDayRows.length >= 2 && fUser && !planLoading && !(batchMode && isProUser) ? (
           <Animated.View
             entering={
               reduceMotion || !batchHeaderOpened.current
@@ -3329,7 +3274,6 @@ export default function GamesHomeScreen({
                 return;
               }
               setBatchMessage(null);
-              setBatchFocusPick(undefined);
               setBatchMode(true);
             }}
             style={{
@@ -3362,13 +3306,12 @@ export default function GamesHomeScreen({
             ) : null}
           </Pressable>
           </Animated.View>
-        )
       ) : null}
           </>
         }
         games={
           !showInitialSkeleton && !predictionPaintPending && !error
-            ? batchListGames
+            ? games
             : []
         }
         showGameCards={
@@ -3632,37 +3575,69 @@ export default function GamesHomeScreen({
         />
       ) : null}
       {batchMode && isProUser ? (
-        <Animated.View
-          entering={reduceMotion ? undefined : FadeInDown.duration(220)}
-          exiting={reduceMotion ? undefined : FadeOutDown.duration(180)}
-          style={{
-            position: "absolute",
-            left: 12,
-            right: 12,
-            bottom: bottomReserveY + 8,
-            zIndex: 30,
-          }}
-        >
-          {batchMessage ? (
-            <Text
-              style={{
-                color: "rgba(147,185,255,0.9)",
-                fontSize: 12,
-                marginBottom: 6,
-                textAlign: "center",
-              }}
-            >
-              {batchMessage}
-            </Text>
-          ) : null}
-          <PredictOverlaySubmitButtonNative
-            variant="cyber"
-            enabled={batchReady && !batchBusy}
-            onPress={() => void submitBatch()}
-            label={batchCopy.submit(batchBuilt.items.length)}
-            disabledLabel={batchCopy.open}
+        <View style={styles.batchPredictBackdrop} pointerEvents="box-none">
+          <BlurView
+            intensity={Platform.OS === "android" ? 64 : 28}
+            tint="dark"
+            {...nativeBlurViewExtraProps()}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
-        </Animated.View>
+          <View style={styles.batchPredictDim} pointerEvents="none" />
+          {Platform.OS === "android" ? (
+            <View style={styles.batchPredictFrost} pointerEvents="none" />
+          ) : null}
+          <ScrollView
+            style={styles.batchPredictScroll}
+            contentContainerStyle={{
+              paddingTop: topContentPadY + 8,
+              paddingBottom: bottomReserveY + 24,
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.batchPredictTabs}>
+              <CyberSlantedTabBarNative fill>
+                <CyberSlantedTabNative
+                  label="ALL"
+                  active={!batchPickupOnly}
+                  compact
+                  onPress={() => setBatchPickupOnly(false)}
+                />
+                <CyberSlantedTabNative
+                  label="PICK UP"
+                  active={batchPickupOnly}
+                  compact
+                  onPress={() => setBatchPickupOnly(true)}
+                />
+              </CyberSlantedTabBarNative>
+            </View>
+            <BatchDayEntryNative
+              rows={batchEntryRows}
+              scores={batchScores}
+              onScore={setBatchSide}
+              scorers={batchScorers}
+              onScorer={setBatchScorer}
+              tieLabel={batchCopy.tieShort}
+              onOpenStats={(gameId) => {
+                const game = games.find((item) => String(item.id ?? "") === gameId);
+                if (game) void openPredictModal(game);
+              }}
+            />
+            <View style={styles.batchPredictSubmit}>
+              {batchMessage ? (
+                <Text style={styles.batchPredictSubmitMessage}>{batchMessage}</Text>
+              ) : null}
+              <PredictOverlaySubmitButtonNative
+                variant="cyber"
+                enabled={batchReady && !batchBusy}
+                onPress={() => void submitBatch()}
+                label={batchCopy.submit(batchBuilt.items.length)}
+                disabledLabel={batchCopy.open}
+              />
+            </View>
+          </ScrollView>
+        </View>
       ) : null}
       <GamesCalendarSheetNative
         visible={calendarOpen}
@@ -3683,9 +3658,21 @@ export default function GamesHomeScreen({
         onOpenToday={() => navigation.navigate("DailyLeaders")}
         todayUnread={todayUniterzUnread}
         statsTutorialTargetId="games-stats-edge"
-        hidden={tutorialPhase === "welcome"}
+        hidden={tutorialPhase === "welcome" || (batchMode && isProUser)}
         fadeIn
       />
+      {batchMode && isProUser ? (
+        <View style={styles.batchPredictBack} pointerEvents="box-none">
+          <ProfileMenuEdgeHandleNative
+            label="BACK"
+            onOpen={() => {
+              setBatchMessage(null);
+              setBatchPickupOnly(false);
+              setBatchMode(false);
+            }}
+          />
+        </View>
+      ) : null}
       <TutorialLiveHostNative
         page="games"
         language={normalizeLanguage(language) ?? "en"}
@@ -3771,6 +3758,7 @@ function GamesMainScrollNative({
       }
       renderItem={renderItem}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       contentInsetAdjustmentBehavior="never"
       scrollEnabled={scrollEnabled}
       refreshControl={
@@ -3804,6 +3792,43 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     position: "relative",
     overflow: "visible",
+  },
+  /** 予想シートと同じ。一覧の上に暗いぼかしを載せる */
+  batchPredictBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+  },
+  batchPredictDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor:
+      Platform.OS === "android" ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.35)",
+  },
+  batchPredictFrost: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8,10,18,0.28)",
+  },
+  batchPredictScroll: {
+    flex: 1,
+  },
+  batchPredictSubmit: {
+    paddingHorizontal: 12,
+    marginTop: 16,
+  },
+  batchPredictSubmitMessage: {
+    color: "rgba(147,185,255,0.9)",
+    fontSize: 12,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  batchPredictTabs: {
+    marginHorizontal: 12,
+    marginBottom: 12,
+  },
+  /** まとめて入力中の右端。ぼかしより手前 */
+  batchPredictBack: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    elevation: 12,
   },
   card: {
     width: "100%",
