@@ -47,7 +47,7 @@ async function loadMatchupInsightPayload(gameId: string) {
   );
   const predictKit = sanitizeProInsightPredictKit(data.predictKit);
 
-  const updatedAtMs =
+  const narrativeAtMs =
     (typeof narrativeMeta.generatedAtMs === "number"
       ? narrativeMeta.generatedAtMs
       : null) ??
@@ -56,6 +56,13 @@ async function loadMatchupInsightPayload(gameId: string) {
       "function"
       ? (data.proBriefUpdatedAt as { toMillis: () => number }).toMillis()
       : null);
+  // アプリの未読の点はこの時刻で判定する。予想の材料を作った / 直したときも点が付くよう新しい方
+  const kitAtMs =
+    predictKit && typeof data.predictKitAtMs === "number" ? data.predictKitAtMs : null;
+  const updatedAtMs =
+    kitAtMs != null && narrativeAtMs != null
+      ? Math.max(kitAtMs, narrativeAtMs)
+      : (kitAtMs ?? narrativeAtMs);
 
   return {
     kind: "ok" as const,

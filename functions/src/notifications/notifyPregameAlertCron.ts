@@ -80,6 +80,26 @@ function insightConclusionMaterial(gameData: Record<string, unknown>): unknown {
   return { brief: material };
 }
 
+/** 有利側の勝つ確率（%）がこれだけ動いたら知らせる */
+const KIT_WIN_PCT_ALERT_DELTA = 10;
+
+type KitAlertState = { fav: string; pct: number };
+
+function kitAlertStateOf(kit: unknown): KitAlertState | null {
+  if (!kit || typeof kit !== "object") return null;
+  const { favoredTeamId, winPct } = kit as { favoredTeamId?: unknown; winPct?: unknown };
+  if (typeof favoredTeamId !== "string" || !favoredTeamId || typeof winPct !== "number") {
+    return null;
+  }
+  return { fav: favoredTeamId, pct: winPct };
+}
+
+/** 有利なチームが入れ替わったか、有利側の勝つ確率が KIT_WIN_PCT_ALERT_DELTA 以上動いた */
+function isKitShiftBig(prev: KitAlertState, next: KitAlertState): boolean {
+  if (prev.fav !== next.fav) return true;
+  return Math.abs(next.pct - prev.pct) >= KIT_WIN_PCT_ALERT_DELTA;
+}
+
 function formatInjuryPushDetail(report: unknown): string | undefined {
   if (!report || typeof report !== "object") return undefined;
   const players = (report as { players?: unknown }).players;
@@ -116,8 +136,9 @@ function targetsFromPredictorUids(
 }
 
 /**
- * 試合 doc の injuryReport / proBrief（または narrative）の重要読み差分があれば Pro 向けに送る。
- * Insight は MATCHUP / INJURY IMPACT（または brief の edges・players）だけを指紋化。
+ * 試合 doc の injuryReport の差分、PRO PICK の予想の材料の大きな変化があれば Pro 向けに送る。
+ * 予想の材料（predictKit）がある試合は有利なチームと勝つ確率だけを見る。無い試合だけ旧来の
+ * narrative の MATCHUP / INJURY IMPACT（または brief の edges・players）の指紋で判定。
  * 初回はベースラインだけ（一斉配信回避）。先発・digest は廃止。
  */
 export async function runNotifyPregameAlertCron(): Promise<void> {
@@ -154,10 +175,13 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
       })
     );
 
+    const kitState = kitAlertStateOf(insightDoc.predictKit);
+
     const prev = (gameData.pushPregame as
       | {
           injuryFp?: string | null;
           insightFp?: string | null;
+          kit?: KitAlertState | null;
         }
       | undefined) ?? {};
 
@@ -165,6 +189,7 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
     const next = {
       injuryFp: prev.injuryFp ?? null,
       insightFp: prev.insightFp ?? null,
+      kit: prev.kit ?? null,
     };
 
     if (injuryFp) {
@@ -175,7 +200,15 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
     } else {
       next.injuryFp = null;
     }
-    if (insightFp) {
+    if (kitState) {
+      // 基準は最初に見た値か前回知らせた値。小さな動きが積み重なって閾値を超えたときも 1 回だけ知らせる
+      if (!prev.kit) {
+        next.kit = kitState;
+      } else if (isKitShiftBig(prev.kit, kitState)) {
+        changed.push("pro_insight_update");
+        next.kit = kitState;
+      }
+    } else if (insightFp) {
       if (prev.insightFp && prev.insightFp !== insightFp) {
         changed.push("pro_insight_update");
       }
@@ -186,7 +219,8 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
 
     const fingerprintChanged =
       next.injuryFp !== (prev.injuryFp ?? null) ||
-      next.insightFp !== (prev.insightFp ?? null);
+      next.insightFp !== (prev.insightFp ?? null) ||
+      JSON.stringify(next.kit) !== JSON.stringify(prev.kit ?? null);
 
     if (changed.length === 0) {
       if (fingerprintChanged) {

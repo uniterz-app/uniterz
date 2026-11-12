@@ -6,7 +6,7 @@
 > UI: `PredictProBriefPanel` / `PredictProBriefPanelNative`  
 > 関連: [`preview-to-prod-checklist.md`](preview-to-prod-checklist.md) · [`pro-subscription-plan.md`](pro-subscription-plan.md)
 
-> **2026-11-13: ナラティブ（OpenAI の文章・PICK UP の PREVIEW 展望）の生成は停止。** PRO PICK は「予想の材料」（`predictKit`・LLM なし）を出す。
+> **2026-11-13: ナラティブ（OpenAI の文章・PICK UP の PREVIEW 展望）の生成は停止。** PRO PICK は「予想の材料」（`predictKit`・LLM なし）を出す。アプリの未読の点は `/api/nba/matchup-insight` の `updatedAt`（`predictKitAtMs` とナラティブの新しい方）、試合前プッシュ `pro_insight_update` は予想の材料の有利なチームの入れ替わり / 勝つ確率 10 ポイント以上の変化で出す。
 > `nba-pro-brief-ingest` の `batch_submit` / `narrative_patch` は予想の材料だけ計算し直す。既に作ったナラティブは `gameProInsights` に残り、
 > 予想の材料が無い試合と 1.0.6 以前のアプリだけがそれを読む。以下のナラティブの節は停止前の記録。
 
