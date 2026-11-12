@@ -5,10 +5,16 @@ import DetailStickyTitleNative, {
   useDetailStickyTitleNative,
 } from "../DetailStickyTitleNative";
 import DetailTabBarNative from "../DetailTabBarNative";
-import {
-  NBA_TEAM_DETAIL_TABS,
-  type NbaTeamDetailTab,
-} from "../../../../../../lib/nba/detailTabs";
+import { nbaDetailTabLabel, type NbaTeamDetailTab } from "../../../../../../lib/nba/detailTabs";
+
+const TEAM_DETAIL_TABS = ["overview", "games", "roster", "lineup", "office"] as const;
+type TeamDetailTab = (typeof TEAM_DETAIL_TABS)[number];
+
+function teamDetailTabLabel(tab: TeamDetailTab): string {
+  if (tab === "lineup") return "LINEUP";
+  if (tab === "overview") return "TEAM";
+  return nbaDetailTabLabel(tab as NbaTeamDetailTab);
+}
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -64,6 +70,8 @@ import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaTeamDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { NbaTeamRosterCardNative } from "../predict/NbaRosterPanelNative";
 import NbaTeamHowTheyPlayNative from "./NbaTeamHowTheyPlayNative";
+import NbaTeamLineupsNative from "./NbaTeamLineupsNative";
+import NbaTeamOnOffNative from "./NbaTeamOnOffNative";
 import { NbaTeamOffseasonMovesNative } from "./NbaTeamOffseasonMovesNative";
 import { NbaTeamPositionDefenseNative } from "./NbaTeamPositionDefenseNative";
 import {
@@ -88,6 +96,8 @@ import {
 } from "../../../../../../lib/nba/draftPicks/nbaDraftAssetsUiCopy";
 import { draftTextSegmentsWithTeamColors } from "../../../../../../lib/nba/draftPicks/draftTextTeamColors";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
+import { leagueTeamCleanNetRank } from "../../../../../../lib/nba/cleanRatings/leagueTeamCleanRatings";
+import { formatMetricValue } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import type { NbaTeamDetailShapeEdges } from "../../../../../../lib/nba/teamShapes/fetchTeamShapeEdgesClient";
 import {
@@ -120,6 +130,7 @@ type Props = {
 };
 
 const FORM_WIN = "#00F5FF";
+const CYBER_TAB_CYAN_DIM = "rgba(0,245,255,0.55)";
 const FORM_LOSS = "#FF2D78";
 const OXANIUM = "Oxanium_800ExtraBold";
 /** 予想入力 `NbaTeamStatsPanelNative` と同じ */
@@ -199,6 +210,49 @@ function RatingRow({
         forceStatic
         replayKey={replayKey}
       />
+    </View>
+  );
+}
+
+type NetCompareCell = { key: string; value: string; rank: number; strong: boolean };
+
+function NetRatingCompare({
+  cells,
+  frameColor,
+  ui,
+}: {
+  cells: readonly NetCompareCell[];
+  frameColor: string;
+  ui: NbaTeamDetailUiCopy;
+}) {
+  return (
+    <View style={styles.netCompare}>
+      <Text style={styles.ratingLabel}>NET RATING</Text>
+      <View style={styles.netCompareRow}>
+        {cells.map((c) => (
+          <View
+            key={c.key}
+            style={[
+              styles.netCompareCell,
+              { borderColor: c.strong ? CYBER_TAB_CYAN_DIM : frameColor },
+            ]}
+          >
+            <Text style={styles.netCompareKey} numberOfLines={1}>
+              {c.key}
+            </Text>
+            <Text
+              style={[
+                styles.ratingValue,
+                { color: c.strong ? "#00F5FF" : "rgba(255,255,255,0.9)" },
+              ]}
+            >
+              {c.value}{" "}
+              <Text style={styles.ratingRank}>({ordinal(c.rank)})</Text>
+            </Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.netCompareNote}>{ui.netCompareNote}</Text>
     </View>
   );
 }
@@ -1871,8 +1925,8 @@ export default function NbaTeamDetailPanelNative({
   const isJa = lang === "ja";
   const insets = useSafeAreaInsets();
   const sticky = useDetailStickyTitleNative();
-  const [tab, setTab] = useState<NbaTeamDetailTab>("overview");
-  const selectTab = (next: NbaTeamDetailTab) => {
+  const [tab, setTab] = useState<TeamDetailTab>("overview");
+  const selectTab = (next: TeamDetailTab) => {
     sticky.scrollToTabs();
     setTab(next);
   };
@@ -1919,6 +1973,9 @@ export default function NbaTeamDetailPanelNative({
   const seasonMetrics = detail.metrics.season;
   const ortg = seasonMetrics.find((m) => m.id === "ortg");
   const drtg = seasonMetrics.find((m) => m.id === "drtg");
+  const netrtg = seasonMetrics.find((m) => m.id === "netrtg");
+  const leagueRow = bundle.season.find((r) => r.teamId === detail.teamId);
+  const cleanNetRank = leagueTeamCleanNetRank(bundle.season, detail.teamId);
 
   const confLine =
     detail.conference === "east"
@@ -2015,7 +2072,8 @@ export default function NbaTeamDetailPanelNative({
 
         <View style={styles.detailTabs} onLayout={sticky.onTabsLayout}>
           <DetailTabBarNative
-            tabs={NBA_TEAM_DETAIL_TABS}
+            tabs={TEAM_DETAIL_TABS}
+            labelOf={teamDetailTabLabel}
             active={tab}
             onChange={selectTab}
             accent={accent}
@@ -2089,6 +2147,32 @@ export default function NbaTeamDetailPanelNative({
                 bg: METRIC_DEFENSE,
               }}
               replayKey={`${detail.teamId}-drtg`}
+            />
+          ) : null}
+          {netrtg && leagueRow && cleanNetRank != null ? (
+            <NetRatingCompare
+              cells={[
+                { key: ui.netCompareAll, value: netrtg.display, rank: netrtg.leagueRank, strong: false },
+                {
+                  key: ui.netCompareClean,
+                  value: formatMetricValue("cleanNet", leagueRow.cleanNet),
+                  rank: cleanNetRank,
+                  strong: true,
+                },
+                ...(
+                  [
+                    ["cleanAdjNet", ui.netCompareAdj],
+                    ["cleanNetL10", ui.netCompareL10],
+                  ] as const
+                ).flatMap(([metric, key]) => {
+                  const rank = leagueTeamCleanNetRank(bundle.season, detail.teamId, metric);
+                  return rank != null
+                    ? [{ key, value: formatMetricValue(metric, leagueRow[metric]), rank, strong: true }]
+                    : [];
+                }),
+              ]}
+              frameColor={frameColor}
+              ui={ui}
             />
           ) : null}
         </View>
@@ -2197,6 +2281,9 @@ export default function NbaTeamDetailPanelNative({
             />
           </>
         ) : null}
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        <NbaTeamOnOffNative teamId={detail.teamId} isJa={isJa} onSelectPlayer={onSelectPlayer} />
           </>
         ) : null}
 
@@ -2284,6 +2371,10 @@ export default function NbaTeamDetailPanelNative({
           </>
         ) : null}
 
+        {tab === "lineup" ? (
+          <NbaTeamLineupsNative teamId={detail.teamId} isJa={isJa} accent={accent} />
+        ) : null}
+
         {tab === "office" ? (
           <>
         <PayrollSection
@@ -2326,7 +2417,8 @@ export default function NbaTeamDetailPanelNative({
       pinned={sticky.pinned}
     >
       <DetailTabBarNative
-        tabs={NBA_TEAM_DETAIL_TABS}
+        tabs={TEAM_DETAIL_TABS}
+        labelOf={teamDetailTabLabel}
         active={tab}
         onChange={selectTab}
         accent={accent}
@@ -3403,6 +3495,35 @@ const styles = StyleSheet.create({
   },
   ratingRank: {
     fontWeight: "700",
+  },
+  netCompare: {
+    gap: 8,
+  },
+  netCompareRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  netCompareCell: {
+    flexGrow: 1,
+    flexBasis: "45%",
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+    backgroundColor: "rgba(8,8,12,0.35)",
+  },
+  netCompareKey: {
+    fontFamily: METRIC_FONT,
+    color: "rgba(255,255,255,0.6)",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+  },
+  netCompareNote: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 10,
+    lineHeight: 14,
   },
   advWrap: {
     zIndex: 1,

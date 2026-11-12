@@ -91,7 +91,7 @@ export function notificationProGateCopy(
         }),
       },
       {
-        title: "Pro Insight",
+        title: "Pro Pick",
         detail: L(lang, {
           ja: "試合前の読み。結論が変わったときだけ通知",
           en: "Match reads. Notify only when the conclusion changes",

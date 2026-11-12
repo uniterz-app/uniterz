@@ -20,16 +20,21 @@ import {
 } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 
-const DEFAULT_TTL_SEC = 1800;
+/**
+ * ingest の書き込みは必ず tag で捨てるので、期限は保険。
+ * Next の外（scripts/）から書いたときだけ、この期限まで古いまま残る。
+ */
+const DEFAULT_TTL_SEC = 86400;
 
 /** コレクション → 時間切れ（秒）。ingest 後は tag で即捨てる */
 const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaTeamRosters: DEFAULT_TTL_SEC,
   nbaTeamPayrolls: DEFAULT_TTL_SEC,
-  nbaTeamInjuries: 300,
+  nbaTeamInjuries: 3600,
   nbaLeaguePlayerStats: DEFAULT_TTL_SEC,
   nbaLeagueTeamStats: DEFAULT_TTL_SEC,
   nbaDiscipline: DEFAULT_TTL_SEC,
+  nbaTeamCleanRatings: DEFAULT_TTL_SEC,
   nbaTeamOffseasonMoves: DEFAULT_TTL_SEC,
   nbaTeamShapeRecords: DEFAULT_TTL_SEC,
   nbaTeamSeasonRecords: DEFAULT_TTL_SEC,

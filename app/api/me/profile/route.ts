@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+import { revalidateRankingUserFields } from "@/lib/rankings/rankingCommentCache";
 import {
   chineseScriptFromChoice,
   languageFromChoice,
@@ -62,6 +63,7 @@ async function bumpRankingChromeForUser(uid: string): Promise<void> {
   revalidateTag("cumulative-ranking", {});
   revalidateTag("period-ranking", {});
   revalidateTag("ranking-ui", {});
+  revalidateRankingUserFields();
 }
 
 /**

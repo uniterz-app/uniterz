@@ -35,6 +35,16 @@ type Props = {
   onOpenTeamDetail?: (teamId: string) => void;
   /** 親が枠を持つとき、このパネル自身の枠は出さない */
   bare?: boolean;
+  /** 勝敗の行（SEASON は今季の勝敗 + 順位、LAST 10 は直近 10 試合の勝敗）。無ければ行を出さない */
+  records?: { home: NbaTeamStatsRecord | null; away: NbaTeamStatsRecord | null } | null;
+};
+
+export type NbaTeamStatsRecord = {
+  wins: number;
+  losses: number;
+  rank: number;
+  conference: "east" | "west";
+  last10: { wins: number; losses: number } | null;
 };
 
 /** 勝っている側の値は、そのチームカラーで少し大きく光らせる */
@@ -106,7 +116,7 @@ function SideMetricBlock({
     <Text
       style={[
         styles.rankBeside,
-        win ? { color: accent, fontSize: 13 } : styles.rankIdle,
+        win ? { color: accent } : styles.rankIdle,
       ]}
     >
       {side.rankBelow}
@@ -142,7 +152,7 @@ function SideMetricBlock({
           style={[
             styles.recordBelow,
             styles.textCenter,
-            win ? { color: accent, fontSize: 13, fontWeight: "700" as const } : null,
+            win ? { color: accent } : null,
           ]}
         >
           {side.recordBelow}
@@ -387,6 +397,43 @@ function fmtPct(n: number): string {
   return `${(n <= 1 ? n * 100 : n).toFixed(1)}`;
 }
 
+function buildRecordRow(
+  records: NonNullable<Props["records"]>,
+  windowId: WindowId,
+  ja: boolean
+): RowSpec[] {
+  const pick = (r: NbaTeamStatsRecord | null) =>
+    windowId === "last10" ? (r?.last10 ?? null) : r;
+  const h = pick(records.home);
+  const a = pick(records.away);
+  if (!h && !a) return [];
+  const seed = (r: NbaTeamStatsRecord | null) => {
+    if (windowId === "last10" || !r || !(r.rank > 0)) return null;
+    const conf = r.conference === "east" ? (ja ? "東" : "EAST") : ja ? "西" : "WEST";
+    return ja ? `${conf} ${r.rank}位` : `${conf} #${r.rank}`;
+  };
+  const hPct = h ? winPct(h.wins, h.losses) : -1;
+  const aPct = a ? winPct(a.wins, a.losses) : -1;
+  const side = (w: { wins: number; losses: number } | null, below: string | null): SideSpec => ({
+    primary: w ? `${w.wins}-${w.losses}` : "—",
+    leagueRank: null,
+    rankBelow: null,
+    recordBelow: below,
+    proMeta: null,
+    proMetaTone: "flat",
+  });
+  return [
+    {
+      key: "record",
+      label: ja ? "勝敗" : "W-L",
+      leftWin: hPct > aPct,
+      rightWin: aPct > hPct,
+      left: side(h, seed(records.home)),
+      right: side(a, seed(records.away)),
+    },
+  ];
+}
+
 /** 今試合の条件: ホームの HOME 成績 vs アウェイの ROAD 成績 */
 function buildSiteRow(home: NbaTeamStatSide, away: NbaTeamStatSide): RowSpec[] {
   const hSite = winPct(home.homeW, home.homeL);
@@ -424,6 +471,7 @@ export default function NbaTeamStatsPanelNative({
   language,
   onOpenTeamDetail,
   bare = false,
+  records = null,
 }: Props) {
   const t = getGamesTexts(language);
   const [windowId, setWindowId] = useState<WindowId>("season");
@@ -452,8 +500,10 @@ export default function NbaTeamStatsPanelNative({
     isPro
   );
   const splitRows = windowId === "season" ? buildSiteRow(home, away) : [];
-  const rows = [...coreRows, ...splitRows];
-  const previewCount = 3;
+  const recordRows = records ? buildRecordRow(records, windowId, language === "ja") : [];
+  const rows = [...recordRows, ...coreRows, ...splitRows];
+  /** 勝敗の行があっても NETRTG / ORTG / DRTG までは畳まずに見せる */
+  const previewCount = 3 + recordRows.length;
   const visibleRows = open ? rows : rows.slice(0, previewCount);
   const canExpand = rows.length > previewCount;
   const hidden = Math.max(0, rows.length - previewCount);
@@ -469,6 +519,7 @@ export default function NbaTeamStatsPanelNative({
           active={windowId === "season"}
           onPress={() => setWindowId("season")}
           compact
+          bodyHeight={24}
           fontWeight="700"
         />
         <CyberSlantedTabNative
@@ -476,13 +527,10 @@ export default function NbaTeamStatsPanelNative({
           active={windowId === "last10"}
           onPress={() => setWindowId("last10")}
           compact
+          bodyHeight={24}
           fontWeight="700"
         />
       </CyberSlantedTabBarNative>
-
-      {onOpenTeamDetail ? (
-        <Text style={styles.moreHint}>{t.teamStatsMoreHint}</Text>
-      ) : null}
 
       <View style={styles.teamHeaderRow}>
         {onOpenTeamDetail && home.teamId ? (
@@ -502,7 +550,11 @@ export default function NbaTeamStatsPanelNative({
             {teamLabel(home.teamId, home.teamName)}
           </Text>
         )}
-        <View style={styles.labelCol} />
+        <View style={styles.labelCol}>
+          {onOpenTeamDetail ? (
+            <Text style={styles.tapHint}>{t.teamStatsTapHint}</Text>
+          ) : null}
+        </View>
         {onOpenTeamDetail && away.teamId ? (
           <Pressable
             onPress={() => onOpenTeamDetail(away.teamId)}
@@ -610,17 +662,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 2,
   },
-  moreHint: {
-    marginTop: 4,
-    marginBottom: 4,
-    paddingHorizontal: 2,
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textAlign: "center",
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-  },
   teamHeaderHit: {
     flex: 1,
   },
@@ -640,7 +681,7 @@ const styles = StyleSheet.create({
   metricRow: {
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
-    paddingVertical: 7,
+    paddingVertical: 6,
   },
   metricInner: {
     flexDirection: "row",
@@ -663,6 +704,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 2,
   },
+  tapHint: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "center",
+  },
   labelCol: {
     width: 64,
     alignItems: "center",
@@ -671,7 +719,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontFamily: OXANIUM,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1,
     color: "rgba(255,255,255,0.72)",
@@ -692,18 +740,16 @@ const styles = StyleSheet.create({
   textCenter: { textAlign: "center" },
   metricValue: {
     fontFamily: OXANIUM,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },
   metricValueIdle: { color: "#ffffff" },
-  metricValueWin: {
-    fontSize: 20,
-  },
+  metricValueWin: {},
   metaText: {
     fontFamily: OXANIUM,
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: "700",
   },
   metaUp: { color: "rgba(45,255,110,0.9)" },
@@ -712,7 +758,7 @@ const styles = StyleSheet.create({
   rankBeside: {
     // Web `nameBebas` — スタッツ数値（Oxanium）と差別化
     fontFamily: RANK_DISPLAY_FONT,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "400",
     letterSpacing: 0.4,
     fontVariant: ["tabular-nums"],
@@ -721,7 +767,7 @@ const styles = StyleSheet.create({
   rankIdle: { color: "rgba(255,255,255,0.55)" },
   recordBelow: {
     fontFamily: OXANIUM,
-    fontSize: 12,
+    fontSize: 9,
     color: "rgba(255,255,255,0.45)",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],

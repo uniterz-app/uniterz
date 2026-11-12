@@ -4,6 +4,7 @@ import {
   type UserBillingSecureFields,
 } from "@/lib/billing/userBillingSecure";
 import type { ProIapPlan } from "@/lib/pro/iapProductIds";
+import { revalidateRankingUserFields } from "@/lib/rankings/rankingCommentCache";
 
 export type ApplyProEntitlementInput = {
   planType: ProIapPlan | string;
@@ -36,6 +37,7 @@ export async function applyProEntitlement(
   }
 
   await db.doc(`users/${uid}`).set(userPatch, { merge: true });
+  revalidateRankingUserFields();
 
   try {
     const { ensureUserPlanStartDate } = await import(
@@ -72,4 +74,5 @@ export async function revokeProEntitlement(
     },
     { merge: true }
   );
+  revalidateRankingUserFields();
 }

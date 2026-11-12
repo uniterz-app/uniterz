@@ -29,6 +29,7 @@ import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import { notifyBackEdgeScroll } from "../profile/backEdgeScrollNative";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
   predictModalBackdropEnter,
@@ -413,6 +414,8 @@ export default function ResultDetailScreen({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 pointerEvents="auto"
+                onScroll={notifyBackEdgeScroll}
+                scrollEventThrottle={16}
               >
                 <View style={styles.modalContent}>
                   {loading ? (

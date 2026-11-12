@@ -91,6 +91,7 @@ import {
   predictPanelRevealEnter,
 } from "./predictMotion";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import { notifyBackEdgeScroll } from "../profile/backEdgeScrollNative";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
   normalizeLanguage,
@@ -1980,6 +1981,7 @@ export default function PredictModal({
                 {
                   /** ×・REGULAR SEASON がノッチ/ステータスバーに食い込まない */
                   paddingTop: Math.max(spacing.md, insets.top),
+                  paddingBottom: Math.max(spacing.md, insets.bottom),
                 },
               ]}
               pointerEvents="box-none"
@@ -1996,6 +1998,7 @@ export default function PredictModal({
                 bounces={tutorialUserScrollEnabled}
                 nestedScrollEnabled={tutorialUserScrollEnabled}
                 onScroll={(e) => {
+                  notifyBackEdgeScroll();
                   predictScrollYRef.current = e.nativeEvent.contentOffset.y;
                 }}
               >
@@ -2110,9 +2113,31 @@ export default function PredictModal({
                       onOpenTeamDetail={onOpenTeamDetail}
                       onOpenPlayerDetail={onOpenPlayerDetail}
                       onOpenProSubscribe={onOpenProSubscribe}
+                      onRevealPanel={(panel) => {
+                        const scroll = predictScrollRef.current;
+                        const host = scroll?.getNativeScrollRef();
+                        if (!scroll || !host) return;
+                        host.measureInWindow((_sx, scrollTop) => {
+                          panel.measureInWindow((_px, panelTop) => {
+                            const offset = panelTop - scrollTop;
+                            if (offset >= 0) return;
+                            const y = Math.max(0, predictScrollYRef.current + offset - 8);
+                            scroll.scrollTo({ y, animated: true });
+                          });
+                        });
+                      }}
                       preseason={isProInsightPreseasonPhase(
                         predictData?.subjectGame?.seasonPhase
                       )}
+                      crowd={
+                        overlayMarketBar?.fallbackMarketBias &&
+                        overlayMarketBar.predictionCount != null
+                          ? {
+                              homePct: overlayMarketBar.fallbackMarketBias.homePct,
+                              total: overlayMarketBar.predictionCount,
+                            }
+                          : null
+                      }
                     />
                   ) : (
               <View>
@@ -2424,13 +2449,13 @@ const s = StyleSheet.create({
   kav: {
     flex: 1,
     zIndex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
   scroll: {
     width: "100%",
-    maxHeight: Platform.OS === "ios" ? "92%" : "94%",
+    maxHeight: "100%",
   },
   scrollContent: {
     alignItems: "stretch",

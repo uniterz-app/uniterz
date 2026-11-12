@@ -117,6 +117,7 @@ import {
   keepSingleBatchGameDay,
 } from "../../../../../lib/predict/batchPredict";
 import { batchPredictCopy } from "../../../../../lib/predict/batchPredictCopy";
+import { nbaAskCopy } from "../../../../../lib/nba/ask/nbaAskCopy";
 
 /** 1.0.4 ストア版はまとめて入力を出さない（入口ボタンだけ止める） */
 const BATCH_PREDICT_ENTRY_ENABLED = false;
@@ -3203,6 +3204,19 @@ export default function GamesHomeScreen({
                 accessibilityLabel="calendar"
               />
             </Animated.View>
+            {/* ASK はベータ。ストアビルドには入口を出さない */}
+            {__DEV__ ? (
+              <Animated.View
+                key={`ask-${headerMotionKey}`}
+                entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
+              >
+                <GamesHeaderFilterButtonNative
+                  icon="chat-processing-outline"
+                  onPress={() => navigation.navigate("NbaAsk")}
+                  accessibilityLabel={nbaAskCopy(gamesLanguage).open}
+                />
+              </Animated.View>
+            ) : null}
           </View>
         </View>
       {showInitialSkeleton ? (

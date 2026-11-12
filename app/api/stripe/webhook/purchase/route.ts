@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { revalidateRankingUserFields } from "@/lib/rankings/rankingCommentCache";
 
 /* =====================
    Lazy Stripe
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
     },
     { merge: true }
   );
+  revalidateRankingUserFields();
 
   try {
     const { ensureUserPlanStartDate } = await import(

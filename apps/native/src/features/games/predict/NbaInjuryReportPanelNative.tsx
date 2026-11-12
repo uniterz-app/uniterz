@@ -36,6 +36,8 @@ type Props = {
   /** スターター → MPG の順。怪我人をこの順の上から出す */
   roster?: NbaRosterReport | null;
   onPlayerPress?: (playerId: string) => void;
+  /** 渡すとチーム名と同じ行の中央に見出しを置く（76ERS ｜ INJURY ｜ RAPTORS） */
+  heading?: string | null;
 };
 
 const TONE_COLORS = {
@@ -90,15 +92,16 @@ function InjuryCard({
         </View>
       </View>
 
-      {detail ? (
-        <Text style={styles.detail} numberOfLines={1}>
-          {detail}
+      <View style={styles.detailRow}>
+        {detail ? (
+          <Text style={styles.detail} numberOfLines={1}>
+            {detail}
+          </Text>
+        ) : null}
+        <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
+          → {expected}
         </Text>
-      ) : null}
-
-      <Text style={[styles.exp, { color: colors.accent }]} numberOfLines={1}>
-        ↳ {expected}
-      </Text>
+      </View>
     </>
   );
 
@@ -164,24 +167,28 @@ function TeamColumn({
   totalCount,
   language,
   onPlayerPress,
+  showHeader = true,
 }: {
   team: NbaInjuryTeamReport;
   rows: NbaInjuryEntry[];
   totalCount: number;
   language: GamesLanguage;
   onPlayerPress?: (playerId: string) => void;
+  showHeader?: boolean;
 }) {
   const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
   const countLabel = injuryReportCountLabel(totalCount, language);
 
   return (
     <View style={styles.column}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle} numberOfLines={1}>
-          {columnTeamLabel(team)}
-        </Text>
-        <Text style={styles.columnCount}>{countLabel}</Text>
-      </View>
+      {showHeader ? (
+        <View style={styles.columnHeader}>
+          <Text style={styles.columnTitle} numberOfLines={1}>
+            {columnTeamLabel(team)}
+          </Text>
+          <Text style={styles.columnCount}>{countLabel}</Text>
+        </View>
+      ) : null}
       {rows.length === 0 ? (
         <Text style={styles.empty}>{ui.noInjuries}</Text>
       ) : (
@@ -201,11 +208,33 @@ function TeamColumn({
   );
 }
 
+function SharedHeaderTeam({
+  team,
+  totalCount,
+  language,
+}: {
+  team: NbaInjuryTeamReport;
+  totalCount: number;
+  language: GamesLanguage;
+}) {
+  return (
+    <View style={styles.sharedTeam}>
+      <Text style={styles.sharedTeamTitle} numberOfLines={1}>
+        {columnTeamLabel(team)}
+      </Text>
+      <Text style={styles.columnCount}>
+        {injuryReportCountLabel(totalCount, language)}
+      </Text>
+    </View>
+  );
+}
+
 export default function NbaInjuryReportPanelNative({
   report,
   language,
   roster = null,
   onPlayerPress,
+  heading = null,
 }: Props) {
   const ui = injuryReportUiCopy(resolveInjuryReportUiLang(language));
   const [open, setOpen] = useState(false);
@@ -223,6 +252,21 @@ export default function NbaInjuryReportPanelNative({
   const lessLabel = language === "ja" ? "閉じる" : "CLOSE";
   return (
     <View>
+      {heading ? (
+        <View style={styles.sharedHeader}>
+          <SharedHeaderTeam
+            team={report.home}
+            totalCount={homeRows.length}
+            language={language}
+          />
+          <Text style={styles.sharedHeading}>{heading}</Text>
+          <SharedHeaderTeam
+            team={report.away}
+            totalCount={awayRows.length}
+            language={language}
+          />
+        </View>
+      ) : null}
       <View style={styles.grid}>
         <TeamColumn
           team={report.home}
@@ -230,6 +274,7 @@ export default function NbaInjuryReportPanelNative({
           totalCount={homeRows.length}
           language={language}
           onPlayerPress={onPlayerPress}
+          showHeader={!heading}
         />
         <TeamColumn
           team={report.away}
@@ -237,6 +282,7 @@ export default function NbaInjuryReportPanelNative({
           totalCount={awayRows.length}
           language={language}
           onPlayerPress={onPlayerPress}
+          showHeader={!heading}
         />
       </View>
       {canExpand || report.asOfLabel ? (
@@ -275,7 +321,7 @@ const styles = StyleSheet.create({
   column: { flex: 1, minWidth: 0, gap: 6 },
   columnHeader: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 4,
     paddingHorizontal: 2,
@@ -292,6 +338,38 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     includeFontPadding: false,
     transform: [{ skewX: "-6deg" }],
+  },
+  sharedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  sharedTeam: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  sharedTeamTitle: {
+    flexShrink: 1,
+    fontFamily: MATCH_CARD_TEAM_NAME_FONT,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    lineHeight: 18,
+    color: "#fff",
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
+  },
+  sharedHeading: {
+    paddingHorizontal: 8,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.6,
   },
   columnCount: {
     fontFamily: OXANIUM,
@@ -397,13 +475,23 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     transform: [{ skewX: "6deg" }],
   },
+  /** 部位の横に収まらないときだけ復帰見込みを次の行へ */
+  detailRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: 6,
+    rowGap: 4,
+  },
   detail: {
+    flexShrink: 1,
     fontSize: 11,
     lineHeight: 15,
     color: "rgba(255,255,255,0.65)",
     fontWeight: "500",
   },
   exp: {
+    flexShrink: 0,
     fontFamily: OXANIUM,
     fontSize: 10,
     fontWeight: "800",

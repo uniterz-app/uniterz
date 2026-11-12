@@ -14,6 +14,7 @@ import { getTeamJerseyPrimaryColor } from "../../../../../../lib/team-colors";
 import { formatStreakLabel } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import { teamStreakBadgeTheme } from "../../../../../../lib/predict/nbaTeamDetailForm";
 import { useNbaConferenceStandings } from "../../../../../../lib/nba/useNbaConferenceStandings";
+import { notifyBackEdgeScroll } from "../../profile/backEdgeScrollNative";
 import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
 import {
   formatStandingsWl,
@@ -141,6 +142,8 @@ export default function NbaLeagueStandingsPanelNative({
         style={styles.tableScroll}
         contentContainerStyle={{ paddingBottom: bottomContentReserveY }}
         showsVerticalScrollIndicator={false}
+        onScroll={notifyBackEdgeScroll}
+        scrollEventThrottle={16}
       >
         {CONFERENCE_SECTIONS.map(({ id, label }, sectionIndex) => (
           <View

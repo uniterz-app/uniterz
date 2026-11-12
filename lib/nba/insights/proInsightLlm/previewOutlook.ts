@@ -82,6 +82,8 @@ export function buildPreviewOutlookSheet(pack: ProInsightFactPack): Record<strin
   });
   const teams = pack.preview.analysis?.teams.map((t) => ({
     ...t,
+    // ID と数値の幅は採点用。LLM には pointsOutlook の文だけ渡す
+    keyPlayers: t.keyPlayers.map(({ playerId: _id, pointsRange: _range, ...kp }) => kp),
     ...(styleStrengths.get(t.team) ? { styleStrengths: styleStrengths.get(t.team) } : {}),
     ...(styleWeaknesses.get(t.team) ? { styleWeaknesses: styleWeaknesses.get(t.team) } : {}),
   }));
@@ -150,20 +152,25 @@ Return ONLY valid JSON (no markdown).
 
 Input "sheet" = facts computed by code (English). Use ONLY what is in it.
 
-The value is in CONNECTING facts into a projection one step beyond the numbers. Examples of the depth wanted (placeholders, not real facts — never copy them):
-- "TEAM_B give up the most points to guards in the league, and guard P.One lives on isolation and mid-range — set up for a big scoring night."
-- "With P.Two OUT, P.Three has averaged far more in the games P.Two missed; expect the offense to run through him, which also means heavy minutes on a back-to-back."
+The value is in CONNECTING facts into a read one step beyond the numbers — and in being honest about how much a single night can swing. Examples of the depth wanted (placeholders, not real facts — never copy them):
 - "Both teams play fast and neither defends the arc — a high-possession, shootout-type game is the likelier shape."
-Find the 2–3 strongest such connections in the sheet. Combine: a player's strengths / form / usage × the opponent's weakness at his position or in that play type × absences that shift the load × pace and style × schedule.
+- "P.One carries the offense on isolation and pull-ups; on most nights he lands between 21 and 33, so a big night means getting past the top of that range."
+- "With P.Two OUT, his shots have to go somewhere; in the games he missed, P.Three scored more — a pattern worth watching, not a guarantee."
+Find the 2–3 strongest such connections in the sheet. Combine: team pace and style × the biggest style edge × absences × schedule, and for players: what they do well × their realistic range tonight.
+
+What the app's own checks found (2026-11, this season's games): a player's points are best predicted by his season average. Hot or cold recent streaks bounce back toward the average, points allowed by position did not predict scoring, and a teammate's absence did not reliably raise a player's points. So never sell a streak, a position matchup or an absence as a sure big (or quiet) night.
 
 Write exactly 4 paragraphs:
 1) The shape of the game. Team-level: pace (fast vs slow → possessions), offense vs defense quality, the biggest style edge (styleEdges / shooting / turnovers / glass), and what kind of game that produces.
-2) Players set up for a big (or tough) night. 2–3 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]) — a star is never left out just because the opponent has no weakness at his position. For each, the reason chain: what he does well (strengths, usage, recent form last5Ppg vs season ppg, season high) × why tonight's opponent is vulnerable to it (opponentVsPosition, the matching team weakness) × load shift from absences (loadShiftWithoutAbsent). Give each top scorer the full picture: season ppg, last5Ppg, season high, his top 1–2 strengths. If he has no opponentVsPosition, his case rests on his own form, usage and strengths alone — state it with confidence and say nothing about the opponent's defense at his position; never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」. When teams[].defensiveReads is present, paragraph 2 MUST include it (the defender vs the named opposing scorer, e.g. "his rim protection makes it a tough night for the opposing center"). Projections are allowed ("a big scoring night is in play", "likely to carry more of the load"); certainty is not.
+2) Players to watch. 2–3 players, and ALWAYS each team's top scorer (teams[].keyPlayers[0]). For each: what he does well (top 1–2 strengths, usage), his season ppg and season high, and his realistic range tonight from pointsOutlook (JA 例「6 割の夜は 18〜29 点に収まる」). Use the range to set expectations: a big night means beating the top of it. Add the opponent angle ONLY when the sheet gives one for him (opponentVsPosition / defensiveReads — they appear only once the season has enough games); otherwise say nothing about the opponent's defense at his position. When formNote is present, say the streak tends to return to his average — a hot streak is never the reason for a big night, a cold one never the reason for a quiet night. loadShiftWithoutAbsent is what happened in past games without the absent teammate — report it as a past fact ("in the games X missed he averaged…"), never as a promise for tonight. Do not call it "set up for a big night" / 「大きな数字が狙える」「爆発が期待できる」 or "a tough night" / 「苦しみやすい」 unless an opponentVsPosition or defensiveReads line exists for him. Never hedge with "how far it works" / 「どこまで通用するか」「どこまで押し切れるか」.
 3) Difficulty and condition. Who has the harder night and why: absences (what each takes away), difficulty with absences, back-to-back / travel / heavy minutes, and what that changes late in the game.
 4) Last meeting and last games as evidence for or against the reads above, then 1–2 concrete watch points — in-game signs that tell the fan which way it is going.
 
 Reading the sheet:
-- teams[].allowedByPosition: points per game a team gives up to opposing guards / forwards / centers, listed ONLY where the team is top 10 or bottom 10; the rank says #N of M where the highest number = allows the most. keyPlayers[].opponentVsPosition is that line for tonight's opponent vs the player's position — the core of "who is set up". A player without opponentVsPosition has no matchup angle — do not mention the opponent's defense at his position at all.
+- teams[].allowedByPosition: points per game a team gives up to opposing guards / forwards / centers, listed ONLY where the team is top 10 or bottom 10 and has played enough games; the rank says #N of M where the highest number = allows the most. keyPlayers[].opponentVsPosition is that line for tonight's opponent vs the player's position — one input, never the whole case. A player without opponentVsPosition has no matchup angle — do not mention the opponent's defense at his position at all.
+- keyPlayers[].pointsOutlook / pointsRange: his realistic points range tonight (centered on his season average; about 6 nights in 10 land inside). Use these numbers as written; do not invent other ranges.
+- keyPlayers[].formNote: his last 5 games are far from his season average and that usually reverts.
+- teams[].absences: "questionable" players usually play. Never write that a questionable player is out or that the team "loses" his scoring; at most say his status is uncertain.
 - teams[] ranks: #1 = best in that stat unless the text says otherwise (pace #1 = fastest, opponent 3P% #1 = stingiest, TOV% #1 = fewest turnovers).
 - keyPlayers[].strengths: player ranks among ALL NBA players (e.g. isolation frequency #1).
 - teams[].defensiveReads (also on the defender's keyPlayers[].defensiveRead): code-built matchup — the named defender's team is stingy at a position, against the opposing scorer at that position (with his load shift if any). The stingy defense belongs to the defender's team; write it with the defender as the subject (e.g. "V.Wembanyama's rim protection makes it a tough night for D.Clingan").
@@ -184,7 +191,7 @@ Rules:
 - Interpret, never list. Every sentence must say why it matters tonight. Do not walk through the sheet item by item; select the strongest connections.
 - At most 4 numbers per paragraph. Prefer words ("one of the league's worst defensive glass teams", JA 「リーグ下位の」) over raw ranks; use a number only when it is the point.
 - Every number, name, status, date and record must come from the sheet. No invented stats, no arithmetic, no new ranks. Never write a number that is not in the sheet.
-- Do NOT pick a winner, predict a final score, or give betting advice. You MAY say an area or the matchup leans toward a team, and you MAY project individual output ("big scoring night", "more shots") with its reason.
+- Do NOT pick a winner, predict a final score, or give betting advice. You MAY say an area or the matchup leans toward a team, and you MAY describe individual output within pointsOutlook's range ("more shots", "the top of his usual range") with its reason.
 - If phase is "early" or "opening", mention the small sample once, briefly (e.g. "nine games in"). If styleStatsSeason / teamAnalysisSeason is an earlier season than the game, say those numbers are from that season.
 - Team names = nicknames exactly as in the sheet (THUNDER). Player names in English as written (S.Gilgeous-Alexander). Status words OUT / questionable / doubtful stay English in every language.
 - Each paragraph 2–3 sentences. JA: 1 段落 100〜150 字程度（2 段落目だけ 180 字まで）。EN: about 50–90 words per paragraph. スポーツ記者の展望の文体（だ・である調 / 体言止め可。です・ます調にしない）。
@@ -197,7 +204,7 @@ Headlines ("heads"): one per paragraph, same order. The takeaway of that paragra
 - JA 10〜22 字、句点なし、体言止めか短い言い切り（例 「NUGGETS のインサイド守備が狙われる」「N.Jokic はペイントで大きな夜に」）。EN at most 8 words, no period.
 - NO digits. Names and nicknames exactly as in the paragraph. Only what the paragraph says — no new claims, no winner.
 - Do not restate the paragraph's role ("Game shape", 「試合の形」「見どころ」) — the app prints that label itself.
-- Headline 2 names the player(s) set up for a big night; headline 4 names the watch point.
+- Headline 2 names the player(s) to watch; headline 4 names the watch point.
 
 Output shape:
 { "paragraphs": { "ja": ["p1", "p2", "p3", "p4"], "en": ["p1", "p2", "p3", "p4"] },

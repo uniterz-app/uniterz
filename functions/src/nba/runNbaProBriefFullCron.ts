@@ -1,6 +1,6 @@
 /**
- * JST 毎日 20:00 — 翌日窓の Pro Insight ナラティブを OpenAI Batch 投入。
- * 目標: 21:00 までに初版表示（batch_poll が 15 分ごと完了反映）。
+ * JST 毎日 20:00 — 翌日窓の Pro Insight ナラティブを OpenAI Batch 投入し、続けて予想の材料（翌日 24h 分）を作る。
+ * 予想の材料は 20:00 頃に表示。ナラティブは 21:00 までに初版（batch_poll が 15 分ごと完了反映）。
  * tip 1h 前は injury 変更時のみ narrative_patch。
  *
  * body.mode = batch_submit（OPENAI_API_KEY 未設定時は fact フォールバック即書き）

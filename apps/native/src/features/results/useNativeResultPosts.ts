@@ -8,6 +8,8 @@ import {
   startAfter,
   where,
   type DocumentSnapshot,
+  type Query,
+  type QuerySnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
@@ -181,7 +183,7 @@ export function useNativeResultPosts(
             while (pages < RESULT_OPEN_MAX_PAGES && merged.length < RESULT_POSTS_MAX_CACHED) {
               const pageLimit =
                 pages === 0 ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE;
-              const pageQuery = cursor
+              const pageQuery: Query = cursor
                 ? query(
                     collection(db, "posts"),
                     ...base.slice(0, 3),
@@ -189,7 +191,7 @@ export function useNativeResultPosts(
                     limit(pageLimit)
                   )
                 : query(collection(db, "posts"), ...base.slice(0, 3), limit(pageLimit));
-              const snap = await getDocs(pageQuery);
+              const snap: QuerySnapshot = await getDocs(pageQuery);
               if (isStale()) return null;
               pages += 1;
               let crossedDay = false;

@@ -780,14 +780,14 @@ export function getGamesTexts(language: string | null | undefined) {
       pt: "Dados em breve",
       fr: "Données bientôt",
     }),
-    teamStatsMoreHint: L(lang, {
-      ja: "より詳細なスタッツはチームページへ",
-      en: "For more stats, open the team page",
-      ko: "더 자세한 스탯은 팀 페이지에서",
-      zh: "更多数据请打开球队页",
-      es: "Más stats en la página del equipo",
-      pt: "Mais stats na página do time",
-      fr: "Plus de stats sur la page équipe",
+    teamStatsTapHint: L(lang, {
+      ja: "詳細は\n← → をタップ",
+      en: "Tap ← →\nfor details",
+      ko: "자세히는\n← → 탭",
+      zh: "详情请点\n← →",
+      es: "Toca ← →\npara más",
+      pt: "Toque ← →\npara mais",
+      fr: "Touchez ← →\npour plus",
     }),
     nbaTopScorerTitle: L(lang, {
       ja: "TOP SCORER",

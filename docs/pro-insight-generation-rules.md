@@ -304,4 +304,16 @@ injury · ace-out · leaders · mpg（ロスター）。新規 BDL 不要。
 
 ---
 
+## PREVIEW（展望）の選手の読み
+
+詳細は `docs/pro-insight-design.md` 6.6。生成前に守ること:
+
+- 得点の見込みは `pointsOutlook`（中心 = 今季平均、10 回中 6 回入る幅）の範囲内
+- ポジション別失点・守りの読みはチームの消化試合 20 以上のときだけ材料に載る。載っていても「材料の一つ」で、それだけで大量得点 / 不発を言わない
+- 直近の好不調（`formNote`）は平均へ戻りやすいと書く。欠場時の得点移動は過去の事実で、今夜の上乗せにしない
+- questionable は「たいてい出場する・未確定」。欠場扱いにしない
+- 文章の試合後の採点（`proInsightAudit`）は 2026-11-12 で止めた。手で見たいときだけ `scripts/report-pro-insight-audit.ts --backfill`
+
+---
+
 ## PLAYERS / その他

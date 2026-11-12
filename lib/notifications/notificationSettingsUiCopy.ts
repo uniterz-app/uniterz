@@ -360,13 +360,13 @@ function proPrefRows(lang: LocalizedLang): PrefRowCopy[] {
     {
       key: "proInsightUpdate",
       title: L(lang, {
-        ja: "PRO INSIGHT 重要更新",
-        en: "PRO INSIGHT update",
-        ko: "PRO INSIGHT 중요 업데이트",
-        zh: "PRO INSIGHT 重要更新",
-        es: "Actualización PRO INSIGHT",
-        pt: "Atualização PRO INSIGHT",
-        fr: "Mise à jour PRO INSIGHT",
+        ja: "PRO PICK 重要更新",
+        en: "PRO PICK update",
+        ko: "PRO PICK 중요 업데이트",
+        zh: "PRO PICK 重要更新",
+        es: "Actualización PRO PICK",
+        pt: "Atualização PRO PICK",
+        fr: "Mise à jour PRO PICK",
       }),
       desc: L(lang, {
         ja: "MATCHUP・欠場インパクトなど重要読みが変わったとき",

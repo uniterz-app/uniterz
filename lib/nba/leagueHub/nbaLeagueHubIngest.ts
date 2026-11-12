@@ -486,6 +486,84 @@ export async function loadAndBuildNbaLeagueHub(
       aceGuard.set(id, { minutes: row.minutes, suppress: row.suppress });
     }
   }
+  const toughRaw = aceSnap.data()?.tough as
+    | Record<string, { minutes?: number; suppress?: number }>
+    | undefined;
+  const toughGuard = new Map<string, { minutes: number; suppress: number }>();
+  for (const [id, row] of Object.entries(toughRaw ?? {})) {
+    if (typeof row?.minutes === "number" && typeof row.suppress === "number") {
+      toughGuard.set(id, { minutes: row.minutes, suppress: row.suppress });
+    }
+  }
+  const readMatchups = (raw: unknown) => {
+    const out = new Map<string, { playerId: string; seconds: number; fgm: number; fga: number }[]>();
+    for (const [id, rows] of Object.entries(
+      (raw ?? {}) as Record<string, { o?: string; s?: number; m?: number; a?: number }[]>
+    )) {
+      const list = rows.flatMap((row) =>
+        typeof row?.o === "string" && typeof row.s === "number"
+          ? [{ playerId: row.o, seconds: row.s, fgm: row.m ?? 0, fga: row.a ?? 0 }]
+          : []
+      );
+      if (list.length > 0) out.set(id, list);
+    }
+    return out;
+  };
+  const matchups = readMatchups(aceSnap.data()?.matchups);
+  const guardedBy = readMatchups(aceSnap.data()?.guardedBy);
+  const lineupSnap = await db.collection("nbaLineupSeason").doc(seasonKey).get();
+  const onOff = new Map<string, { onNet: number; offNet: number; onMin: number; offMin: number }>();
+  for (const [id, row] of Object.entries(
+    (lineupSnap.data()?.players ?? {}) as Record<string, { onNet?: number; offNet?: number; onMin?: number; offMin?: number }>
+  )) {
+    if (typeof row?.onNet === "number" && typeof row.offNet === "number") {
+      onOff.set(id, {
+        onNet: row.onNet,
+        offNet: row.offNet,
+        onMin: row.onMin ?? 0,
+        offMin: row.offMin ?? 0,
+      });
+    }
+  }
+  const lineups = new Map<string, { ids: string[]; min: number; net: number; pm?: number; off?: number; def?: number; games?: number }[]>();
+  const lineupBoards = new Map<
+    string,
+    {
+      size: 2 | 3 | 4 | 5;
+      most: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+      best: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+      worst: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+    }[]
+  >();
+  for (const [teamId, row] of Object.entries(
+    (lineupSnap.data()?.teams ?? {}) as Record<
+      string,
+      {
+        lineups?: { ids?: string[]; min?: number; net?: number; pm?: number }[];
+        boards?: { size?: number; most?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number; games?: number }[]; best?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number; games?: number }[]; worst?: { ids?: string[]; min?: number; net?: number; pm?: number; off?: number; def?: number; games?: number }[] }[];
+      }
+    >
+  )) {
+    const list = (row?.lineups ?? []).flatMap((unit) =>
+      Array.isArray(unit.ids) && typeof unit.min === "number" && typeof unit.net === "number"
+        ? [{ ids: unit.ids.map(String), min: unit.min, net: unit.net, pm: unit.pm }]
+        : []
+    );
+    if (list.length > 0) lineups.set(teamId, list);
+    const boards = (row?.boards ?? []).flatMap((board) => {
+      const size = board.size;
+      if (size !== 2 && size !== 3 && size !== 4 && size !== 5) return [];
+      const boardSize: 2 | 3 | 4 | 5 = size;
+      const read = (units: typeof board.best) =>
+        (units ?? []).flatMap((unit) =>
+          Array.isArray(unit.ids) && typeof unit.min === "number" && typeof unit.net === "number"
+            ? [{ ids: unit.ids.map(String), min: unit.min, net: unit.net, pm: unit.pm ?? 0, off: unit.off, def: unit.def, games: unit.games }]
+            : []
+        );
+      return [{ size: boardSize, most: read(board.most), best: read(board.best), worst: read(board.worst) }];
+    });
+    if (boards.length > 0) lineupBoards.set(teamId, boards);
+  }
 
   return buildNbaLeagueHub({
     seasonKey,
@@ -506,6 +584,12 @@ export async function loadAndBuildNbaLeagueHub(
     salaryUsd,
     careerBase,
     aceGuard,
+    toughGuard,
+    matchups,
+    guardedBy,
+    onOff,
+    lineups,
+    lineupBoards,
     previousLadders: prevData
       ? {
           ladderWeek: (prevData.ladderWeek as LeagueHubLadderWeek | undefined) ?? null,
