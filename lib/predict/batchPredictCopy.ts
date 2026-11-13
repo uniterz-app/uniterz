@@ -96,5 +96,14 @@ export function batchPredictCopy(language: string | null | undefined) {
       pt: "Preencha o placar de pelo menos 2 jogos",
       fr: "Saisissez le score d'au moins 2 matchs",
     }),
+    help: L(lang, {
+      ja: "薄い数字は平均得点です。まだ予想ではありません。\n入れた試合だけ提出します。\n名前は最多得点者。OUT は欠場。STATS は詳細。",
+      en: "Faint numbers are scoring averages, not a pick yet.\nOnly games you fill in are submitted.\nA name is the top scorer. OUT means out. STATS opens the detail.",
+      ko: "옅은 숫자는 평균 득점입니다. 아직 예측이 아닙니다.\n입력한 경기만 제출합니다.\n이름은 최다 득점자. OUT 은 결장. STATS 는 상세.",
+      zh: "淡字是场均得分，还不是预测。\n只提交填过的比赛。\n名字是得分王。OUT 是缺阵。STATS 是详情。",
+      es: "El número tenue es el promedio. Aún no es un tip.\nSolo se envían los partidos que rellenas.\nEl nombre es el máximo anotador. OUT es baja. STATS es el detalle.",
+      pt: "O número claro é a média. Ainda não é um tip.\nSó entram os jogos que você preenche.\nO nome é o cestinha. OUT é ausência. STATS é o detalhe.",
+      fr: "Le chiffre pâle est la moyenne. Ce n'est pas encore un tip.\nSeuls les matchs remplis partent.\nLe nom est le meilleur marqueur. OUT veut dire absent. STATS ouvre le détail.",
+    }),
   };
 }

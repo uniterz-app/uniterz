@@ -9,6 +9,7 @@ import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import { PRO_INSIGHT_PREDICT_KIT_SAMPLES } from "../../../../../../lib/predict/proInsightPredictKitSample";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+
 type Props = {
   language: string;
   onClose: () => void;

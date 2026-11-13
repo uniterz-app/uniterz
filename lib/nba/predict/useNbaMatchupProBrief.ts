@@ -18,6 +18,7 @@ import {
   sanitizeProInsightNarrativeForDisplay,
   type ProInsightNarrativeStatus,
 } from "@/lib/predict/validateProInsightNarrative";
+
 export function useNbaMatchupProBrief(opts: {
   gameId?: string | null;
   /** @deprecated 旧 HOME/AWAY。プレビュー用 */

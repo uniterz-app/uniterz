@@ -51,7 +51,7 @@ const GLASS_FILL_MOBILE = {
   locations: [0, 0.45, 1],
 } as const;
 
-/** blur が弱い端末向けの下地（日付帯 `resultDayStripPanelNative.panel` と同系） */
+/** blur が弱い端末向けの下地 */
 const GLASS_UNDERLAY = "rgba(8,11,18,0.48)";
 
 type Props = {

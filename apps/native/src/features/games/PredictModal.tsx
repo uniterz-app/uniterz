@@ -203,6 +203,8 @@ export type PredictModalMatchPreview = {
   awaySide: unknown;
   knockout?: boolean;
   season?: string | null;
+  /** 一覧カードと同じ左辺 PICK UP */
+  pickup?: boolean;
 };
 
 export type PredictOverlayMarketBarProps = {
@@ -762,6 +764,8 @@ export function PredictMatchPreview({
       <TutorialTargetNative id="predict-round">
         <MatchListLineFrameNative
           topLabel={data.roundLabel || undefined}
+          leftLabel={data.pickup ? "PICK UP" : undefined}
+          pickup={data.pickup === true}
           predicted={Boolean(myPostId) && !mergedFinal}
           paint={resultOutcomeLineFramePaint(mergedFinal?.badge)}
         >
@@ -2454,8 +2458,14 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   scroll: {
-    width: "100%",
+    alignSelf: "stretch",
     maxHeight: "100%",
+    /**
+     * 枠は動かさない。シートの左余白へスクロール範囲だけ広げ、
+     * 枠の外へ出る PICK UP を切らない。
+     */
+    marginLeft: -10,
+    paddingLeft: 10,
   },
   scrollContent: {
     alignItems: "stretch",

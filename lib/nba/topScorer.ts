@@ -92,11 +92,14 @@ export function nbaTopScorerSegmentLabel(name: string): string {
   return (parts[parts.length - 1] ?? name).toUpperCase();
 }
 
-/** 平均得点が高い順。同点は名前順 */
+/** 今季出場ありを上に、平均得点が高い順。未出場（GP 0）は下にまとめる。同点は名前順 */
 export function sortNbaTopScorerCandidatesByPpg(
   candidates: NbaTopScorerCandidate[]
 ): NbaTopScorerCandidate[] {
   return [...candidates].sort((a, b) => {
+    const aPlayed = (a.gp ?? 0) > 0;
+    const bPlayed = (b.gp ?? 0) > 0;
+    if (aPlayed !== bPlayed) return aPlayed ? -1 : 1;
     const ap = a.ppg ?? -1;
     const bp = b.ppg ?? -1;
     if (bp !== ap) return bp - ap;

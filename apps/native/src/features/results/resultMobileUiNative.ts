@@ -1,15 +1,19 @@
 import { Platform, StyleSheet, type TextStyle, type ViewStyle } from "react-native";
+import { spacing } from "../../theme/tokens";
 import { MATCH_CARD_SCORE_FONT } from "../games/matchCardTypography";
-import { PANEL_BG } from "../profile/reports/reportThemeNative";
 import { resultStreakTier } from "../../../../../lib/result/resultGlass";
 
 /** Web `mobileListCardLayout` / `/mobile/result` */
 export const MOBILE_RESULT_PAGE_PAD_X = 18;
+/** 一覧の左右余白。日付の線はこれを超えて画面端まで伸ばす */
+export const MOBILE_RESULT_LIST_PAD_X = Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs);
 export const MOBILE_RESULT_PAGE_PAD_Y = 16;
 export const MOBILE_RESULT_SECTION_GAP = 6;
 export const MOBILE_RESULT_CARD_GAP = 8;
-/** 日付帯→先頭カード / 最終カード→次の日付帯 */
-export const MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP = 4;
+/** 日付帯の下 → その日の先頭カード。日付はその日のカード側に付ける */
+export const MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP = 8;
+/** 前日の最終カード → 次の日付の境。カード同士の隙間より広く取る */
+export const MOBILE_RESULT_DAY_BREAK_GAP = 20;
 /** Web `MOBILE_LIST_CARD_MAX_W_CLASS`（23rem）= 試合カードと同じ */
 export const MOBILE_RESULT_CARD_MAX_W = 368;
 
@@ -204,76 +208,14 @@ export const resultDayStripPanelNative = StyleSheet.create({
     maxWidth: MOBILE_RESULT_CARD_MAX_W,
     alignSelf: "center",
   },
+  /** 試合カードの枠にはしない。境は日付行の線 */
   panel: {
     position: "relative",
     overflow: "hidden",
     borderRadius: 0,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: PANEL_BG,
+    backgroundColor: "transparent",
     paddingHorizontal: 0,
     paddingVertical: 0,
-  },
-  row: {
-    position: "relative",
-    zIndex: 3,
-    flexDirection: "row",
-    alignItems: "stretch",
-    minHeight: 40,
-  },
-  dateCol: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: "center",
-    alignItems: "flex-start",
-    paddingLeft: 12,
-    paddingRight: 6,
-    paddingVertical: 6,
-  },
-  date: {
-    flexShrink: 0,
-    ...dayStripNumberText,
-    fontSize: 15,
-    lineHeight: 17,
-    color: "rgba(236,254,255,0.95)",
-    letterSpacing: -0.4,
-  },
-  divider: {
-    width: 1,
-    alignSelf: "stretch",
-    marginVertical: 5,
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  /** 確定日: hit を中央列 */
-  hitCol: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-  },
-  /** 確定日: 総合スコアを右列 */
-  totalCol: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingRight: 10,
-    paddingLeft: 4,
-    paddingVertical: 6,
-  },
-  /** 未確定日: 得点未確定ピルを右寄せ */
-  rightCol: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
   },
 });
 

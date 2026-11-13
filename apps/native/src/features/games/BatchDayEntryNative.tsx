@@ -13,6 +13,11 @@ import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScore
 import { getTeamRosterMarkColor } from "../../../../../lib/team-colors";
 import { batchPredictWinnerFromScores } from "../../../../../lib/predict/batchPredict";
 import {
+  injuryStatusByPlayerId,
+  injuryStatusTone,
+} from "../../../../../lib/predict/nbaInjuryReport";
+import { useNbaMatchupInjuryReport } from "../../../../../lib/nba/predict/useNbaMatchupInjuryReport";
+import {
   CYBER_TAB_CYAN,
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -22,6 +27,9 @@ import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 const TOP_BOTH_TEAMS = 4;
 const WIN_SCORE = "#F5C518";
 const UNCONFIRMED = "rgba(255,255,255,0.38)";
+/** 予想シートの OUT チップと同じ */
+const OUT_PINK = "#FF8AB4";
+const OUT_HOT = "#FF2D78";
 
 export type BatchDayEntryRow = {
   gameId: string;
@@ -238,9 +246,24 @@ function ScorerPick({
     () => sortNbaTopScorerCandidatesByPpg(candidates).slice(0, TOP_BOTH_TEAMS),
     [candidates]
   );
+  const { report: injuryReport } = useNbaMatchupInjuryReport({
+    homeTeamId,
+    awayTeamId,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    enabled: true,
+  });
+  const injuryById = useMemo(
+    () => (injuryReport ? injuryStatusByPlayerId(injuryReport) : {}),
+    [injuryReport]
+  );
   if (!loading && top.length === 0) return null;
   const slots: Array<NbaTopScorerCandidate | null> =
     top.length > 0 ? top : Array.from({ length: TOP_BOTH_TEAMS }, () => null);
+  const outFlags = slots.map((player) =>
+    player
+      ? injuryStatusTone(injuryById[player.playerId] ?? "") === "out"
+      : false
+  );
   return (
     <View style={styles.scorerRow}>
       <CyberSlantedTabBarNative fill>
@@ -258,6 +281,7 @@ function ScorerPick({
           }
           const selected =
             pick?.playerId === player.playerId && pick.teamId === player.teamId;
+          const out = outFlags[index];
           return (
             <CyberSlantedTabNative
               key={`${player.teamId}:${player.playerId}`}
@@ -265,9 +289,11 @@ function ScorerPick({
               active={selected}
               compact
               theme={{
-                accent: CYBER_TAB_CYAN,
-                inactiveText: CYBER_TAB_CYAN,
-                inactiveBorder: getTeamRosterMarkColor("nba", player.teamId),
+                accent: out ? OUT_PINK : CYBER_TAB_CYAN,
+                inactiveText: out ? OUT_PINK : CYBER_TAB_CYAN,
+                inactiveBorder: out
+                  ? OUT_HOT
+                  : getTeamRosterMarkColor("nba", player.teamId),
               }}
               onPress={() =>
                 onPick(
@@ -284,6 +310,15 @@ function ScorerPick({
           );
         })}
       </CyberSlantedTabBarNative>
+      {outFlags.some(Boolean) ? (
+        <View style={styles.outRow}>
+          {outFlags.map((out, index) => (
+            <View key={`out-${index}`} style={styles.outCell}>
+              {out ? <Text style={styles.outLabel}>OUT</Text> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -349,6 +384,22 @@ const styles = StyleSheet.create({
   },
   scorerRow: {
     marginTop: 2,
+  },
+  outRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: -4,
+  },
+  outCell: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+  },
+  outLabel: {
+    color: OUT_HOT,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    fontFamily: "Oxanium_700Bold",
   },
   tie: {
     color: "#F87171",

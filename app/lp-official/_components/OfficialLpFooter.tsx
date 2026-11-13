@@ -1,4 +1,5 @@
 import { officialSite } from "@/lib/lp/officialSiteContent";
+import OfficialLpStoreLinks from "./OfficialLpStoreLinks";
 
 export default function OfficialLpFooter() {
   const year = new Date().getFullYear();
@@ -7,6 +8,7 @@ export default function OfficialLpFooter() {
   return (
     <footer className="olp-footer">
       <div className="olp-wrap">
+        <OfficialLpStoreLinks className="olp-footer-stores" />
         <nav aria-label="フッター">
           <a href={officialSite.termsHref}>利用規約</a>
           <a href={officialSite.privacyHref}>プライバシーポリシー</a>

@@ -85,17 +85,17 @@ export const officialHero = {
 
 export const officialHeroScreens = {
   left: {
-    src: "/lp/games.png",
+    src: "/lp/app/games.png",
     alt: "Uniterz の試合一覧画面",
     label: "Games",
   },
   leftBack: {
-    src: "/lp/prediction.png",
+    src: "/lp/app/prediction.png",
     alt: "Uniterz の予想画面",
     label: "Predict",
   },
   right: {
-    src: "/lp/ranking.png",
+    src: "/lp/app/ranking.png",
     alt: "Uniterz のランキング画面",
     label: "Ranking",
   },
@@ -133,28 +133,28 @@ export const officialHow = {
       icon: "match" as const,
       title: "試合を選択",
       text: "日程から気になる試合を開きます。まずは NBA を中心に提供します。",
-      shot: { src: "/lp/games.png", alt: "Uniterz の試合一覧" },
+      shot: { src: "/lp/app/games.png", alt: "Uniterz の試合一覧" },
     },
     {
       no: "02",
       icon: "predict" as const,
       title: "勝敗・スコアなどを予想",
       text: "勝敗とスコアを入力して投稿します。試合開始前なら見直しもできます。",
-      shot: { src: "/lp/prediction.png", alt: "Uniterz の予想画面" },
+      shot: { src: "/lp/app/prediction.png", alt: "Uniterz の予想画面" },
     },
     {
       no: "03",
       icon: "rank" as const,
       title: "ランキングで競う",
       text: "的中などの成績で順位が決まります。スコアの計算方法は Free でも Pro でも同じです。",
-      shot: { src: "/lp/ranking.png", alt: "Uniterz のランキング" },
+      shot: { src: "/lp/app/ranking.png", alt: "Uniterz のランキング" },
     },
     {
       no: "04",
       icon: "exchange" as const,
       title: "Unit で商品と交換",
       text: "条件達成者に Unit が無償で付与されます。ユニフォームなどの NBA グッズと交換できます。Unit の購入・換金はできません。",
-      shot: { src: "/lp/change.png", alt: "Uniterz の商品交換" },
+      shot: { src: "/lp/app/change.png", alt: "Uniterz の商品交換" },
     },
   ],
 } as const;
@@ -244,42 +244,42 @@ export const officialFeatures = {
 export const officialPreview = {
   heading: "App",
   headingJa: "実際のアプリ画面",
-  lead: "開発中の実機画面です。",
+  lead: "試合、予想、ランキング、スタッツの画面です。",
   screens: [
     {
       id: "result",
       label: "リザルトカード",
-      src: "/lp/resultcard.png",
+      src: "/lp/app/resultcard.png",
       alt: "Uniterz のリザルトカード",
     },
     {
       id: "teamstats",
       label: "チームスタッツ",
-      src: "/lp/teamstats.png",
+      src: "/lp/app/teamstats.png",
       alt: "Uniterz のチームスタッツ",
     },
     {
       id: "playerstats",
       label: "プレイヤースタッツ",
-      src: "/lp/playerstats.png",
+      src: "/lp/app/playerstats.png",
       alt: "Uniterz のプレイヤースタッツ",
     },
     {
       id: "teamdetail",
       label: "チーム詳細",
-      src: "/lp/teamdetail.png",
+      src: "/lp/app/teamdetail.png",
       alt: "Uniterz のチーム詳細",
     },
     {
       id: "playerdetail",
       label: "選手詳細",
-      src: "/lp/playerdetail.png",
+      src: "/lp/app/playerdetail.png",
       alt: "Uniterz の選手詳細",
     },
     {
       id: "standing",
       label: "順位予想",
-      src: "/lp/standingprediction.png",
+      src: "/lp/app/standingprediction.png",
       alt: "Uniterz の順位予想",
     },
   ],
@@ -369,7 +369,7 @@ export const officialPro = {
         "各カードに根拠となる数字を添える",
         "重要情報がないときは、無理にカードを作らない",
       ],
-      shots: [{ src: "/lp/pro-insght.png", alt: "Uniterz の PRO PICK" }],
+      shots: [{ src: "/lp/app/pro-insght.png", alt: "Uniterz の PRO PICK" }],
     },
     {
       id: "report",
@@ -400,8 +400,8 @@ export const officialPro = {
         "実績バッジはプロフィールに並べて見せられる",
       ],
       shots: [
-        { src: "/lp/proskin.png", alt: "Uniterz の Pro Skin 選択画面" },
-        { src: "/lp/profile-proskin.png", alt: "Pro Skin とバッジを付けたプロフィール" },
+        { src: "/lp/app/proskin.png", alt: "Uniterz の Pro Skin 選択画面" },
+        { src: "/lp/app/profile-proskin.png", alt: "Pro Skin とバッジを付けたプロフィール" },
       ],
     },
     {

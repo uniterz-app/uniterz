@@ -115,6 +115,8 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../rankings/CyberSlantedTabNative";
+import CyberHelpMarkNative from "../../ui/CyberHelpMarkNative";
+import { CyberHelpOverlayNative } from "../../ui/CyberSubpageShellNative";
 import {
   batchPredictRowFromGame,
   buildBatchPredictItems,
@@ -836,6 +838,7 @@ export default function GamesHomeScreen({
   >({});
   const [myPredictionsReloadNonce, setMyPredictionsReloadNonce] = useState(0);
   const [batchMode, setBatchMode] = useState(false);
+  const [batchHelpOpen, setBatchHelpOpen] = useState(false);
   const batchHeaderOpened = useRef(false);
   if (batchMode) batchHeaderOpened.current = true;
   const [batchPickupOnly, setBatchPickupOnly] = useState(false);
@@ -1449,6 +1452,9 @@ export default function GamesHomeScreen({
         wcStage: typeof g.wcStage === "string" ? g.wcStage : null,
       }),
       season: typeof g.season === "string" ? g.season : WC_DEFAULT_SEASON,
+      pickup: isNbaPickupGame(
+        g as { isPickup?: unknown; pickupWeekKey?: unknown }
+      ),
     };
   }, [selectedGame, language, formatSideRecord, peerGamesForSeries, scorePrefs]);
   const formatGameDateMs = useCallback(
@@ -3299,34 +3305,11 @@ export default function GamesHomeScreen({
               setBatchMessage(null);
               setBatchMode(true);
             }}
-            style={{
-              marginBottom: 12,
-              borderWidth: 1,
-              borderColor: "rgba(0,245,255,0.7)",
-              paddingVertical: 10,
-              alignItems: "center",
-              flexDirection: "row",
-              justifyContent: "center",
-              gap: 8,
-            }}
+            style={styles.batchEnter}
+            accessibilityRole="button"
           >
-            <Text style={{ color: "#00F5FF", fontWeight: "700", fontSize: 13 }}>
-              {batchCopy.enter}
-            </Text>
-            {!isProUser ? (
-              <Text
-                style={{
-                  color: "#050508",
-                  backgroundColor: "#00F5FF",
-                  fontWeight: "800",
-                  fontSize: 10,
-                  letterSpacing: 1,
-                  paddingHorizontal: 4,
-                }}
-              >
-                PRO
-              </Text>
-            ) : null}
+            <Text style={styles.batchEnterLabel}>{batchCopy.enter}</Text>
+            {!isProUser ? <Text style={styles.batchEnterPro}>PRO</Text> : null}
           </Pressable>
           </Animated.View>
       ) : null}
@@ -3620,20 +3603,34 @@ export default function GamesHomeScreen({
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.batchPredictTabs}>
-              <CyberSlantedTabBarNative fill>
-                <CyberSlantedTabNative
-                  label="ALL"
-                  active={!batchPickupOnly}
-                  compact
-                  onPress={() => setBatchPickupOnly(false)}
-                />
-                <CyberSlantedTabNative
-                  label="PICK UP"
-                  active={batchPickupOnly}
-                  compact
-                  onPress={() => setBatchPickupOnly(true)}
-                />
-              </CyberSlantedTabBarNative>
+              <View style={styles.batchPredictTabsFill}>
+                <CyberSlantedTabBarNative fill>
+                  <CyberSlantedTabNative
+                    label="ALL"
+                    active={!batchPickupOnly}
+                    compact
+                    onPress={() => setBatchPickupOnly(false)}
+                  />
+                  <CyberSlantedTabNative
+                    label="PICK UP"
+                    active={batchPickupOnly}
+                    compact
+                    onPress={() => setBatchPickupOnly(true)}
+                  />
+                </CyberSlantedTabBarNative>
+              </View>
+              <Pressable
+                onPress={() => setBatchHelpOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="説明"
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.batchHelpBtn,
+                  pressed ? styles.batchHelpBtnPressed : null,
+                ]}
+              >
+                <CyberHelpMarkNative active={batchHelpOpen} />
+              </Pressable>
             </View>
             <BatchDayEntryNative
               rows={batchEntryRows}
@@ -3660,6 +3657,11 @@ export default function GamesHomeScreen({
               />
             </View>
           </ScrollView>
+          <CyberHelpOverlayNative
+            open={batchHelpOpen}
+            text={batchCopy.help}
+            onClose={() => setBatchHelpOpen(false)}
+          />
         </View>
       ) : null}
       <GamesCalendarSheetNative
@@ -3848,12 +3850,52 @@ const styles = StyleSheet.create({
   batchPredictTabs: {
     marginHorizontal: 12,
     marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  batchPredictTabsFill: {
+    flex: 1,
+    minWidth: 0,
+  },
+  batchHelpBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  batchHelpBtnPressed: {
+    opacity: 0.85,
   },
   /** まとめて入力中の右端。ぼかしより手前 */
   batchPredictBack: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 40,
     elevation: 12,
+  },
+  /** 試合一覧の入口。細いシアン枠 */
+  batchEnter: {
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.7)",
+    paddingVertical: 10,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  batchEnterLabel: {
+    color: "#00F5FF",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  batchEnterPro: {
+    color: "#050508",
+    backgroundColor: "#00F5FF",
+    fontWeight: "800",
+    fontSize: 10,
+    letterSpacing: 1,
+    paddingHorizontal: 4,
   },
   card: {
     width: "100%",

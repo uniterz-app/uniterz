@@ -4,6 +4,7 @@ import type {
   NbaRosterTeamBlock,
 } from "@/lib/predict/nbaRoster";
 import { getNbaTeamNicknameById } from "@/lib/nba-team-names";
+import { clearPriorSeasonGamesPlayed } from "./applyPriorSeasonRosterAverages";
 import type { NbaTeamRosterDocTeam } from "./teamRosterTypes";
 
 function toTeamBlock(
@@ -11,7 +12,9 @@ function toTeamBlock(
   teamId: string,
   snap: NbaTeamRosterDocTeam | null | undefined
 ): NbaRosterTeamBlock {
-  const players: NbaRosterPlayer[] = snap?.players ?? [];
+  const players: NbaRosterPlayer[] = (snap?.players ?? []).map((player) =>
+    clearPriorSeasonGamesPlayed(player)
+  );
   return {
     teamId,
     teamName:
