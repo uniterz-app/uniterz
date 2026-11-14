@@ -767,18 +767,23 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </View>
             ) : null}
 
+            {/**
+             * 枝ごとに key を分ける。同じ View を使い回すと、平坦化される loadingWrap と
+             * 実体の listSectionTop が同じ tag で入れ替わり、Android Fabric が
+             * 「Unable to find viewState」で落ちて画面がグレーになる。
+             */}
             {!listReady ? (
-              <View style={styles.loadingWrap}>
+              <View key="list-loading" style={styles.loadingWrap}>
                 <CandleChartLoaderNative scale={0.85} label={t.loading} />
               </View>
             ) : shouldShowRankingsPreseasonNotice(rankingHasNoEntries) ? (
-              <View style={styles.noDataWrap}>
+              <View key="list-preseason" style={styles.noDataWrap}>
                 <Text style={styles.preseasonNotice}>
                   {rankingsPreseasonNotice(language)}
                 </Text>
               </View>
             ) : rankingHasNoEntries ? (
-              <View style={styles.noDataWrap}>
+              <View key="list-empty" style={styles.noDataWrap}>
                 <Text
                   style={[
                     styles.noData,
@@ -790,6 +795,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </View>
             ) : (
               <View
+                key="list-podium"
+                collapsable={false}
                 style={[
                   styles.listSectionTop,
                   nbaBoard === "open" ? styles.listSectionProTop : null,
