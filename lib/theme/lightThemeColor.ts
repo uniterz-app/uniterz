@@ -1,7 +1,7 @@
 /**
  * ダーク前提で書かれた色リテラルをライト（シアンミスト地）用に写す。
  *
- * - 背景級の黒 → `LIGHT_THEME_BG`（#D2DBDB）
+ * - 背景級の黒 → `LIGHT_THEME_BG`（#A0A8A8）
  * - 少し明るい面（カード）→ 背景より一段明るい薄グレー（真っ白にはしない。まぶしさ対策）
  * - 白文字・明るいグレー → 墨（#122022）寄り
  * - 彩度の高いネオン → 同じ色相で暗く（白地で読める濃さ）
@@ -9,7 +9,7 @@
  * アルファは保つ。OKLab で明度だけ写し、色相は変えない。
  */
 
-export const LIGHT_THEME_BG = "#D2DBDB";
+export const LIGHT_THEME_BG = "#A0A8A8";
 export const LIGHT_THEME_INK = "#122022";
 
 export type LightThemeColorRole = "shadow" | "glow" | undefined;
@@ -134,11 +134,17 @@ function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
-const [BG_L, BG_A, BG_B] = rgbToOklab(0xd2, 0xdb, 0xdb);
-/** カード等の上限。背景 0.885 から +0.04 */
-const SURFACE_MAX_L = 0.925;
-/** 中間グレー（枠線など）の起点。背景との差を旧配色と同じ 0.085 に保つ */
-const MID_SURFACE_L = 0.8;
+const [BG_L, BG_A, BG_B] = rgbToOklab(
+  parseInt(LIGHT_THEME_BG.slice(1, 3), 16),
+  parseInt(LIGHT_THEME_BG.slice(3, 5), 16),
+  parseInt(LIGHT_THEME_BG.slice(5, 7), 16)
+);
+/** カード等の上限。背景から +0.04 */
+const SURFACE_MAX_L = BG_L + 0.04;
+/** 中間グレー（枠線など）の起点。背景との差 0.085 */
+const MID_SURFACE_L = BG_L - 0.085;
+/** 背景 #D2DBDB（L 0.885）で調整した明度を、暗い背景ではその分だけ下げる */
+const ACCENT_SHIFT = Math.max(0, 0.885 - BG_L) * 0.6;
 const [INK_L] = rgbToOklab(0x12, 0x20, 0x22);
 const MIST_HUE = Math.atan2(BG_B, BG_A);
 const MIST_CHROMA = Math.hypot(BG_A, BG_B);
@@ -151,7 +157,7 @@ function mapSurfaceLightness(L: number): number {
 
 /** 明るい有彩色（ネオン文字・アクセント）用 */
 function mapAccentLightness(L: number): number {
-  return Math.min(0.62, Math.max(0.4, 1.02 - 0.6 * L));
+  return Math.min(0.62, Math.max(0.4, 1.02 - 0.6 * L)) - ACCENT_SHIFT;
 }
 
 function toLightRgba(c: Rgba, role: LightThemeColorRole): Rgba {
@@ -169,17 +175,26 @@ function toLightRgba(c: Rgba, role: LightThemeColorRole): Rgba {
   let outH: number;
   if (C < 0.02) {
     outH = MIST_HUE;
-    outC = outL > 0.8 ? MIST_CHROMA : MIST_CHROMA * 1.2;
+    outC = outL > MID_SURFACE_L ? MIST_CHROMA : MIST_CHROMA * 1.2;
   } else {
     outH = h;
-    const surfaceC = Math.min(C, outL > 0.85 ? 0.035 : 0.08);
+    const surfaceC = Math.min(C, outL > BG_L - 0.035 ? 0.035 : 0.08);
     outC = lerp(surfaceC, C, accentW);
   }
 
   const rgb = oklchToRgb(outL, outC, outH);
   let a = c.a;
   if (role === "glow" || (role === "shadow" && C >= 0.04)) a *= 0.3;
+  else if (C < 0.03 && L > 0.8 && a >= 0.25 && a < 1) a = Math.min(1, a * 1.35 + 0.08);
   return { ...rgb, a };
+}
+
+/** 透明度を除いた RGB の識別子（変換済みの色をもう一度写さない判定用） */
+export function lightThemeRgbKey(input: string): string | null {
+  const parsed = parseColor(input);
+  if (!parsed) return null;
+  const { r, g, b } = parsed.rgba;
+  return `${Math.round(r)},${Math.round(g)},${Math.round(b)}`;
 }
 
 function hex2(n: number): string {
