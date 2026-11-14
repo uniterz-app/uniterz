@@ -209,6 +209,13 @@ export type LeagueHubTrendRow = LeagueHubPlayerRef & {
   diff: number;
 };
 
+/** 前季と今季の 1 試合平均得点 */
+export type LeagueHubPtsDeltaRow = LeagueHubPlayerRef & {
+  pts: number;
+  prevPts: number;
+  diff: number;
+};
+
 export type LeagueHubWeekRow = LeagueHubPlayerRef & {
   games: number;
   wins: number;
@@ -431,6 +438,8 @@ export type NbaLeagueHubDoc = {
   };
   hot: LeagueHubTrendRow[];
   cold: LeagueHubTrendRow[];
+  /** 前季比で平均得点が上がった / 下がった（古い doc には無い） */
+  ptsDelta?: { up: LeagueHubPtsDeltaRow[]; down: LeagueHubPtsDeltaRow[] } | null;
   week: LeagueHubWeek | null;
   topGames?: LeagueHubTopGames | null;
   rookies: LeagueHubLadderRow[];

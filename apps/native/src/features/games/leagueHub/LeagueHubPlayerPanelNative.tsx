@@ -689,6 +689,46 @@ function awardRowText(
   }
 }
 
+function HubPtsDeltaSection({
+  hub,
+  lang,
+  onSelectPlayer,
+}: {
+  hub: NbaLeagueHubDoc;
+  lang: HubLang;
+  onSelectPlayer: (playerId: string) => void;
+}) {
+  const ja = lang === "ja";
+  const delta = hub.ptsDelta;
+  if (!delta) return null;
+  const rows = (list: NonNullable<typeof delta>["up"]) =>
+    list.length === 0
+      ? noData(lang)
+      : list.map((r) => (
+          <HubRow
+            key={r.playerId}
+            teamId={r.teamId}
+            name={r.name}
+            value={`${r.diff > 0 ? "+" : ""}${r.diff.toFixed(1)}`}
+            valueSub={`${r.prevPts.toFixed(1)} → ${r.pts.toFixed(1)}`}
+            onPress={() => onSelectPlayer(r.playerId)}
+            framed
+          />
+        ));
+  return (
+    <HubSection
+      title="VS LAST SEASON"
+      hint={
+        ja
+          ? "前季と今季の平均得点の差。前季 20 試合以上、今季はリーグ最多試合数の 4 割以上・平均 15 分以上出場。上位 10 人。"
+          : "Change in points per game from last season. 20+ games last season; this season 40% of the league-high games and 15+ minutes. Top 10."
+      }
+    >
+      <HubTwoCol leftTitle="UP" rightTitle="DOWN" left={rows(delta.up)} right={rows(delta.down)} />
+    </HubSection>
+  );
+}
+
 export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelectPlayer }: Props) {
   const [high, setHigh] = useState<LeagueHubHighStat>("pts");
   const [countId, setCountId] = useState<CountId>("pts20");
@@ -868,6 +908,8 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             }
           />
         </HubSection>
+
+        <HubPtsDeltaSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <PlayerSplitsSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
