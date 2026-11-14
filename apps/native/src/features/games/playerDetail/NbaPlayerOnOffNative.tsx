@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useNbaLeagueHubNative } from "../leagueHub/useNbaLeagueHubNative";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 const POSITIVE = "#5cf0b5";

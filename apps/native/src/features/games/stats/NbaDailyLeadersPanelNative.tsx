@@ -9,10 +9,10 @@ import {
   View,
 } from "react-native";
 import {
-  CYBER_TAB_CYAN,
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";

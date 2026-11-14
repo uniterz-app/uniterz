@@ -12,7 +12,7 @@ import {
   fetchMeRankingCommentNative,
   saveMeRankingCommentNative,
 } from "./rankingCommentApiNative";
-import { CYBER_TAB_CYAN } from "./CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../ui/cyberSideMenuNative";
 
 type Props = {
   language: string;

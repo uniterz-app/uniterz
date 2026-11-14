@@ -29,7 +29,7 @@ import {
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import NbaLeagueStatsSeasonNavNative from "../NbaLeagueStatsSeasonNavNative";
 import { nbaLeagueStatsChrome } from "../stats/nbaStatsUiCopy";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 

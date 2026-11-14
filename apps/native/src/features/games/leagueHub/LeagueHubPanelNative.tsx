@@ -4,8 +4,8 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-nat
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
-  CYBER_TAB_CYAN,
 } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import {

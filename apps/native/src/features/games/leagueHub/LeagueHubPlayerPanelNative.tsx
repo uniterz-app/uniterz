@@ -20,7 +20,7 @@ import type {
   LeagueHubTopGame,
   NbaLeagueHubDoc,
 } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { useMyNbaFavoritesNative } from "../../profile/useMyNbaFavoritesNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";

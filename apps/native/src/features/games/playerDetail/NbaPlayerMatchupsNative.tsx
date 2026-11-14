@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { LeagueHubPlayerMatchup } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { useNbaLeagueHubNative } from "../leagueHub/useNbaLeagueHubNative";
 import { playerNameStyle, teamAbbr } from "../leagueHub/leagueHubUiNative";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 /** 順位ハブに載っている選手の、今季のマッチアップ。ハブにいない選手は出さない。 */

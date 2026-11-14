@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { LeagueHubLineup } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { useNbaLeagueHubNative } from "../leagueHub/useNbaLeagueHubNative";
 import { playerNameStyle } from "../leagueHub/leagueHubUiNative";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 
 const SIZES = [5, 4, 3, 2] as const;
