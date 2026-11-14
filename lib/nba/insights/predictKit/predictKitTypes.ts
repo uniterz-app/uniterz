@@ -77,8 +77,10 @@ export type ProInsightPredictKitRecord = {
   /** 得点王の候補 1 番手が得点王だった試合 / 候補を出した試合 */
   scorerGames: number;
   scorerHits: number;
-  /** 本番の採点が 20 試合たまるまでの代わり: 今季の終わった試合をその日までのデータだけで予想し直した成績 */
+  /** 今季の終わった試合をその日までのデータだけで予想し直した成績（検証）。本番の予想の結果を足すときは `liveGames` */
   basis?: "backtest";
+  /** 検証のあとに始まった試合で、本番の予想を採点して足した数（games に含む） */
+  liveGames?: number;
 };
 
 export const PREDICT_KIT_RECORD_MIN_GAMES = 20;
@@ -187,8 +189,40 @@ export function sanitizePredictKitRecord(raw: unknown): ProInsightPredictKitReco
         scorerGames: record.scorerGames,
         scorerHits: record.scorerHits,
         ...(rec.basis === "backtest" ? { basis: "backtest" as const } : {}),
+        ...(isNum(rec.liveGames) && rec.liveGames > 0 ? { liveGames: rec.liveGames } : {}),
       }
     : null;
+}
+
+type PredictKitResultRow = { p?: number; h?: number; s?: number; t?: number };
+
+/**
+ * 検証の成績（〜`kitBacktest.throughMs` に始まった試合）に、それより後に始まった試合の本番の採点を足す。
+ * 開始時刻 `t` の無い本番の行は検証と重なりうるので数えない。検証が無ければ本番だけ（20 試合から）。
+ */
+export function predictKitCombinedRecordOf(
+  results: Record<string, PredictKitResultRow> | null | undefined,
+  backtestRaw: unknown
+): ProInsightPredictKitRecord | null {
+  const backtest = predictKitBacktestRecordOf(backtestRaw);
+  const throughMs = (backtestRaw as { throughMs?: unknown } | null)?.throughMs;
+  if (!backtest || !isNum(throughMs)) return predictKitRecordOf(results) ?? backtest;
+  const rows = Object.values(results ?? {}).filter(
+    (r) => isNum(r?.p) && (r.h === 0 || r.h === 1) && isNum(r.t) && r.t > throughMs
+  );
+  if (rows.length === 0) return backtest;
+  const strong = rows.filter((r) => (r.p as number) >= PREDICT_KIT_RECORD_STRONG_PCT);
+  const scorer = rows.filter((r) => r.s === 0 || r.s === 1);
+  return {
+    games: backtest.games + rows.length,
+    hits: backtest.hits + rows.filter((r) => r.h === 1).length,
+    strongGames: backtest.strongGames + strong.length,
+    strongHits: backtest.strongHits + strong.filter((r) => r.h === 1).length,
+    scorerGames: backtest.scorerGames + scorer.length,
+    scorerHits: backtest.scorerHits + scorer.filter((r) => r.s === 1).length,
+    basis: "backtest",
+    liveGames: rows.length,
+  };
 }
 
 /** 検証スクリプトが保存した成績（`nbaPredictShadowMeta/{season}.kitBacktest`）。得点王が無ければ 0 */

@@ -104,7 +104,7 @@ export async function runPredictAudits(
     .where("season", "==", seasonKey)
     .where("startAtJst", ">=", Timestamp.fromMillis(nowMs - lookbackDays * 86_400_000))
     .where("startAtJst", "<", Timestamp.fromMillis(nowMs))
-    .select("status", "final", "homeScore", "awayScore", "leadingScorers")
+    .select("status", "final", "homeScore", "awayScore", "leadingScorers", "startAtJst")
     .get();
   const finished = snap.docs.filter((d) => {
     const g = d.data();
@@ -156,6 +156,7 @@ export async function runPredictAudits(
         p: kit.winPct,
         h: kitScore.pickedRight ? 1 : 0,
         ...(scorer ? { s: scorer.hit ? (1 as const) : (0 as const) } : {}),
+        ...(g.startAtJst instanceof Timestamp ? { t: g.startAtJst.toMillis() } : {}),
       };
     }
     const audit: PredictAudit = {

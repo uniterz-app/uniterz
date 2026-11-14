@@ -13,8 +13,7 @@ import { restDaysBetweenGameDates } from "@/lib/nba/matchupDifficulty/features";
 import { gameProInsightRef } from "@/lib/nba/insights/gameProInsightStore";
 import { buildPredictKit, type PredictKitSeasonState } from "@/lib/nba/insights/predictKit/predictKit";
 import {
-  predictKitBacktestRecordOf,
-  predictKitRecordOf,
+  predictKitCombinedRecordOf,
   toProInsightPredictKit,
   type ProInsightPredictKit,
 } from "@/lib/nba/insights/predictKit/predictKitTypes";
@@ -69,8 +68,8 @@ export type PredictShadowMeta = {
   simShockSd?: number;
   /** 前回計算したときの、対象チームの欠場状況の指紋 */
   predictKitInjuryKey?: string;
-  /** 採点した試合ごとの本番の予想の材料の結果（p = 有利側の勝つ確率 %・h = 有利側が勝った・s = 得点王の 1 番手が当たった） */
-  kitResults?: Record<string, { p: number; h: 0 | 1; s?: 0 | 1 }>;
+  /** 採点した試合ごとの本番の予想の材料の結果（p = 有利側の勝つ確率 %・h = 有利側が勝った・s = 得点王の 1 番手が当たった・t = 試合開始 ms） */
+  kitResults?: Record<string, { p: number; h: 0 | 1; s?: 0 | 1; t?: number }>;
 };
 
 export type RefreshPredictKitsResult = {
@@ -228,9 +227,7 @@ export async function refreshPredictKits(
     loadNbaSimContext(db, seasonKey),
     db.getAll(metaRef, { fieldMask: ["kitResults", "kitBacktest"] }),
   ]);
-  const record =
-    predictKitRecordOf(recordSnap[0]?.get("kitResults")) ??
-    predictKitBacktestRecordOf(recordSnap[0]?.get("kitBacktest"));
+  const record = predictKitCombinedRecordOf(recordSnap[0]?.get("kitResults"), recordSnap[0]?.get("kitBacktest"));
   const scorerPlayers = await loadPredictKitScorerPlayers(
     db,
     seasonKey,
