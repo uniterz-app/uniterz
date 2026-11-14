@@ -19,7 +19,6 @@ import {
   resolveLocalizedLang,
 } from "../../../../../lib/i18n/localize";
 import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
-import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
 import { BlocksPulseLoader } from "../../components/BlocksPulseLoader";
 import { colors, spacing, typography } from "../../theme/tokens";
 import { getTeamAlias, splitTeamNameByLeague } from "../../utils/teamName";
@@ -155,20 +154,17 @@ function ResultDayHeader({
   entranceActive,
   sectionStaggerIndex,
   leadGap = false,
-  showPoints = true,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
   /** 同じ日の PICK UP だけ。null は対象試合なし */
   pickupPoints: NativeDayPointsHeader;
-  /** Pro は ALL と PICK UP の2行 */
+  /** ALL と PICK UP の2行 */
   splitByPickup: boolean;
   entranceActive: boolean;
   sectionStaggerIndex: number;
   /** 前セクションの最終カードとの間（SectionSeparator の代わり） */
   leadGap?: boolean;
-  /** Pro 以外は日付だけ。合計点は出さない */
-  showPoints?: boolean;
 }) {
   const screenWidth = useWindowDimensions().width;
   return (
@@ -188,7 +184,6 @@ function ResultDayHeader({
         entranceActive={entranceActive}
         sectionStaggerIndex={sectionStaggerIndex}
         linesToScreenEdge
-        showPoints={showPoints}
       />
     </View>
   );
@@ -236,7 +231,6 @@ export default function ResultHomeScreen({
   const { language } = useNativeUserLanguageFromAuth();
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
-  const { isPro } = useNativeUserPlan(uid);
 
   const t = useMemo(() => {
     const lang = resolveLocalizedLang(language);
@@ -331,9 +325,9 @@ export default function ResultHomeScreen({
     return () => clearInterval(id);
   }, [hasPendingSettlement, listTickActive]);
 
-  /** カードは全員、予想した分を出す。Pro だけ PICK UP に絞れる */
+  /** カードは予想した分を全部出し、PICK UP に絞れる（Free / Pro 共通） */
   const [pickupOnly, setPickupOnly] = useState(false);
-  const restrictToPickup = isPro && pickupOnly;
+  const restrictToPickup = pickupOnly;
   /** 絞り込み列が画面外に出たら、下に同じボタンを出す */
   const [quickActionsPinned, setQuickActionsPinned] = useState(false);
 
@@ -662,7 +656,7 @@ export default function ResultHomeScreen({
       jumpAccessibilityLabel={quickActionCopy.jumpA11y}
       jumpDisabled={todaySectionIndex < 0}
       onJump={jumpToTodayBottom}
-      showPickupToggle={isPro}
+      showPickupToggle
       pickupActive={pickupOnly}
       pickupAccessibilityLabel={quickActionCopy.pickupA11y}
       onTogglePickup={() => setPickupOnly((on) => !on)}
@@ -818,26 +812,17 @@ export default function ResultHomeScreen({
             return (
               <ResultDayHeader
                 dateLabel={section.dateLabel}
-                dayPoints={
-                  isPro
-                    ? dayPointsHeaderForNative(
-                        section.summaryFinal,
-                        section.summaryPending,
-                        language
-                      )
-                    : dayPointsHeaderForNative(
-                        section.summaryFinal.filter(resultListPostIsPickup),
-                        section.summaryPending.filter(resultListPostIsPickup),
-                        language
-                      )
-                }
+                dayPoints={dayPointsHeaderForNative(
+                  section.summaryFinal,
+                  section.summaryPending,
+                  language
+                )}
                 pickupPoints={dayPointsHeaderForNative(
                   section.summaryFinal.filter(resultListPostIsPickup),
                   section.summaryPending.filter(resultListPostIsPickup),
                   language
                 )}
-                splitByPickup={isPro}
-                showPoints={isPro}
+                splitByPickup
                 entranceActive={
                   entranceArmed && isInitialHeader
                 }
@@ -892,7 +877,7 @@ export default function ResultHomeScreen({
               jumpAccessibilityLabel={quickActionCopy.jumpA11y}
               jumpDisabled={todaySectionIndex < 0}
               onJump={jumpToTodayBottom}
-              showPickupToggle={isPro}
+              showPickupToggle
               pickupActive={pickupOnly}
               pickupAccessibilityLabel={quickActionCopy.pickupA11y}
               onTogglePickup={() => setPickupOnly((on) => !on)}
