@@ -99,6 +99,7 @@ import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { RankingsDivisionTabsNative } from "./RankingsDivisionTabsNative";
 import { RankingsProLeagueTeaserNative } from "./RankingsProLeagueTeaserNative";
 import RankingCommentEditorNative from "./RankingCommentEditorNative";
+import { useTrackViewNative } from "../../analytics/useTrackViewNative";
 import {
   divisionFromNbaBoard,
   type NbaRankingBoard,
@@ -205,6 +206,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     (user.plan !== "pro" ||
       openSeasonBulk.proRequired ||
       periodBulk.proRequired);
+
+  const analyticsView =
+    category === "bracket"
+      ? { title: "Rankings: Bracket", path: "rankings/bracket" }
+      : nbaBoard === "playoffs"
+        ? { title: "Rankings: Playoffs", path: "rankings/playoffs" }
+        : nbaBoard === "open"
+          ? openProLocked
+            ? { title: "Rankings: PRO LEAGUE (Locked)", path: "rankings/pro-league-locked" }
+            : { title: "Rankings: PRO LEAGUE", path: "rankings/pro-league" }
+          : { title: "Rankings: PICK UP", path: "rankings/pick-up" };
+  useTrackViewNative(analyticsView.title, analyticsView.path);
 
   /**
    * Ranking Progress（日次順位推移）。

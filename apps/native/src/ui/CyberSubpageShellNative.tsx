@@ -80,7 +80,7 @@ function CyberHelpPanelNative({
 }
 
 /** Web `CyberHelpOverlay` 相当 */
-function CyberHelpOverlayNative({
+export function CyberHelpOverlayNative({
   open,
   text,
   onClose,

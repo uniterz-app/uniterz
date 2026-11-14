@@ -67,6 +67,7 @@ import MonthlyBadgeUnlockLaunchHostNative from "../features/profile/MonthlyBadge
 import StoreReviewLaunchHostNative from "../features/games/StoreReviewLaunchHostNative";
 import UnitEarnLaunchHostNative from "../features/units/UnitEarnLaunchHostNative";
 import SeasonPredictCrowdLaunchHostNative from "../features/games/predict/season/SeasonPredictCrowdLaunchHostNative";
+import AppAnalyticsUserHostNative from "../analytics/AppAnalyticsUserHostNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -230,6 +231,7 @@ export default function MainTabNavigator() {
   return (
     <>
       <ProfileStatsPrefetchHost />
+      <AppAnalyticsUserHostNative />
       <NativePushNotificationsHost />
       <SquadBattleLaunchPromptHostNative />
       <UnitEarnLaunchHostNative />

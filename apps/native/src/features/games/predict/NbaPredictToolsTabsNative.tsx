@@ -44,6 +44,10 @@ import { proInsightPreseasonNotice } from "../../../../../../lib/predict/proInsi
 import type { Language } from "../../../../../../lib/i18n/language";
 import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import { useProInsightUnreadNative } from "./useProInsightUnreadNative";
+import {
+  predictAnalyticsPath,
+  trackPageViewNative,
+} from "../../../analytics/appAnalyticsNative";
 
 export type NbaPredictToolsTab = "insight" | "info" | "trend";
 
@@ -146,6 +150,12 @@ export default function NbaPredictToolsTabsNative({
     }
     if (next === "insight" && tab !== "insight" && gameId) {
       trackProFunnelNative("insight_open", { gameId, pro: isPro });
+    }
+    if (next !== tab) {
+      trackPageViewNative(
+        `Predict: ${next.toUpperCase()}`,
+        predictAnalyticsPath(gameId, awayTeamName, homeTeamName, next)
+      );
     }
     setTab((cur) => (cur === next ? null : next));
     setVisited((cur) => (cur.has(next) ? cur : new Set(cur).add(next)));

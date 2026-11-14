@@ -1,6 +1,8 @@
 /** Team Detail（Games スタック · STATS/順位表/予想から） */
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
 import NbaTeamDetailPanelNative from "./NbaTeamDetailPanelNative";
+import { useTrackViewNative } from "../../../analytics/useTrackViewNative";
+import { analyticsSlug } from "../../../analytics/appAnalyticsNative";
 
 type Props = {
   language: "ja" | "en";
@@ -18,6 +20,10 @@ export default function TeamDetailPreviewScreenNative({
   onSelectTeam,
 }: Props) {
   const isJa = language === "ja";
+  useTrackViewNative(
+    teamId ? "Team Detail" : null,
+    `team/${analyticsSlug((teamId ?? "").replace(/^nba-/, ""))}`
+  );
   return (
     <MobilePageShell
       title={isJa ? "Team Detail" : "Team Detail"}

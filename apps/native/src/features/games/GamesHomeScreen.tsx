@@ -146,6 +146,8 @@ import {
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
 import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
+import { useTrackViewNative } from "../../analytics/useTrackViewNative";
+import { predictAnalyticsPath } from "../../analytics/appAnalyticsNative";
 import { requestPushPermissionPrimerAfterPredict } from "../../notifications/requestPushPermissionPrimerNative";
 import {
   GameCardListEmpty,
@@ -1439,6 +1441,9 @@ export default function GamesHomeScreen({
         wcStage: typeof g.wcStage === "string" ? g.wcStage : null,
       }),
       season: typeof g.season === "string" ? g.season : WC_DEFAULT_SEASON,
+      pickup: isNbaPickupGame(
+        g as { isPickup?: unknown; pickupWeekKey?: unknown }
+      ),
     };
   }, [selectedGame, language, formatSideRecord, peerGamesForSeries, scorePrefs]);
   const formatGameDateMs = useCallback(
@@ -1634,6 +1639,15 @@ export default function GamesHomeScreen({
     );
     return toCompactTeamName(selectedGame.league, awayName);
   }, [selectedGame]);
+
+  useTrackViewNative(
+    isPredictModalOpen ? "Predict" : null,
+    predictAnalyticsPath(
+      selectedGame?.id,
+      predictModalAwayLabel,
+      predictModalHomeLabel
+    )
+  );
 
   const nextGameAfterPostDisplay = useMemo(() => {
     if (!nextGameAfterPost) return null;

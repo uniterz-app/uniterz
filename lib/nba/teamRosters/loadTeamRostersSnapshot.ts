@@ -4,6 +4,7 @@ import {
   previousNbaSeasonKey,
 } from "@/lib/rankings/nbaSeason";
 import {
+  clearPriorSeasonGamesPlayed,
   mergePriorAveragesOntoRosterTeams,
   rosterBundleHasSeasonAverages,
 } from "./applyPriorSeasonRosterAverages";
@@ -48,7 +49,7 @@ function resolveTeam(
         ? row.teamId.trim()
         : teamId,
     teamName,
-    players: row.players,
+    players: row.players.map((player) => clearPriorSeasonGamesPlayed(player)),
   };
 }
 

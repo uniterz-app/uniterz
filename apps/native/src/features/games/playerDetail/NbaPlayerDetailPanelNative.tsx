@@ -111,6 +111,8 @@ import type { LeagueHubZoneBoard } from "../../../../../../lib/nba/leagueHub/lea
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
+import { useTrackViewNative } from "../../../analytics/useTrackViewNative";
+import { analyticsSlug } from "../../../analytics/appAnalyticsNative";
 import { buildPlayerDetailInsights } from "../../../../../../lib/nba/detailInsights/buildPlayerDetailInsights";
 import { useNbaTeamRosterSlice } from "../../../../../../lib/nba/detailInsights/useNbaTeamRosterSlice";
 import {
@@ -142,6 +144,8 @@ type Props = {
   playerId?: string;
   /** Profile DEV メニュー用。Firestore 空でもシードで SHOT CHART 等を表示 */
   useDevMock?: boolean;
+  /** 選手詳細の画面として GA4 に記録する（ASK に埋め込むときは付けない） */
+  trackPageView?: boolean;
 };
 
 const OXANIUM = "Oxanium_800ExtraBold";
@@ -1483,6 +1487,7 @@ export default function NbaPlayerDetailPanelNative({
   language,
   playerId,
   useDevMock = false,
+  trackPageView = false,
 }: Props) {
   const chrome = nbaPlayerDetailChrome(language);
   const isJa = chrome.catalogJa;
@@ -1503,13 +1508,21 @@ export default function NbaPlayerDetailPanelNative({
         : getNbaPlayerDetailPreview(playerId),
     [playerId, useDevMock]
   );
-  const { detail, discipline, hasFetchError } = useNbaPlayerDetailLiveOverlay({
-    playerId,
-    apiBaseUrl,
-    base,
-    leaders,
-    skipLiveFetch: useDevMock,
-  });
+  const { detail, discipline, hasFetchError, loading: detailLoading } =
+    useNbaPlayerDetailLiveOverlay({
+      playerId,
+      apiBaseUrl,
+      base,
+      leaders,
+      skipLiveFetch: useDevMock,
+    });
+  const analyticsName = analyticsSlug(
+    formatNbaPlayerDisplayName(detail.firstName, detail.lastName, detail.playerId)
+  );
+  useTrackViewNative(
+    trackPageView && playerId && !detailLoading ? "Player Detail" : null,
+    `player/${playerId ?? ""}${analyticsName ? `-${analyticsName}` : ""}`
+  );
   const { players: teammates } = useNbaTeamRosterSlice({
     teamId: detail.teamId,
     apiBaseUrl,

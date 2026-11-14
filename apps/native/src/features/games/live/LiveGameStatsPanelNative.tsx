@@ -175,11 +175,10 @@ export default function LiveGameStatsPanelNative({
 
 const styles = StyleSheet.create({
   root: { gap: 16 },
-  /** 斜め先端と光がスクロール端で切れないよう、タブ列だけ内側に収める */
+  /** 上の得点枠と同じ横幅。斜めの光は縦だけ避ける */
   tabShell: {
     alignSelf: "stretch",
     overflow: "visible",
-    paddingHorizontal: 20,
     paddingVertical: 6,
   },
   section: { gap: 10 },

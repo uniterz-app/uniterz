@@ -1,6 +1,8 @@
 /** Web `ResultDayPipeGroup` の日付帯（日付 / hit / 合計 pt）相当 */
 import { Platform, StyleSheet, Text, View } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
+import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
+import { MATCH_LINE_FRAME_GOLD } from "../../../../../lib/games/matchListLineFrame";
 import type { NativeDayPointsHeader } from "./nativeResultDaySummary";
 import { dayStripNumberText, resultDayStripPanelNative } from "./resultMobileUiNative";
 import { useResultDayHeaderEntrance } from "./useResultHomeEntrance";
@@ -12,6 +14,8 @@ export default function ResultDayStripNative({
   splitByPickup = false,
   entranceActive = false,
   sectionStaggerIndex = 0,
+  linesToScreenEdge = false,
+  showPoints = true,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
@@ -21,6 +25,10 @@ export default function ResultDayStripNative({
   splitByPickup?: boolean;
   entranceActive?: boolean;
   sectionStaggerIndex?: number;
+  /** 日付を画面中央に置き、両側の線を画面端まで伸ばす */
+  linesToScreenEdge?: boolean;
+  /** false のとき日付だけ。合計点は出さない */
+  showPoints?: boolean;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const { clipStyle, dateClusterStyle, rightClusterStyle } = useResultDayHeaderEntrance(
@@ -28,62 +36,60 @@ export default function ResultDayStripNative({
     reduceMotion,
     sectionStaggerIndex
   );
+  const stats = !showPoints ? null : splitByPickup ? (
+          <Animated.View style={[styles.splitTrack, rightClusterStyle]}>
+            <DaySplitCell label="ALL" points={dayPoints} />
+            <View style={styles.splitRule} />
+            <DaySplitCell label="PICK UP" points={pickupPoints} />
+          </Animated.View>
+        ) : dayPoints?.variant === "total" ? (
+          <Animated.View style={[styles.statsRow, rightClusterStyle]}>
+            {typeof dayPoints.hitTotal === "number" && dayPoints.hitTotal > 0 ? (
+              <View style={styles.dayHitWrap}>
+                <Text style={styles.dayHitLabel}>hit</Text>
+                <Text style={styles.dayHitNums}>
+                  {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.dayTotalWrap}>
+              <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
+              <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
+              <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
+            </View>
+          </Animated.View>
+        ) : dayPoints?.variant === "pending" ? (
+          <Animated.View style={[styles.pendingRow, rightClusterStyle]}>
+            <View style={styles.pendingPill}>
+              <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
+            </View>
+          </Animated.View>
+        ) : null;
+
+  const dateRow = (
+    <View style={styles.cutRow}>
+      <View style={styles.cutLine} />
+      <Animated.View style={dateClusterStyle}>
+        <Text style={styles.cutDate}>{dateLabel}</Text>
+      </Animated.View>
+      <View style={styles.cutLine} />
+    </View>
+  );
+
+  if (linesToScreenEdge) {
+    return (
+      <Animated.View style={[styles.screenBand, clipStyle]}>
+        {dateRow}
+        <View style={resultDayStripPanelNative.outer}>{stats}</View>
+      </Animated.View>
+    );
+  }
+
   return (
     <View style={resultDayStripPanelNative.outer}>
-      <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
-        <View style={resultDayStripPanelNative.row}>
-          <Animated.View
-            style={[
-              splitByPickup ? styles.splitDateCol : resultDayStripPanelNative.dateCol,
-              dateClusterStyle,
-            ]}
-          >
-            <Text
-              style={[
-                resultDayStripPanelNative.date,
-                splitByPickup ? styles.splitDate : null,
-              ]}
-            >
-              {dateLabel}
-            </Text>
-          </Animated.View>
-          {splitByPickup ? (
-            <Animated.View style={[styles.splitTrack, rightClusterStyle]}>
-              <DaySplitCell label="ALL" points={dayPoints} />
-              <View style={styles.splitRule} />
-              <DaySplitCell label="PICK UP" points={pickupPoints} />
-            </Animated.View>
-          ) : dayPoints?.variant === "total" ? (
-            <>
-              <Animated.View style={[resultDayStripPanelNative.hitCol, rightClusterStyle]}>
-                {typeof dayPoints.hitTotal === "number" && dayPoints.hitTotal > 0 ? (
-                  <View style={styles.dayHitWrap}>
-                    <Text style={styles.dayHitLabel}>hit</Text>
-                    <Text style={styles.dayHitNums}>
-                      {dayPoints.hitWins ?? 0}/{dayPoints.hitTotal}
-                    </Text>
-                  </View>
-                ) : null}
-              </Animated.View>
-              <Animated.View style={[resultDayStripPanelNative.totalCol, rightClusterStyle]}>
-                <View style={styles.dayTotalWrap}>
-                  <Text style={styles.dayTotalPrefix}>{dayPoints.prefix}</Text>
-                  <Text style={styles.dayTotalValue}>{dayPoints.value}</Text>
-                  <Text style={styles.dayTotalUnit}>{dayPoints.unit}</Text>
-                </View>
-              </Animated.View>
-            </>
-          ) : dayPoints?.variant === "pending" ? (
-            <>
-              <View style={resultDayStripPanelNative.divider} />
-              <Animated.View style={[resultDayStripPanelNative.rightCol, rightClusterStyle]}>
-                <View style={styles.pendingPill}>
-                  <Text style={styles.pendingPillText}>{dayPoints.line}</Text>
-                </View>
-              </Animated.View>
-            </>
-          ) : null}
-        </View>
+      <Animated.View style={[resultDayStripPanelNative.panel, styles.panelOpen, clipStyle]}>
+        {dateRow}
+        {stats}
       </Animated.View>
     </View>
   );
@@ -123,30 +129,64 @@ function DaySplitCell({
 }
 
 const styles = StyleSheet.create({
-  splitDateCol: {
-    justifyContent: "center",
-    alignItems: "flex-start",
-    paddingLeft: 12,
-    paddingRight: 6,
-    paddingVertical: 6,
+  screenBand: {
+    width: "100%",
+    overflow: "visible",
   },
-  splitDate: {
-    fontSize: 13,
-    lineHeight: 15,
-    letterSpacing: -0.3,
+  panelOpen: {
+    overflow: "visible",
+  },
+  cutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 28,
+  },
+  /** カード上辺の REGULAR SEASON と同じ Oxanium。斜体のスコア書体は使わない */
+  cutDate: {
+    flexShrink: 0,
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontWeight: "700",
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: 0.8,
+    includeFontPadding: false,
+    fontVariant: ["tabular-nums"],
+    color: MATCH_LINE_FRAME_GOLD,
+  },
+  /** 一覧の金枠・白数字・シアンに無い色。スクロール中の境 */
+  cutLine: {
+    flex: 1,
+    height: 4,
+    backgroundColor: "#C8FF3D",
   },
   splitTrack: {
-    flex: 1,
+    alignSelf: "stretch",
     minWidth: 0,
     justifyContent: "center",
-    paddingRight: 12,
-    paddingVertical: 5,
+    paddingTop: 6,
+    paddingBottom: 2,
     gap: 3,
   },
   splitRule: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(255,255,255,0.12)",
     marginLeft: 72,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "flex-end",
+    gap: 14,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  pendingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingTop: 6,
+    paddingBottom: 2,
   },
   splitCell: {
     minHeight: 20,

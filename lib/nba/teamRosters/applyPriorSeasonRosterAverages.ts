@@ -21,6 +21,20 @@ export function rosterBundleHasSeasonAverages(
   return false;
 }
 
+/** 前季平均を載せた行の GP は今季出場数ではないので 0 に戻す（既存スナップショット用） */
+export function clearPriorSeasonGamesPlayed<T extends { gp?: number; averagesSeasonKey?: string }>(
+  player: T
+): T {
+  if (
+    typeof player.averagesSeasonKey === "string" &&
+    player.averagesSeasonKey.trim() &&
+    (player.gp ?? 0) !== 0
+  ) {
+    return { ...player, gp: 0 };
+  }
+  return player;
+}
+
 function mergePlayerAverages(
   current: NbaRosterPlayer,
   prior: NbaRosterPlayer | undefined,
@@ -31,7 +45,7 @@ function mergePlayerAverages(
   return {
     ...current,
     averagesSeasonKey: priorAveragesSeasonKey,
-    gp: prior.gp,
+    // GP は今季の出場数のまま（未出場は 0）。前季の試合数を載せると今季の GP に見える
     mpg: prior.mpg,
     ppg: prior.ppg,
     rpg: prior.rpg ?? current.rpg,

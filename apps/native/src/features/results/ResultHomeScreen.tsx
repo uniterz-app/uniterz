@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Platform, RefreshControl, SectionList, StyleSheet, Text, View, type ViewStyle,
+  Platform, RefreshControl, SectionList, StyleSheet, Text, useWindowDimensions, View, type ViewStyle,
   type RefreshControlProps,
 } from "react-native";
 import { useNavigation, useFocusEffect, useRoute, useIsFocused } from "@react-navigation/native";
@@ -66,10 +66,11 @@ import {
   DISPLAY_FONT,
   MOBILE_RESULT_CARD_GAP,
   MOBILE_RESULT_CARD_MAX_W,
+  MOBILE_RESULT_DAY_BREAK_GAP,
   MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   MOBILE_RESULT_JERSEY_SIZE,
   MOBILE_RESULT_MATCH_SIDE_SCORE_PAD,
-  MOBILE_RESULT_PAGE_PAD_X,
+  MOBILE_RESULT_LIST_PAD_X,
   MOBILE_RESULT_SECTION_GAP,
   MOBILE_RESULT_STAT_LABEL_W,
   MOBILE_RESULT_STAT_ROW_GAP,
@@ -154,24 +155,29 @@ function ResultDayHeader({
   entranceActive,
   sectionStaggerIndex,
   leadGap = false,
+  showPoints = true,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
   /** 同じ日の PICK UP だけ。null は対象試合なし */
   pickupPoints: NativeDayPointsHeader;
-  /** Pro は ALL と PICK UP の2行。Free は PICK UP の1行 */
+  /** Pro は ALL と PICK UP の2行 */
   splitByPickup: boolean;
   entranceActive: boolean;
   sectionStaggerIndex: number;
   /** 前セクションの最終カードとの間（SectionSeparator の代わり） */
   leadGap?: boolean;
+  /** Pro 以外は日付だけ。合計点は出さない */
+  showPoints?: boolean;
 }) {
+  const screenWidth = useWindowDimensions().width;
   return (
     <View
       style={[
-        styles.listRowOuter,
+        styles.dayHeaderBleed,
         styles.dayHeaderSpacing,
         leadGap ? styles.dayHeaderLeadGap : null,
+        { width: screenWidth, marginLeft: -MOBILE_RESULT_LIST_PAD_X },
       ]}
     >
       <ResultDayStripNative
@@ -181,6 +187,8 @@ function ResultDayHeader({
         splitByPickup={splitByPickup}
         entranceActive={entranceActive}
         sectionStaggerIndex={sectionStaggerIndex}
+        linesToScreenEdge
+        showPoints={showPoints}
       />
     </View>
   );
@@ -323,9 +331,9 @@ export default function ResultHomeScreen({
     return () => clearInterval(id);
   }, [hasPendingSettlement, listTickActive]);
 
-  /** Pro だけ ALL を混ぜて見られる。Free は PICK UP 固定 */
+  /** カードは全員、予想した分を出す。Pro だけ PICK UP に絞れる */
   const [pickupOnly, setPickupOnly] = useState(false);
-  const restrictToPickup = !isPro || pickupOnly;
+  const restrictToPickup = isPro && pickupOnly;
   /** 絞り込み列が画面外に出たら、下に同じボタンを出す */
   const [quickActionsPinned, setQuickActionsPinned] = useState(false);
 
@@ -829,6 +837,7 @@ export default function ResultHomeScreen({
                   language
                 )}
                 splitByPickup={isPro}
+                showPoints={isPro}
                 entranceActive={
                   entranceArmed && isInitialHeader
                 }
@@ -1021,11 +1030,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 30,
-    paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
+    paddingHorizontal: MOBILE_RESULT_LIST_PAD_X,
   },
   listContent: {
     /** Web `/mobile/result` の px-[18px]（親 mainArea xs=8 を差し引く） */
-    paddingHorizontal: Math.max(0, MOBILE_RESULT_PAGE_PAD_X - spacing.xs),
+    paddingHorizontal: MOBILE_RESULT_LIST_PAD_X,
     flexGrow: 1,
   },
   headerBlock: {
@@ -1066,11 +1075,16 @@ const styles = StyleSheet.create({
   sectionGap: {
     height: MOBILE_RESULT_SECTION_GAP,
   },
+  /** 日付の線だけ画面端まで。幅は一覧の余白を打ち消して画面幅にする */
+  dayHeaderBleed: {
+    alignSelf: "flex-start",
+    overflow: "visible",
+  },
   dayHeaderSpacing: {
     marginBottom: MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
   },
   dayHeaderLeadGap: {
-    marginTop: MOBILE_RESULT_DAY_HEADER_TO_CARD_GAP,
+    marginTop: MOBILE_RESULT_DAY_BREAK_GAP,
   },
   dayHeaderClip: {
     position: "relative",

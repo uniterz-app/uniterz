@@ -56,7 +56,9 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "993533705061",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:993533705061:web:378b74b68db05441b77f8c",
         "EXPO_PUBLIC_APP_URL": "https://uniterz.app",
-        "EXPO_PUBLIC_UNITERZ_API_BASE_URL": "https://www.uniterz.app"
+        "EXPO_PUBLIC_UNITERZ_API_BASE_URL": "https://www.uniterz.app",
+        "EXPO_PUBLIC_GA4_MEASUREMENT_ID": "G-Y0KLCCS94C",
+        "EXPO_PUBLIC_GA4_API_SECRET": "FESgAJASQMmfByXoTPex4A"
       }
     }
   },

@@ -28,6 +28,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import { navigationRef } from "./src/navigation/navigationRef";
 import { useNativeShareDeepLinks } from "./src/navigation/useNativeShareDeepLinks";
 import { flushPendingShareDeepLink } from "./src/navigation/shareDeepLinkNative";
+import { trackNavigationStateNative } from "./src/analytics/trackNavigationNative";
 import AppShellNative from "./src/components/AppShellNative";
 import TutorialRestartCoverNative from "./src/features/tutorial/TutorialRestartCoverNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
@@ -98,7 +99,11 @@ export default function App() {
           <AppShellNative>
             <NavigationContainer
               ref={navigationRef}
-              onReady={flushPendingShareDeepLink}
+              onReady={() => {
+                flushPendingShareDeepLink();
+                trackNavigationStateNative();
+              }}
+              onStateChange={trackNavigationStateNative}
               theme={{
                 dark: !isLightAppTheme(),
                 colors: {
