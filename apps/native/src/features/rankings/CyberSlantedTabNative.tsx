@@ -21,6 +21,7 @@ import {
   rankingFontSizePx,
 } from "../../../../../lib/rankings/rankingJaTextSize";
 import { METRIC_FONT } from "./rankingsUiTheme";
+import { isLightAppTheme, themeColor } from "../../theme/themeColorRuntime";
 import tabMeta from "../../../assets/cyber-slanted-tab/meta.json";
 
 export const CYBER_TAB_CYAN = "#00F5FF";
@@ -89,15 +90,24 @@ function chromeImageHeight(bodyH: number): number {
   return bodyH + GLOW_PAD * 2;
 }
 
+/**
+ * このファイルは色の自動置き換え（babel）の対象外。白地では素のネオン色の非選択文字・枠が
+ * 背景に溶けるので、焼き込みのある素の色だけ白地用に写す（呼び出し元で置き換え済みの色は二重に写さない）。
+ */
+function inactiveInk(color: string): string {
+  if (!isLightAppTheme()) return color;
+  return BAKED_ACTIVE_BY_ACCENT[color.toUpperCase()] ? themeColor(color) : color;
+}
+
 function resolveTabTheme(theme?: CyberSlantedTabThemeNative) {
   const accent = theme?.accent ?? CYBER_TAB_CYAN;
   const bakedSource =
     BAKED_ACTIVE_BY_ACCENT[accent.toUpperCase()] ?? null;
   return {
     accent,
-    inactiveText: theme?.inactiveText ?? accent,
+    inactiveText: inactiveInk(theme?.inactiveText ?? accent),
     activeText: theme?.activeText ?? TAB_ACTIVE_TEXT,
-    inactiveBorder: theme?.inactiveBorder ?? accent,
+    inactiveBorder: inactiveInk(theme?.inactiveBorder ?? accent),
     /** 焼き込みがある色は Pick Up と同寸の光。無い色だけ runtime shadow */
     bakedActiveSource: bakedSource,
   };

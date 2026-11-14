@@ -13,7 +13,7 @@ import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { resolveStaticNbaH2hRows } from "../nbaStaticH2hFallback";
 import { listFinalH2hGamesFromPeers, type PeerH2hLine } from "../peerH2hGames";
 import type { NativeGameRow } from "../useTodayGames";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { MATCH_CARD_METRIC_FONT } from "../matchCardTypography";
 
 /** STATS タブ LAST 5 と同じ勝敗色 */

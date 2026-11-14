@@ -44,10 +44,10 @@ import type {
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { resolveTeamJerseyPalette } from "../teamColors";
 import {
-  CYBER_TAB_CYAN,
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";

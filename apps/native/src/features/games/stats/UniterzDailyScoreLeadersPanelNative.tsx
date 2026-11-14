@@ -10,10 +10,10 @@ import {
   View,
 } from "react-native";
 import {
-  CYBER_TAB_CYAN,
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { RankingsProLeagueTeaserNative } from "../../rankings/RankingsProLeagueTeaserNative";
 import RankingCommentEditorNative from "../../rankings/RankingCommentEditorNative";
 import RankingRowCommentNative from "../../rankings/RankingRowCommentNative";

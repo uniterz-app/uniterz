@@ -1,7 +1,7 @@
 /** スタイルマップの 2 人比較。今季スタッツを左右に並べ、上回った側にその選手のチームカラーの斜め帯 */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { LeagueHubPlayer } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import HubShareSectionNative, { useHubCapturing } from "./HubShareSectionNative";
 import { HubTeamTag, playerNameStyle, teamInk, type HubLang } from "./leagueHubUiNative";
