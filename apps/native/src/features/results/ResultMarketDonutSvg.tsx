@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, Platform, StyleSheet, UIManager, View } from "react-native";
 import { BlurView } from "expo-blur";
+import { themePick } from "../../theme/themeColorRuntime";
 import Svg, {
   Circle,
   Defs,
@@ -213,14 +214,14 @@ export default function ResultMarketDonutSvg({
           <BlurView
             pointerEvents="none"
             intensity={22}
-            tint="dark"
+            tint={themePick("dark", "light")}
             style={[styles.donutGlassBlur, { width: size, height: size, borderRadius: size / 2 }]}
           />
         ) : (
           <BlurView
             pointerEvents="none"
             intensity={18}
-            tint="dark"
+            tint={themePick("dark", "light")}
             experimentalBlurMethod="dimezisBlurView"
             style={[styles.donutGlassBlur, { width: size, height: size, borderRadius: size / 2 }]}
           />
