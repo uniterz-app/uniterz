@@ -5,7 +5,11 @@
 
 import { toDateOrNull } from "@/lib/games/transform";
 
-export const GAMES_WINDOW_LIVE_REFRESH_MS = 60_000;
+/**
+ * 開始済み・未終了があるときだけ live-cards を取り直す間隔。
+ * 非ライブ時はポーリングしない（wakeAtMs で tip まで待つだけ）。
+ */
+export const GAMES_WINDOW_LIVE_REFRESH_MS = 90_000;
 /** 開始からこの時間を過ぎても final にならない行は放置データとみなし更新しない */
 const LIVE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 /** 次の試合開始までの待機上限（これより先は再判定しない） */
@@ -23,7 +27,7 @@ function isSkippedRow(row: Record<string, unknown>): boolean {
 }
 
 export type GamesWindowLiveRefreshPlan = {
-  /** いま 60 秒ポーリングすべきか */
+  /** いま live-cards をポーリングすべきか（非ライブは false） */
   active: boolean;
   /** active でないとき、次に再判定する時刻（ms）。null は待たない */
   wakeAtMs: number | null;

@@ -184,7 +184,7 @@ export function useGameDays(
     };
   }, [fetchDepsKey]);
 
-  /** 開始済み・未終了の試合がある間だけ、その試合のスコアだけ 60 秒ごとに足す */
+  /** 開始済み・未終了がある間だけ live-cards を足す（非ライブはポーリングしない） */
   const [liveWakeTick, setLiveWakeTick] = useState(0);
   const rowsRef = useRef(rows);
   const peerRowsRef = useRef(peerRowsForSeriesInference);
