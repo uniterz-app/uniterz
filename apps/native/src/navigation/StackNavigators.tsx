@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import GamesHomeScreen from "../features/games/GamesHomeScreen";
 import ResultHomeScreen from "../features/results/ResultHomeScreen";
 import RankingsHomeScreen from "../features/rankings/RankingsHomeScreen";
+import RankingsScreenBoundaryNative from "../features/rankings/RankingsScreenBoundaryNative";
 import LeaderboardsHomeScreen from "../features/leaderboards/LeaderboardsHomeScreen";
 import ProfileHomeScreen from "../features/profile/ProfileHomeScreen";
 import type {
@@ -243,7 +244,11 @@ function RankingsStackScreen() {
     <NativeStackBackdrop>
       <RankingsStack.Navigator screenOptions={stackOptions}>
         <RankingsStack.Screen name="RankingsHome">
-          {() => <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />}
+          {() => (
+            <RankingsScreenBoundaryNative>
+              <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />
+            </RankingsScreenBoundaryNative>
+          )}
         </RankingsStack.Screen>
         <RankingsStack.Screen
           name="SquadBattle"

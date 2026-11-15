@@ -12,6 +12,7 @@ import {
   type MyRankProgressPoint,
 } from "../../../../../lib/rankings/myRankRankingProgress";
 import MyRankRankingProgressNative from "./MyRankRankingProgressNative";
+import SkiaBoundary from "../../ui/SkiaBoundary";
 import {
   deriveMyRankListAvgRow,
   type MyRankStatsSource,
@@ -330,17 +331,19 @@ export function MyRankCardNative({
                 />
 
               {showRankingProgress ? (
-                <View style={styles.myRankProProgressBand}>
-                  <MyRankRankingProgressNative
-                    points={progressPoints}
-                    maxSnapshots={progressSnapshotLimit}
-                    loading={rankProgressLoading}
-                    language={language}
-                    emptyHint={t.rankingProgressNoData}
-                    numbersOnly
-                    dense
-                  />
-                </View>
+                <SkiaBoundary fallback={null}>
+                  <View style={styles.myRankProProgressBand}>
+                    <MyRankRankingProgressNative
+                      points={progressPoints}
+                      maxSnapshots={progressSnapshotLimit}
+                      loading={rankProgressLoading}
+                      language={language}
+                      emptyHint={t.rankingProgressNoData}
+                      numbersOnly
+                      dense
+                    />
+                  </View>
+                </SkiaBoundary>
               ) : null}
 
               {showEstimatedUnitsBand && estimatedUnits ? (
