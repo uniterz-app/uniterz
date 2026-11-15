@@ -247,10 +247,20 @@ export async function loadGamesWindow(
   };
 }
 
+/** ライブ中: 予想比率（market）の鮮度。スコア本体は live-cards 側 */
+const GAMES_WINDOW_CDN_LIVE_S_MAXAGE = 60;
+const GAMES_WINDOW_CDN_LIVE_SWR = 300;
+/** 非ライブ: 日程は ingest までほぼ変わらないので長め */
+const GAMES_WINDOW_CDN_IDLE_S_MAXAGE = 300;
+const GAMES_WINDOW_CDN_IDLE_SWR = 3600;
+
 /**
  * CDN / オリジン共有キャッシュ用 Cache-Control。
- * ライブのスコアは `/api/games/live-cards` が足すので、窓は短く捨てない。
+ * ライブのスコアは `/api/games/live-cards` が足す。非ライブは窓を長く持つ。
  */
-export function gamesWindowCacheControl(_hasLive: boolean): string {
-  return "public, s-maxage=60, stale-while-revalidate=300";
+export function gamesWindowCacheControl(hasLive: boolean): string {
+  if (hasLive) {
+    return `public, s-maxage=${GAMES_WINDOW_CDN_LIVE_S_MAXAGE}, stale-while-revalidate=${GAMES_WINDOW_CDN_LIVE_SWR}`;
+  }
+  return `public, s-maxage=${GAMES_WINDOW_CDN_IDLE_S_MAXAGE}, stale-while-revalidate=${GAMES_WINDOW_CDN_IDLE_SWR}`;
 }

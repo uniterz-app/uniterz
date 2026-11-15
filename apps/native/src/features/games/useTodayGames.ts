@@ -503,7 +503,7 @@ export function useTodayGames(options: UseTodayGamesOptions = {}) {
     };
   }, [enabled, fetchWindowKey, selectedDate, selectedLeague, refreshNonce, dateKey, timeZone]);
 
-  /** Web `useGameDays` 相当: 開始済みの試合だけスコアを 60 秒ごとに足す */
+  /** Web `useGameDays` 相当: 開始済み・未終了があるときだけ live-cards を足す（非ライブはポーリングしない） */
   const screenActive = useScreenActiveNative();
   const [liveWakeTick, setLiveWakeTick] = useState(0);
   const windowRowsRef = useRef(windowRows);

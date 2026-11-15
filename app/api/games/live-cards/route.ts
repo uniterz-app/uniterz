@@ -30,13 +30,14 @@ export async function GET(req: Request) {
     const games = await unstable_cache(
       () => loadLiveGameCardPatches(getAdminDb(), sorted),
       ["games-live-cards", sorted.join(",")],
-      { revalidate: 30, tags: ["games-live-cards"] }
+      { revalidate: 45, tags: ["games-live-cards"] }
     )();
     return NextResponse.json(
       { ok: true, games },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=20, stale-while-revalidate=20",
+          // クライアントは約 90 秒間隔。複数ユーザーでオリジンを共有するため 45 秒
+          "Cache-Control": "public, s-maxage=45, stale-while-revalidate=45",
         },
       }
     );
