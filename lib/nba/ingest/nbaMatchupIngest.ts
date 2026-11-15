@@ -1,6 +1,7 @@
 /**
  * BDL `/nba/v1/matchups` → `nbaGameMatchups/{bdlGameId}` → `nbaAceGuard/{season}`。
  * 未処理の終了試合だけ。エースは今季の得点がチーム最多の選手。
+ * BDL がまだ空の試合は確定しない（ショットチャートと同じく最大 3 日待つ）。
  */
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -19,6 +20,9 @@ export type NbaDefenderMatchup = { o: string; s: number; m: number; a: number };
 
 type StoredPair = { d: string; o: string; s: number; m: number; a: number };
 
+/** 終了からこれだけ経っても空なら空として保存し、取り直さない */
+const EMPTY_GIVE_UP_MS = 3 * 24 * 60 * 60 * 1000;
+
 function isFinal(g: BdlGame): boolean {
   return String(g.status ?? "").trim().toLowerCase() === "final";
 }
@@ -27,28 +31,56 @@ function num(v: unknown): number {
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
+export type NbaMatchupIngestInput = {
+  seasonKey?: string;
+  /** 1 回で処理する最大試合数（タイムアウト対策。未指定は 20） */
+  maxGames?: number;
+  /** 処理済みの試合も取り直す */
+  force?: boolean;
+};
+
+export type NbaMatchupIngestResult = {
+  seasonKey: string;
+  processedGames: number;
+  /** BDL がまだ返さない試合（次回また取りに行く） */
+  notReadyGames: number;
+  remainingGames: number;
+  defenders: number;
+};
+
 export async function ingestNbaMatchupsFromBdl(
   db: Firestore,
-  input: { seasonKey?: string; maxGames?: number } = {}
-): Promise<{ seasonKey: string; processedGames: number; remainingGames: number; defenders: number }> {
+  input: NbaMatchupIngestInput = {}
+): Promise<NbaMatchupIngestResult> {
   const seasonKey = (input.seasonKey ?? CURRENT_NBA_SEASON_KEY).trim();
   const seasonYear = bdlSeasonYearFromSeasonKey(seasonKey);
+  const force = input.force === true;
   const games = (await fetchBdlGames({ seasonYears: [seasonYear] })).filter((g) => {
     if (!isFinal(g)) return false;
     const phase = String(g.season_type ?? "regular");
     return phase === "regular" || phase === "";
   });
-  const done = await db
+  const existing = await db
     .collection(NBA_GAME_MATCHUPS_COLLECTION)
     .where("seasonKey", "==", seasonKey)
-    .select()
+    .select("pairs", "empty")
     .get();
-  const doneIds = new Set(done.docs.map((d) => d.id));
+  /** pairs があるか、空確定したものだけ完了。空のまま書いた古い doc は再取得対象 */
+  const doneIds = new Set<string>();
+  if (!force) {
+    for (const d of existing.docs) {
+      const data = d.data() as { pairs?: StoredPair[]; empty?: boolean };
+      const pairs = data.pairs ?? [];
+      if (pairs.length > 0 || data.empty === true) doneIds.add(d.id);
+    }
+  }
   const pending = games
     .filter((g) => !doneIds.has(String(g.id)))
     .sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
   const limit = Math.max(1, Math.min(500, input.maxGames ?? 20));
   const batch = pending.slice(0, limit);
+  const nowMs = Date.now();
+  let notReadyGames = 0;
 
   let cursor = 0;
   const worker = async () => {
@@ -70,22 +102,37 @@ export async function ingestNbaMatchupsFromBdl(
             a,
           });
         }
+        if (pairs.length === 0) {
+          const gameMs = Date.parse(String(game.date ?? "").slice(0, 10));
+          if (!Number.isFinite(gameMs) || nowMs - gameMs < EMPTY_GIVE_UP_MS) {
+            notReadyGames += 1;
+            continue;
+          }
+          await db.collection(NBA_GAME_MATCHUPS_COLLECTION).doc(String(game.id)).set({
+            seasonKey,
+            pairs: [],
+            empty: true,
+            builtAtMs: nowMs,
+          });
+          continue;
+        }
         await db.collection(NBA_GAME_MATCHUPS_COLLECTION).doc(String(game.id)).set({
           seasonKey,
           pairs,
-          builtAtMs: Date.now(),
+          builtAtMs: nowMs,
         });
       } catch (e) {
         console.error(`[nba-matchup-ingest] game=${game.id}`, e);
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(4, batch.length) }, () => worker()));
+  await Promise.all(Array.from({ length: Math.min(4, batch.length || 1) }, () => worker()));
 
   const defenders = await rebuildNbaAceGuard(db, seasonKey);
   return {
     seasonKey,
-    processedGames: batch.length,
+    processedGames: batch.length - notReadyGames,
+    notReadyGames,
     remainingGames: Math.max(0, pending.length - batch.length),
     defenders,
   };

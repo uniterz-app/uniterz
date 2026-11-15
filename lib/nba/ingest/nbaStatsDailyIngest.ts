@@ -135,7 +135,7 @@ export async function runNbaStatsSnapshotSteps(
   );
   steps.push(
     await runStep("matchups", () =>
-      ingestNbaMatchupsFromBdl(db, { seasonKey, maxGames: 20 })
+      ingestNbaMatchupsFromBdl(db, { seasonKey, maxGames: 40 })
     )
   );
   return steps;
