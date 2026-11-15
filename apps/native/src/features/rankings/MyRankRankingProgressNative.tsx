@@ -4,8 +4,12 @@
  */
 import { useMemo, useState } from "react";
 import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
-import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
-import Svg, { Line as SvgLine } from "react-native-svg";
+import Svg, {
+  Circle as SvgCircle,
+  G as SvgG,
+  Line as SvgLine,
+  Path as SvgPath,
+} from "react-native-svg";
 import type { MyRankProgressPoint } from "../../../../../lib/rankings/myRankRankingProgress";
 import { PROFILE_CHART_CYBER } from "../../../../../lib/profile/profileOverviewChartCyberTheme";
 import {
@@ -118,7 +122,7 @@ export default function MyRankRankingProgressNative({
     const plotInnerH = chartHeight - PAD_T - PAD_B;
     if (n === 0 || plotW <= 0) {
       return {
-        linePath: Skia.Path.Make(),
+        linePath: "",
         dots: [] as Array<{ x: number; y: number; rank: number; trend: TrendState }>,
         hGrid: [] as Array<{ y: number; label: string }>,
         vGrid: [] as number[],
@@ -153,14 +157,14 @@ export default function MyRankRankingProgressNative({
     }));
 
     /** Web `type="monotone"` に近い滑らかな曲線 */
-    const path = Skia.Path.Make();
+    let path = "";
     if (dots.length > 0) {
-      path.moveTo(dots[0]!.x, dots[0]!.y);
+      path = `M${dots[0]!.x} ${dots[0]!.y}`;
       for (let i = 0; i < dots.length - 1; i++) {
         const p0 = dots[i]!;
         const p1 = dots[i + 1]!;
         const mx = (p0.x + p1.x) / 2;
-        path.cubicTo(mx, p0.y, mx, p1.y, p1.x, p1.y);
+        path += ` C${mx} ${p0.y} ${mx} ${p1.y} ${p1.x} ${p1.y}`;
       }
     }
 
@@ -254,52 +258,54 @@ export default function MyRankRankingProgressNative({
                 ))}
               </Svg>
             )}
-            <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-              <Group>
-                {model.dots.length > 1 ? (
-                  <>
-                    <Path
-                      path={model.linePath}
-                      style="stroke"
+            <Svg
+              width={plotW}
+              height={chartHeight}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            >
+              {model.dots.length > 1 ? (
+                <>
+                  <SvgPath
+                    d={model.linePath}
+                    fill="none"
+                    stroke={PROFILE_CHART_CYBER.cyanSoft}
+                    strokeWidth={3}
+                    opacity={0.5}
+                  />
+                  <SvgPath
+                    d={model.linePath}
+                    fill="none"
+                    stroke={PROFILE_CHART_CYBER.cyan}
+                    strokeWidth={1.25}
+                  />
+                </>
+              ) : null}
+              {model.dots.map((d, idx) => {
+                const theme = TREND_THEME[d.trend];
+                return (
+                  <SvgG key={`d-${idx}`}>
+                    <SvgCircle
+                      cx={d.x}
+                      cy={d.y}
+                      r={DOT_R + 2}
+                      fill="none"
+                      stroke={theme.glow}
                       strokeWidth={3}
-                      color={PROFILE_CHART_CYBER.cyanSoft}
-                      opacity={0.5}
+                      opacity={0.65}
                     />
-                    <Path
-                      path={model.linePath}
-                      style="stroke"
-                      strokeWidth={1.25}
-                      color={PROFILE_CHART_CYBER.cyan}
+                    <SvgCircle
+                      cx={d.x}
+                      cy={d.y}
+                      r={DOT_R}
+                      fill={theme.fill}
+                      stroke={theme.stroke}
+                      strokeWidth={1.5}
                     />
-                  </>
-                ) : null}
-                {model.dots.map((d, idx) => {
-                  const theme = TREND_THEME[d.trend];
-                  return (
-                    <Group key={`d-${idx}`}>
-                      <Circle
-                        cx={d.x}
-                        cy={d.y}
-                        r={DOT_R + 2}
-                        color={theme.glow}
-                        style="stroke"
-                        strokeWidth={3}
-                        opacity={0.65}
-                      />
-                      <Circle cx={d.x} cy={d.y} r={DOT_R} color={theme.fill} />
-                      <Circle
-                        cx={d.x}
-                        cy={d.y}
-                        r={DOT_R}
-                        color={theme.stroke}
-                        style="stroke"
-                        strokeWidth={1.5}
-                      />
-                    </Group>
-                  );
-                })}
-              </Group>
-            </Canvas>
+                  </SvgG>
+                );
+              })}
+            </Svg>
             {numbersOnly
               ? null
               : model.hGrid.map((g, i) => (
