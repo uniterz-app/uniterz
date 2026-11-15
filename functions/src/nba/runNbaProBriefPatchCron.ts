@@ -9,6 +9,7 @@
  */
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
+import { shouldRunNbaProBriefPatch } from "./shouldRunNbaProBriefPatch";
 
 const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
@@ -38,6 +39,13 @@ export const runNbaProBriefPatchCron = onSchedule(
     if (!url || !secret) {
       console.warn(
         "[runNbaProBriefPatchCron] skip: missing NEXT_NBA_PRO_BRIEF_INGEST_URL (or DAILY URL) or INTERNAL_JOB_SECRET"
+      );
+      return;
+    }
+
+    if (!(await shouldRunNbaProBriefPatch())) {
+      console.log(
+        "[runNbaProBriefPatchCron] skip: no NBA tip within patch window"
       );
       return;
     }

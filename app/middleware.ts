@@ -11,6 +11,11 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    /**
+     * `/api` は除外。x-pathname は Web の layout（メンテ判定）専用で、
+     * Native 向け API では使わない。API に乗ると Fast Origin Transfer が
+     * 二重に付きやすいので対象外にする。
+     */
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };
