@@ -9,6 +9,7 @@
  */
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { defineSecret } from "firebase-functions/params";
+import { shouldRunNbaProInsightBatchPoll } from "./shouldRunNbaProInsightBatchPoll";
 
 const INTERNAL_JOB_SECRET = defineSecret("INTERNAL_JOB_SECRET");
 
@@ -38,6 +39,13 @@ export const runNbaProInsightBatchPollCron = onSchedule(
     if (!url || !secret) {
       console.warn(
         "[runNbaProInsightBatchPollCron] skip: missing NEXT_NBA_PRO_BRIEF_INGEST_URL (or DAILY URL) or INTERNAL_JOB_SECRET"
+      );
+      return;
+    }
+
+    if (!(await shouldRunNbaProInsightBatchPoll())) {
+      console.log(
+        "[runNbaProInsightBatchPollCron] skip: no pending OpenAI batches"
       );
       return;
     }
