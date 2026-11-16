@@ -42,7 +42,8 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaTeamAceOutRecords: DEFAULT_TTL_SEC,
   nbaLeagueHub: DEFAULT_TTL_SEC,
   nbaLeagueHubDetail: DEFAULT_TTL_SEC,
-  nbaTeamGameLogs: DEFAULT_TTL_SEC,
+  /** 試合後すぐ休み / FORM がずれるので 24h より短く（ingest の tag 破棄が正） */
+  nbaTeamGameLogs: 3600,
   nbaTeamInsightExtras: DEFAULT_TTL_SEC,
   nbaPlayerShotAreas: DEFAULT_TTL_SEC,
   nbaPlayerContracts: DEFAULT_TTL_SEC,

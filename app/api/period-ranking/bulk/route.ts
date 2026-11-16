@@ -4,9 +4,9 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import {
-  currentRankingPeriodLabel,
   isRankingPeriod,
   isValidPeriodLabel,
+  previousRankingPeriodLabel,
   type RankingPeriod,
 } from "@/lib/rankings/rankingPeriod";
 import {
@@ -17,11 +17,21 @@ import {
   listNbaPeriodLabels,
   readNbaPeriodRankingSnapshots,
 } from "@/lib/rankings/server/readNbaPeriodRankingSnapshots";
+import { resolveDisplayedRankingPeriodLabel } from "@/lib/rankings/server/resolveDisplayedRankingPeriodLabel";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { RANKING_COMMENT_CDN_TAG_HEADER } from "@/lib/rankings/rankingCommentCache";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
+
+function periodPayloadHasRows(
+  payload: Awaited<ReturnType<typeof loadSharedPayload>>
+): boolean {
+  if (!payload?.byMetric) return false;
+  return Object.values(payload.byMetric).some(
+    (m) => Array.isArray(m?.rows) && m.rows.length > 0
+  );
+}
 
 async function optionalUid(req: Request): Promise<string | null> {
   const authz =
@@ -94,9 +104,17 @@ export async function GET(req: Request) {
       }
     }
 
-    const currentLabel = currentRankingPeriodLabel(period);
+    /** 新期間の初試合日が全部終わるまで前期間を「いま」にする（Unit 付与はカレンダーのまま） */
+    const currentLabel = await unstable_cache(
+      () => resolveDisplayedRankingPeriodLabel(period),
+      [`nba-period-ranking-display-label-${period}`],
+      {
+        revalidate: 60,
+        tags: ["period-ranking", "games-window:nba"],
+      }
+    )();
     const labelRaw = url.searchParams.get("label");
-    const label =
+    let label =
       labelRaw && isValidPeriodLabel(period, labelRaw) && labelRaw <= currentLabel
         ? labelRaw
         : currentLabel;
@@ -181,21 +199,40 @@ export async function GET(req: Request) {
 
     const snapshotGeneration = await loadRankingSnapshotGenerationKey();
 
-    const payload = await unstable_cache(
-      async () => loadSharedPayload(period, label, division),
-      [
-        `nba-period-ranking-shared-v3-${period}-${label}-${division}`,
-        snapshotGeneration,
-      ],
-      {
-        revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
-        tags: ["period-ranking", "cumulative-ranking"],
-      }
-    )();
+    const loadCachedPayload = (periodLabel: string) =>
+      unstable_cache(
+        async () => loadSharedPayload(period, periodLabel, division),
+        [
+          `nba-period-ranking-shared-v3-${period}-${periodLabel}-${division}`,
+          snapshotGeneration,
+        ],
+        {
+          revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+          tags: ["period-ranking", "cumulative-ranking"],
+        }
+      )();
 
-    const availableLabels = await labelsPromise;
+    let payload = await loadCachedPayload(label);
+    /** 新期間スナップ未作成・空のときは前期間へ（NO DATA 回避） */
+    if (!periodPayloadHasRows(payload) && label === currentLabel) {
+      const prev = previousRankingPeriodLabel(period, label);
+      if (prev && prev < label) {
+        const prevPayload = await loadCachedPayload(prev);
+        if (periodPayloadHasRows(prevPayload)) {
+          payload = prevPayload;
+          label = prev;
+        }
+      }
+    }
+
+    const availableLabels = (await labelsPromise).filter(
+      (l) => l <= currentLabel
+    );
     if (!availableLabels.includes(currentLabel)) {
       availableLabels.unshift(currentLabel);
+    }
+    if (label !== currentLabel && !availableLabels.includes(label)) {
+      availableLabels.unshift(label);
     }
 
     const cacheControl =

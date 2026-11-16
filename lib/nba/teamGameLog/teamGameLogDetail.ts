@@ -481,6 +481,7 @@ export function buildTeamGameLogDetailsFromGames(input: {
       s.self.games.push({
         dateLabel: formatDateLabel(g.startMs),
         ...(g.id ? { gameId: g.id } : null),
+        startMs: g.startMs,
         oppTeamId: s.oppId,
         oppAbbr: TEAM_SHORT[s.oppId] ?? s.oppId,
         home: s.isHome,
@@ -571,9 +572,11 @@ function resolveDetailGame(raw: unknown): NbaTeamGameLogDetailGame | null {
   const result = raw.result === "W" || raw.result === "L" ? raw.result : null;
   if (!dateLabel || !oppTeamId || !oppAbbr || !result) return null;
   const gameId = str(raw.gameId);
+  const startMs = finiteOrNull(raw.startMs);
   return {
     dateLabel,
     ...(gameId ? { gameId } : null),
+    ...(startMs != null ? { startMs } : null),
     oppTeamId,
     oppAbbr,
     home: raw.home === true,

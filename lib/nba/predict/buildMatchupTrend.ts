@@ -1,10 +1,14 @@
 /**
  * 予想画面 TREND の中身を `/api/nba/team-detail`（両チーム）から組み立てる。
  * 今季の成績・日程・状況別・勢い。
+ *
+ * 休み / 4日で3試合目は B2B・3IN4 と同じく米国東部の暦日で数える。
+ * `gameLogDetail` が CDN / doc キャッシュで遅れているときは
+ * `gameLog.recentGames`（親シーズン doc）の方が新しいことがあるので合流する。
  */
 import type { NbaTeamDetailApiPayload } from "@/lib/nba/teamDetail/loadTeamDetailBundle";
 import type { NbaTeamGameLogDetailGame } from "@/lib/nba/teamGameLog/teamGameLogDetail";
-import type { NbaTeamStreak } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+import type { NbaTeamRecentGame, NbaTeamStreak } from "@/lib/predict/nbaTeamDetailPreviewMocks";
 
 export type NbaTrendWl = { wins: number; losses: number };
 
@@ -43,12 +47,24 @@ const CLOSE_MARGIN = 5;
 const DAY_MS = 86_400_000;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const etDayFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/New_York",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 const jstDayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Tokyo",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 });
+
+function etDayNumber(ms: number): number {
+  const [y, m, d] = etDayFormatter.format(new Date(ms)).split("-").map(Number);
+  return Math.round(Date.UTC(y!, m! - 1, d!) / DAY_MS);
+}
 
 function jstDayNumber(ms: number): number {
   const [y, m, d] = jstDayFormatter.format(new Date(ms)).split("-").map(Number);
@@ -66,21 +82,82 @@ function labelDayNumber(label: string, seasonKey: string): number | null {
   return Math.round(Date.UTC(year, month, Number(m[2])) / DAY_MS);
 }
 
+function hasStartMs(game: Pick<NbaTeamRecentGame, "startMs">): boolean {
+  return typeof game.startMs === "number" && Number.isFinite(game.startMs);
+}
+
+/**
+ * startMs が揃っているときだけ東部暦日（B2B / 3IN4 と同じ）。
+ * 欠けている試合が混ざる／古いスナップショットは dateLabel（JST）で揃える。
+ */
+function useEasternDays(games: Pick<NbaTeamRecentGame, "startMs">[]): boolean {
+  return games.length > 0 && games.every(hasStartMs);
+}
+
+function gameKey(g: Pick<NbaTeamRecentGame, "gameId" | "dateLabel" | "oppTeamId">): string {
+  if (g.gameId) return `id:${g.gameId}`;
+  return `d:${g.dateLabel}|${g.oppTeamId}`;
+}
+
+/**
+ * detail が遅れていても recentGames に直近試合があれば休みを合わせる。
+ * 同じ試合は detail 側（b2b / threeInFour / startMs）を優先。
+ */
+function gamesForSchedule(
+  detail: NbaTeamDetailApiPayload | null
+): NbaTeamGameLogDetailGame[] {
+  const fromDetail = detail?.gameLogDetail?.games ?? [];
+  const fromRecent = detail?.gameLog?.recentGames ?? [];
+  if (fromRecent.length === 0) return fromDetail;
+  if (fromDetail.length === 0) {
+    return fromRecent.map((g) => ({ ...g, conferenceGame: g.conferenceGame === true }));
+  }
+  const byKey = new Map<string, NbaTeamGameLogDetailGame>();
+  for (const g of fromRecent) {
+    byKey.set(gameKey(g), { ...g, conferenceGame: g.conferenceGame === true });
+  }
+  for (const g of fromDetail) {
+    byKey.set(gameKey(g), g);
+  }
+  return [...byKey.values()].sort((a, b) => {
+    const da =
+      (typeof a.startMs === "number" ? a.startMs : null) ??
+      (labelDayNumber(a.dateLabel, detail?.gameLogDetail?.season ?? detail?.season ?? "") ??
+        0) *
+        DAY_MS;
+    const db =
+      (typeof b.startMs === "number" ? b.startMs : null) ??
+      (labelDayNumber(b.dateLabel, detail?.gameLogDetail?.season ?? detail?.season ?? "") ??
+        0) *
+        DAY_MS;
+    return db - da;
+  });
+}
+
 function wl(games: NbaTeamGameLogDetailGame[]): NbaTrendWl {
   const wins = games.filter((g) => g.result === "W").length;
   return { wins, losses: games.length - wins };
 }
 
 function schedule(
-  games: NbaTeamGameLogDetailGame[],
-  seasonKey: string,
+  detail: NbaTeamDetailApiPayload | null,
   tipAtMs: number | null
 ): NbaTrendSchedule {
-  const b2bRecord = wl(games.filter((g) => g.b2b));
+  const seasonKey = detail?.gameLogDetail?.season ?? detail?.season ?? "";
+  const games = gamesForSchedule(detail);
+  const splits = detail?.gameLogDetail?.splits;
+  const b2bRecord = splits?.b2b
+    ? { wins: splits.b2b.wins, losses: splits.b2b.losses }
+    : wl(games.filter((g) => g.b2b));
   if (tipAtMs == null) return { restDays: null, threeInFour: false, b2bRecord };
-  const tipDay = jstDayNumber(tipAtMs);
+  const eastern = useEasternDays(games);
+  const tipDay = eastern ? etDayNumber(tipAtMs) : jstDayNumber(tipAtMs);
   const prior = games
-    .map((g) => labelDayNumber(g.dateLabel, seasonKey))
+    .map((g) =>
+      eastern
+        ? etDayNumber(g.startMs as number)
+        : labelDayNumber(g.dateLabel, seasonKey)
+    )
     .filter((d): d is number => d != null && d < tipDay)
     .sort((a, b) => b - a);
   const prev = prior[0];
@@ -99,7 +176,6 @@ function side(
   tipAtMs: number | null
 ): NbaTrendSide {
   const games = detail?.gameLogDetail?.games ?? [];
-  const seasonKey = detail?.gameLogDetail?.season ?? detail?.season ?? "";
   const splits = detail?.gameLogDetail?.splits;
   const venueRow = splits?.[isHome ? "home" : "away"];
   const oppRow = opp?.standingsRow;
@@ -111,7 +187,7 @@ function side(
     season: row
       ? { wins: row.wins, losses: row.losses, rank: row.rank, conference: row.conference }
       : null,
-    schedule: schedule(games, seasonKey, tipAtMs),
+    schedule: schedule(detail, tipAtMs),
     situation: {
       venue: venueRow
         ? { wins: venueRow.wins, losses: venueRow.losses }
