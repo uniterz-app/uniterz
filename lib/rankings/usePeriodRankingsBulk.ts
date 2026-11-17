@@ -240,7 +240,7 @@ export function usePeriodRankingsBulk(
     };
   }, [loadShared, period]);
 
-  /** 一覧のあと — top50 外の My Rank を personalOnly で重ねる */
+  /** 一覧のあと — top50 外の My Rank を personalOnly で重ねる（一覧の activeLabel に合わせる） */
   useEffect(() => {
     if (!period || !listReady || proRequired) {
       setPersonalPending(false);
@@ -250,13 +250,24 @@ export function usePeriodRankingsBulk(
       setPersonalPending(false);
       return;
     }
+    const resolvedLabel = activeLabel ?? label;
+    if (!resolvedLabel) {
+      setPersonalPending(false);
+      return;
+    }
 
     let cancelled = false;
 
     void (async () => {
       const generation = await fetchRankingSnapshotGeneration();
       if (cancelled) return;
-      const key = personalCacheKey(uid, period, label, division, generation);
+      const key = personalCacheKey(
+        uid,
+        period,
+        resolvedLabel,
+        division,
+        generation
+      );
 
       const hit = personalCache.get(key);
       if (hit && Date.now() - hit.at < PERSONAL_CACHE_TTL_MS) {
@@ -270,7 +281,11 @@ export function usePeriodRankingsBulk(
       const pending = personalInflight.get(key);
       const run =
         pending ??
-        fetchPeriodPersonalOverlay({ period, label, division }).finally(() => {
+        fetchPeriodPersonalOverlay({
+          period,
+          label: resolvedLabel,
+          division,
+        }).finally(() => {
           personalInflight.delete(key);
         });
       if (!pending) personalInflight.set(key, run);
@@ -293,6 +308,7 @@ export function usePeriodRankingsBulk(
   }, [
     period,
     label,
+    activeLabel,
     division,
     uid,
     listReady,
