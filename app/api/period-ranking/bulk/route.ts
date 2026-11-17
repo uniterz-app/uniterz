@@ -4,7 +4,6 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import {
-  currentRankingPeriodLabel,
   isRankingPeriod,
   isValidPeriodLabel,
   previousRankingPeriodLabel,
@@ -139,11 +138,10 @@ export async function GET(req: Request) {
         uid,
         division,
       });
-      const calendarLabelForPersonal = currentRankingPeriodLabel(period);
+      /** 新週・新月のスナップ未作成のあいだは前期間（一覧と同じ）。表示ラベル解決後の空だけ対象 */
       if (
         (!snapshot || !periodPayloadHasRows(snapshot)) &&
-        personalLabel === currentLabel &&
-        personalLabel !== calendarLabelForPersonal
+        personalLabel === currentLabel
       ) {
         const prev = previousRankingPeriodLabel(period, personalLabel);
         if (prev && prev < personalLabel) {
@@ -237,15 +235,11 @@ export async function GET(req: Request) {
 
     let payload = await loadCachedPayload(label);
     /**
-     * ホールド中（表示がカレンダー前期間）でスナップが空のときだけ、さらに前へ。
-     * カレンダー今月を出す段階で空でも前月に戻さない（11 月中に 10 月固定になるのを防ぐ）。
+     * 表示中ラベルのスナップが空のときだけ前期間へ（新週の日次 cron 前など）。
+     * 月間の「10 月張り付き」は pickDisplayed 側（初試合日経過で今期間）で防ぐ。
+     * 今月スナップに行があればフォールバックしない。
      */
-    const calendarLabel = currentRankingPeriodLabel(period);
-    if (
-      !periodPayloadHasRows(payload) &&
-      label === currentLabel &&
-      label !== calendarLabel
-    ) {
+    if (!periodPayloadHasRows(payload) && label === currentLabel) {
       const prev = previousRankingPeriodLabel(period, label);
       if (prev && prev < label) {
         const prevPayload = await loadCachedPayload(prev);
@@ -266,10 +260,12 @@ export async function GET(req: Request) {
       availableLabels.unshift(label);
     }
 
+    /** 表示ラベルは最大 60s で切り替わるため CDN を 24h にしない（デプロイ後の張り付き防止） */
+    const periodCdnSec = 60;
     const cacheControl =
       division === "open"
-        ? `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
-        : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
+        ? `private, max-age=${periodCdnSec}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
+        : `public, max-age=0, s-maxage=${periodCdnSec}, stale-while-revalidate=${periodCdnSec * 4}`;
 
     if (!payload) {
       return NextResponse.json(
