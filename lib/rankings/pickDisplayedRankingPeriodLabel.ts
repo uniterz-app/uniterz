@@ -10,6 +10,8 @@
 export function pickDisplayedRankingPeriodLabel(opts: {
   calendarLabel: string;
   previousLabel: string | null;
+  /** カレンダー期間の開始日（weekly: 月曜 / monthly: YYYY-MM-01） */
+  periodStartKey: string;
   /** 新期間内で最初に tip-off がある Eastern 暦日。試合がまだ無いときは null */
   firstGameDayKey: string | null;
   /** その試合日の全試合が resultComputedAtV2 済み */
@@ -21,7 +23,10 @@ export function pickDisplayedRankingPeriodLabel(opts: {
   if (!prev) return opts.calendarLabel;
 
   const first = opts.firstGameDayKey?.trim() || null;
-  if (!first) return prev;
+  if (!first) {
+    // index 欠落でも期間開始日が過ぎていれば今期間（月中の前期間張り付き防止）
+    return opts.periodStartKey < opts.todayKey ? opts.calendarLabel : prev;
+  }
 
   // 初日はもう過ぎた → 今期間（settle 欠落で前期間固定しない）
   if (first < opts.todayKey) return opts.calendarLabel;

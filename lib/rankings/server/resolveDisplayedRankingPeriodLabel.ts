@@ -61,6 +61,7 @@ export async function resolveDisplayedRankingPeriodLabel(
   return pickDisplayedRankingPeriodLabel({
     calendarLabel,
     previousLabel,
+    periodStartKey: range.startKey,
     firstGameDayKey,
     firstGameDaySettled,
     todayKey: toDateKeyInTimeZone(now, TIMEZONE_ET),
