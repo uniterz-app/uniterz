@@ -259,6 +259,12 @@ export function useNativePeriodRankingsBulk(
       setPersonalPending(false);
       return;
     }
+    /** 一覧がホールド／空フォールバックした label に合わせる（MY RANK の期間ずれ防止） */
+    const resolvedLabel = activeLabel ?? label;
+    if (!resolvedLabel) {
+      setPersonalPending(false);
+      return;
+    }
 
     let cancelled = false;
 
@@ -266,7 +272,13 @@ export function useNativePeriodRankingsBulk(
       const base = getUniterzApiBaseUrl();
       const generation = await fetchRankingSnapshotGeneration(base);
       if (cancelled) return;
-      const key = personalCacheKey(uid, period, label, division, generation);
+      const key = personalCacheKey(
+        uid,
+        period,
+        resolvedLabel,
+        division,
+        generation
+      );
 
       const hit = personalCache.get(key);
       if (hit && Date.now() - hit.at < PERSONAL_CACHE_TTL_MS) {
@@ -282,7 +294,7 @@ export function useNativePeriodRankingsBulk(
         pending ??
         fetchPeriodPersonalOverlayNative({
           period,
-          label,
+          label: resolvedLabel,
           division,
         }).finally(() => {
           personalInflight.delete(key);
@@ -304,7 +316,16 @@ export function useNativePeriodRankingsBulk(
     return () => {
       cancelled = true;
     };
-  }, [period, label, division, uid, listReady, proRequired, sharedByMetric]);
+  }, [
+    period,
+    label,
+    activeLabel,
+    division,
+    uid,
+    listReady,
+    proRequired,
+    sharedByMetric,
+  ]);
 
   const ensureMetric = useCallback((_metric: string) => {
     /* period bulk loads all metrics at once */

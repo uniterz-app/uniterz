@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import {
+  currentRankingPeriodLabel,
   isRankingPeriod,
   isValidPeriodLabel,
   previousRankingPeriodLabel,
@@ -130,18 +131,40 @@ export async function GET(req: Request) {
           { status: 401 }
         );
       }
-      const snapshot = await readNbaPeriodRankingSnapshots({
+      /** 一覧と同じ label 解決（空なら前期間）。MY RANK だけ新期間で -- にならないようにする */
+      let personalLabel = label;
+      let snapshot = await readNbaPeriodRankingSnapshots({
         period,
-        label,
+        label: personalLabel,
         uid,
         division,
       });
+      const calendarLabelForPersonal = currentRankingPeriodLabel(period);
+      if (
+        (!snapshot || !periodPayloadHasRows(snapshot)) &&
+        personalLabel === currentLabel &&
+        personalLabel !== calendarLabelForPersonal
+      ) {
+        const prev = previousRankingPeriodLabel(period, personalLabel);
+        if (prev && prev < personalLabel) {
+          const prevSnapshot = await readNbaPeriodRankingSnapshots({
+            period,
+            label: prev,
+            uid,
+            division,
+          });
+          if (prevSnapshot && periodPayloadHasRows(prevSnapshot)) {
+            snapshot = prevSnapshot;
+            personalLabel = prev;
+          }
+        }
+      }
       if (!snapshot) {
         return NextResponse.json(
           {
             ok: true,
             period,
-            label,
+            label: personalLabel,
             division,
             personalOnly: true,
             range: null,
@@ -173,7 +196,7 @@ export async function GET(req: Request) {
         {
           ok: true,
           period: snapshot.period,
-          label,
+          label: personalLabel,
           division,
           personalOnly: true,
           range: snapshot.range,
@@ -213,8 +236,16 @@ export async function GET(req: Request) {
       )();
 
     let payload = await loadCachedPayload(label);
-    /** 新期間スナップ未作成・空のときは前期間へ（NO DATA 回避） */
-    if (!periodPayloadHasRows(payload) && label === currentLabel) {
+    /**
+     * ホールド中（表示がカレンダー前期間）でスナップが空のときだけ、さらに前へ。
+     * カレンダー今月を出す段階で空でも前月に戻さない（11 月中に 10 月固定になるのを防ぐ）。
+     */
+    const calendarLabel = currentRankingPeriodLabel(period);
+    if (
+      !periodPayloadHasRows(payload) &&
+      label === currentLabel &&
+      label !== calendarLabel
+    ) {
       const prev = previousRankingPeriodLabel(period, label);
       if (prev && prev < label) {
         const prevPayload = await loadCachedPayload(prev);

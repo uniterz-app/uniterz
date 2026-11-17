@@ -63,5 +63,6 @@ export async function resolveDisplayedRankingPeriodLabel(
     previousLabel,
     firstGameDayKey,
     firstGameDaySettled,
+    todayKey: toDateKeyInTimeZone(now, TIMEZONE_ET),
   });
 }
