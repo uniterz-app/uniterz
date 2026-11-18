@@ -5,6 +5,10 @@ import { fetchBdlGames } from "@/lib/nba/bdl/fetchBdlGames";
 import { mapBdlGameToNbaGameDoc } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { ingestNbaTeamGameLogsFromGames } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
 import { writeGameDayIndexFromGames } from "@/lib/games/server/gameDayIndexAdmin";
+import { stableJsonHash } from "@/lib/nba/ingest/stableJsonHash";
+
+/** 既存 ingestHash の読み取りを 1 回の getAll にまとめる件数 */
+const EXISTING_HASH_READ_CHUNK = 300;
 
 export type IngestNbaGamesResult = {
   ok: true;
@@ -13,6 +17,8 @@ export type IngestNbaGamesResult = {
   fetched: number;
   mapped: number;
   written: number;
+  /** 前回と同じ内容なので書かなかった試合数（`ingestHash` 一致） */
+  unchanged?: number;
   skipped: number;
   dryRun: boolean;
   sampleIds: string[];
@@ -72,26 +78,78 @@ export async function ingestNbaGamesFromBdl(
   const fetchedCount = mainFetched.length + preseasonFetched.length;
 
   let written = 0;
+  let unchanged = 0;
   let skipped = fetchedCount - mapped.length;
 
   if (!dryRun) {
-    for (let i = 0; i < mapped.length; i += batchSize) {
-      const chunk = mapped.slice(i, i + batchSize);
+    // 前回書いた内容（ingestHash）と同じ試合は書かない。
+    // 書くたびに onGameFinalV2（1GiB）が起動し、書き込み課金も発生するため。
+    // final はライブ ingest だけが立てる。merge で false に戻すと onGameFinalV2 が再発火する
+    const entries = mapped.map((g) => {
+      const { startAtMs, startAtJstIso, id: _id, final: _final, ...rest } = g;
+      return {
+        id: g.id,
+        rest,
+        startAtMs,
+        startAtJstIso,
+        hash: stableJsonHash({ rest, startAtMs, startAtJstIso }),
+      };
+    });
+
+    // ライブ ingest も同じ status / スコアを書くので、前回の日次の内容と一致していても
+    // 今の Firestore 上の値がずれていれば書き直す（従来どおり BDL の値に戻す）
+    const prevById = new Map<string, { hash: string | null; state: string }>();
+    for (let i = 0; i < entries.length; i += EXISTING_HASH_READ_CHUNK) {
+      const refs = entries
+        .slice(i, i + EXISTING_HASH_READ_CHUNK)
+        .map((e) => db.collection("games").doc(e.id));
+      const snaps = await db.getAll(...refs, {
+        fieldMask: ["ingestHash", "status", "homeScore", "awayScore", "score"],
+      });
+      for (const snap of snaps) {
+        if (!snap.exists) continue;
+        const h = snap.get("ingestHash");
+        prevById.set(snap.id, {
+          hash: typeof h === "string" ? h : null,
+          state: stableJsonHash({
+            status: snap.get("status") ?? null,
+            homeScore: snap.get("homeScore") ?? null,
+            awayScore: snap.get("awayScore") ?? null,
+            score: snap.get("score") ?? null,
+          }),
+        });
+      }
+    }
+
+    const changed = entries.filter((e) => {
+      const prev = prevById.get(e.id);
+      if (!prev || prev.hash !== e.hash) return true;
+      const wantState = stableJsonHash({
+        status: e.rest.status ?? null,
+        homeScore: e.rest.homeScore ?? null,
+        awayScore: e.rest.awayScore ?? null,
+        score: e.rest.score ?? null,
+      });
+      return prev.state !== wantState;
+    });
+    unchanged = entries.length - changed.length;
+
+    for (let i = 0; i < changed.length; i += batchSize) {
+      const chunk = changed.slice(i, i + batchSize);
       const batch = db.batch();
-      for (const g of chunk) {
-        const ref = db.collection("games").doc(g.id);
-        // final はライブ ingest だけが立てる。merge で false に戻すと onGameFinalV2 が再発火する
-        const { startAtMs, startAtJstIso, id: _id, final: _final, ...rest } = g;
-        const startAt = Timestamp.fromMillis(startAtMs);
+      for (const e of chunk) {
+        const ref = db.collection("games").doc(e.id);
+        const startAt = Timestamp.fromMillis(e.startAtMs);
         batch.set(
           ref,
           {
-            ...rest,
+            ...e.rest,
             startAt,
             startAtJst: startAt,
             updatedAt: Timestamp.now(),
             ingestedAt: Timestamp.now(),
-            startAtJstIso,
+            startAtJstIso: e.startAtJstIso,
+            ingestHash: e.hash,
           },
           { merge: true }
         );
@@ -128,6 +186,7 @@ export async function ingestNbaGamesFromBdl(
     fetched: fetchedCount,
     mapped: mapped.length,
     written: dryRun ? 0 : written,
+    unchanged,
     skipped,
     dryRun,
     sampleIds: mapped.slice(0, 8).map((g) => g.id),

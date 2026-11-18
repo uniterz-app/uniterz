@@ -15,13 +15,19 @@ import {
   MATCHUP_INSIGHT_CACHE_REVALIDATE_SEC,
   MATCHUP_INSIGHT_CACHE_TAG,
 } from "@/lib/nba/predict/matchupInsightCache";
-import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
+import {
+  GAME_PRO_INSIGHT_FIELDS,
+  loadGameProInsight,
+} from "@/lib/nba/insights/gameProInsightStore";
 import { buildProInsightPreviewTeaser } from "@/lib/predict/proInsightPreviewTeaser";
 import { sanitizeProInsightPredictKit } from "@/lib/nba/insights/predictKit/predictKitTypes";
 
 async function loadMatchupInsightPayload(gameId: string) {
   const db = getAdminDb();
-  const snap = await db.collection("games").doc(gameId).get();
+  // league の判定と、旧データ（games 上の Pro Insight 項目）のフォールバックだけ読む
+  const [snap] = await db.getAll(db.collection("games").doc(gameId), {
+    fieldMask: ["league", ...GAME_PRO_INSIGHT_FIELDS],
+  });
   if (!snap.exists) return { kind: "not_found" as const };
 
   const game = snap.data() as Record<string, unknown>;
