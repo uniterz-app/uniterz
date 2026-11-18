@@ -36,7 +36,12 @@ export async function GET(req: Request) {
       .get();
 
     // 試合開始時刻取得
-    const gameSnap = await getAdminDb().collection("games").doc(gameId).get();
+    // 開始時刻の 3 項目だけ読む（games doc 全体は pointsSummary などで重い）
+    const adminDb = getAdminDb();
+    const [gameSnap] = await adminDb.getAll(
+      adminDb.collection("games").doc(gameId),
+      { fieldMask: ["startAtMillis", "startAt", "startAtJst"] }
+    );
     const g = gameSnap.exists ? gameSnap.data() : {};
     const startAtMillis: number | null =
       typeof g?.startAtMillis === "number"

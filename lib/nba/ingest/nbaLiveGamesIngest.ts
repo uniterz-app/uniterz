@@ -24,6 +24,22 @@ import {
 } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
 import { normalizeLiveGameStatsDoc } from "@/lib/games/liveGameStats";
 import { leadingScorersFromBox } from "@/lib/nba/topScorer";
+import { stableJsonHash } from "@/lib/nba/ingest/stableJsonHash";
+
+/** status / スコアだけのハッシュ（前回書いた値と今の Firestore 上の値がずれていないかの確認用） */
+function stateHashOf(x: {
+  status: unknown;
+  homeScore: unknown;
+  awayScore: unknown;
+  score: unknown;
+}): string {
+  return stableJsonHash({
+    status: x.status ?? null,
+    homeScore: x.homeScore ?? null,
+    awayScore: x.awayScore ?? null,
+    score: x.score ?? null,
+  });
+}
 import { fetchBdlGameAdvancedStats } from "@/lib/nba/bdl/fetchBdlGameAdvancedStats";
 import { mergeGameAdvancedIntoLiveStatsDoc } from "@/lib/nba/bdl/mergeGameAdvancedIntoLiveStats";
 import {
@@ -43,6 +59,10 @@ type PrevGameState = {
   hasLeadingScorers: boolean;
   /** `/nba/v1/lineups` で確定済みの先発（取れたら以後 BDL を叩かない） */
   starterIds: string[] | null;
+  /** 前回ライブ ingest が書いた内容のハッシュ（同じなら書かない） */
+  liveHash: string | null;
+  /** 今の Firestore 上の status / スコア（日次 ingest に書き換えられていたら書き直す） */
+  stateHash: string | null;
 };
 
 export type IngestNbaLiveGamesResult = {
@@ -219,8 +239,21 @@ export async function ingestNbaLiveGamesFromBdl(
           .map((b) => nbaGameDocIdFromBdlId(b.bdlGameId as number)),
       ]),
     ];
+    // 判定に使う項目だけ読む（終了試合の box / pointsSummary で 1 件約 20KB になるため）
     const snaps = docIds.length
-      ? await db.getAll(...docIds.map((id) => db.collection("games").doc(id)))
+      ? await db.getAll(...docIds.map((id) => db.collection("games").doc(id)), {
+          fieldMask: [
+            "final",
+            "finalAt",
+            "leadingScorers",
+            "liveStarterIds",
+            "liveHash",
+            "status",
+            "homeScore",
+            "awayScore",
+            "score",
+          ],
+        })
       : [];
     for (const snap of snaps) {
       const d = (snap.data() ?? {}) as Record<string, unknown>;
@@ -233,6 +266,13 @@ export async function ingestNbaLiveGamesFromBdl(
           Array.isArray(d.liveStarterIds) && d.liveStarterIds.length > 0
             ? d.liveStarterIds.map(String)
             : null,
+        liveHash: typeof d.liveHash === "string" ? d.liveHash : null,
+        stateHash: stateHashOf({
+          status: d.status,
+          homeScore: d.homeScore,
+          awayScore: d.awayScore,
+          score: d.score,
+        }),
       });
     }
   }
@@ -360,6 +400,35 @@ export async function ingestNbaLiveGamesFromBdl(
 
     if (!dryRun) {
       const { id: _id, startAtMs, startAtJstIso, ...rest } = mappedGame;
+      // 時刻（updatedAt / liveSyncedAt / finalAt）を除いた中身が前回と同じなら書かない。
+      // 書くたびに onGameFinalV2 が起動し、試合一覧のキャッシュも捨てるため。
+      // 確定する回（settleNow）は必ず書く。
+      const {
+        updatedAt: _updatedAt,
+        liveSyncedAt: _liveSyncedAt,
+        finalAt: _finalAt,
+        ...patchContent
+      } = patch;
+      const liveHash = stableJsonHash({
+        rest,
+        startAtMs,
+        startAtJstIso,
+        patch: patchContent,
+      });
+      const stateHash = stateHashOf({
+        status: patch.status,
+        homeScore: patch.homeScore,
+        awayScore: patch.awayScore,
+        score: patch.score,
+      });
+      if (
+        !settleNow &&
+        prev?.liveHash === liveHash &&
+        prev.stateHash === stateHash
+      ) {
+        skipped += 1;
+        continue;
+      }
       const ref = db.collection("games").doc(docId);
       await ref.set(
         {
@@ -368,6 +437,7 @@ export async function ingestNbaLiveGamesFromBdl(
           startAtJst: Timestamp.fromMillis(startAtMs),
           startAtJstIso,
           ...patch,
+          liveHash,
         },
         { merge: true }
       );

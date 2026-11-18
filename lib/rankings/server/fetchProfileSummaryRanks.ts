@@ -110,10 +110,12 @@ async function loadSnapshotTotalCount(
   metric: RankMetric
 ): Promise<number | null> {
   const docId = rankingSnapshotDocId(metric);
-  const snap = await getAdminDb()
-    .collection("cumulative_ranking_snapshots")
-    .doc(docId)
-    .get();
+  // 使うのは totalCount だけ。スナップショット doc は全参加者の rows / ranks 入りで大きいので項目を絞る
+  const db = getAdminDb();
+  const [snap] = await db.getAll(
+    db.collection("cumulative_ranking_snapshots").doc(docId),
+    { fieldMask: ["totalCount"] }
+  );
   if (!snap.exists) return null;
   return safeDenominator(snap.data()?.totalCount);
 }

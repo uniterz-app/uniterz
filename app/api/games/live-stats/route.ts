@@ -16,7 +16,12 @@ type LiveStatsLoadResult =
   | { found: true; report: LiveGameStatsReport | null };
 
 async function loadLiveStatsReport(gameId: string): Promise<LiveStatsLoadResult> {
-  const snap = await getAdminDb().collection("games").doc(gameId).get();
+  // レポートに使う項目だけ読む（pointsSummary ~11KB・pointsDistribution・predictorUids を受け取らない）。
+  // home / away / homeTeamId / awayTeamId は gameDocTeamContext、liveStats は normalizeLiveGameStatsDoc が使う
+  const db = getAdminDb();
+  const [snap] = await db.getAll(db.collection("games").doc(gameId), {
+    fieldMask: ["league", "liveStats", "home", "away", "homeTeamId", "awayTeamId"],
+  });
   if (!snap.exists) return { found: false };
   const game = snap.data() as Record<string, unknown>;
   if (String(game.league ?? "").toLowerCase() !== "nba") {

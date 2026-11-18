@@ -4,6 +4,7 @@
  * 過去期間の doc は更新されず、そのままアーカイブとして参照できる。
  */
 
+import { FieldPath } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
@@ -93,7 +94,21 @@ export async function readNbaPeriodRankingSnapshots(opts: {
         })
       )
   );
-  const snaps = await db.getAll(...refs);
+  /**
+   * uid 付き（My Rank）は、使う項目だけ読む。ranks / prevRanks は全参加者ぶんの map（各約 30KB）なので、
+   * 自分の分だけ取る。rows は myRow（上位に居る場合）と「空なら前期間」の判定に使うので残す。
+   */
+  const snaps = opts.uid
+    ? await db.getAll(...refs, {
+        fieldMask: [
+          "range",
+          "count",
+          "rows",
+          new FieldPath("ranks", opts.uid),
+          new FieldPath("prevRanks", opts.uid),
+        ],
+      })
+    : await db.getAll(...refs);
   if (snaps.every((s) => !s.exists)) return null;
 
   const myUid = opts.uid ?? null;
