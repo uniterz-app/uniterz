@@ -3,6 +3,7 @@
 import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { installFirestoreEgressMeter } from "./firestore/egressMeter";
 
 let _app: App | null = null;
 let _db: Firestore | null = null;
@@ -64,6 +65,8 @@ function initApp(): App {
 export function getAdminDb(): Firestore {
   if (!_db) {
     _db = getFirestore(initApp());
+    // Firestore → Vercel の転送量を 1 分ごとに [fs-egress] で出す（結果は変えない）
+    installFirestoreEgressMeter(_db);
   }
   return _db;
 }
