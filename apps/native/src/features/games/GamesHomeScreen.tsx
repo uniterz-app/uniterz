@@ -2657,7 +2657,7 @@ export default function GamesHomeScreen({
   ]);
 
   async function handleNextGameModalYes(dontShowAgain: boolean) {
-    if (dontShowAgain) await writePredictNextGameModalSkip();
+    if (dontShowAgain && fUser?.uid) await writePredictNextGameModalSkip(fUser.uid);
     const g = nextGameAfterPost;
     setNextGameAfterPost(null);
     if (g) {
@@ -2668,7 +2668,7 @@ export default function GamesHomeScreen({
   }
 
   async function handleNextGameModalNo(dontShowAgain: boolean) {
-    if (dontShowAgain) await writePredictNextGameModalSkip();
+    if (dontShowAgain && fUser?.uid) await writePredictNextGameModalSkip(fUser.uid);
     setNextGameAfterPost(null);
   }
 
@@ -2793,9 +2793,11 @@ export default function GamesHomeScreen({
               !isProUser
             )
           : null;
-      const skipNextModal =
-        !isEditing ? await readPredictNextGameModalSkip() : false;
       const promptUid = fUser?.uid ?? null;
+      const skipNextModal =
+        !isEditing && promptUid != null
+          ? await readPredictNextGameModalSkip(promptUid)
+          : false;
       const countsForPostPrompt =
         !isEditing &&
         promptUid != null &&

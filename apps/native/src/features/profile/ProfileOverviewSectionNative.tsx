@@ -5,7 +5,7 @@
  * 1 Result Drop → PICK UP / PRO LEAGUE 切替 → 2 Ranking Progress → 3 Last20 Tracker → 4 Daily Combo
  * CAREER はヒーローカード裏面（フリップ）で見る。
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useProfileOverviewStage } from "../../../../../lib/profile/useProfileOverviewStage";
 import {
@@ -36,6 +36,8 @@ import type { StreakTrackerPointNative } from "./useNativeStreakTracker";
 import ProfileOverviewEntranceBlock from "./ProfileOverviewEntranceBlock";
 import ProfileDailyTrendChartNative from "./ProfileDailyTrendChartNative";
 import ProfileRankTrendChartNative from "./ProfileRankTrendChartNative";
+import type { ProfileRankTrendScope } from "./profileChartCopy";
+import { useNativeProfilePeriodRankTrend } from "./useNativeProfilePeriodRankTrend";
 import ProfileStreakTrackerNative from "./ProfileStreakTrackerNative";
 import ProfileSettledTodayResultsNative from "./ProfileSettledTodayResultsNative";
 import { profileOverviewChartShellStyle } from "./profileOverviewChartShell";
@@ -88,6 +90,19 @@ export default function ProfileOverviewSectionNative({
     isMe
   );
   const lockCopy = useMemo(() => rankingsTexts(language), [language]);
+
+  /** Ranking Progress の集計単位（SEASON=日ごと / WEEKLY・MONTHLY=期間ごとの最終順位） */
+  const [rankScope, setRankScope] = useState<ProfileRankTrendScope>("season");
+  const isNbaProfile = (profileStatsContext.rankingLeague ?? "nba") === "nba";
+  const periodScope =
+    isNbaProfile && rankScope !== "season" ? rankScope : null;
+  const periodTrend = useNativeProfilePeriodRankTrend({
+    uid: targetUid,
+    period: periodScope,
+    division: chartsDivision === "open" ? "open" : "pickup",
+  });
+  /** Free は直近 3 期間、Pro は最大 10 期間（My Rank の Ranking Progress と同じ） */
+  const rankDepth = currentIsProView ? 10 : 3;
   const openRankTrend = useMemo(
     () => rankTrendChartPointsFromSeed(openCharts.rankTrend),
     [openCharts.rankTrend]
@@ -176,14 +191,46 @@ export default function ProfileOverviewSectionNative({
         <>
           <View style={styles.chartGap} />
           <ProfileOverviewEntranceBlock index={1} entranceKey={entranceKey}>
+            {isNbaProfile ? (
+              <>
+                <CyberSlantedTabBarNative fill>
+                  {(
+                    [
+                      ["season", "SEASON"],
+                      ["weekly", "WEEKLY"],
+                      ["monthly", "MONTHLY"],
+                    ] as const
+                  ).map(([scope, label]) => (
+                    <CyberSlantedTabNative
+                      key={scope}
+                      label={label}
+                      active={rankScope === scope}
+                      onPress={() => setRankScope(scope)}
+                      compact
+                      theme={showOpen ? PRO_LEAGUE_DIVISION_TAB_THEME : undefined}
+                    />
+                  ))}
+                </CyberSlantedTabBarNative>
+                <View style={styles.rankScopeGap} />
+              </>
+            ) : null}
             <ProfileRankTrendChartNative
-              data={showOpen ? openRankTrend : rankTrend}
+              data={
+                periodScope
+                  ? periodTrend.points.slice(-rankDepth)
+                  : showOpen
+                    ? openRankTrend
+                    : rankTrend
+              }
               loading={
-                showOpen
-                  ? openCharts.loading
-                  : rankTrendLoading && rankTrend.length === 0
+                periodScope
+                  ? periodTrend.loading
+                  : showOpen
+                    ? openCharts.loading
+                    : rankTrendLoading && rankTrend.length === 0
               }
               language={chartLang}
+              scope={isNbaProfile ? rankScope : undefined}
             />
           </ProfileOverviewEntranceBlock>
 
@@ -236,6 +283,9 @@ const styles = StyleSheet.create({
   },
   chartGap: {
     height: 16,
+  },
+  rankScopeGap: {
+    height: 10,
   },
   chartSkeleton: {
     ...profileOverviewChartShellStyle,
