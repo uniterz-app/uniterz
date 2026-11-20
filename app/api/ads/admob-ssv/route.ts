@@ -13,12 +13,23 @@ const PRO_PICK_AD_REWARDS_COLLECTION = "proPickAdRewards";
  * 解除は `POST /api/nba/pro-pick-unlock` がこの記録を消費して行う。
  * 同じ transaction_id は 2 回目以降無視する（再送に強くする）。
  */
+/** ログ用: パラメータの名前だけ（値は出さない） */
+function paramNames(rawQuery: string): string {
+  return rawQuery
+    .split("&")
+    .map((p) => p.split("=")[0])
+    .filter(Boolean)
+    .join(",");
+}
+
 export async function GET(req: Request) {
   const rawQuery = req.url.split("?")[1] ?? "";
   const result = await verifyAdMobSsv(rawQuery);
   if (!result.ok) {
+    console.warn(`[admob-ssv] rejected reason=${result.reason} params=${paramNames(rawQuery)}`);
     return new NextResponse(`rejected: ${result.reason}`, { status: 403 });
   }
+  console.log(`[admob-ssv] verified tx=${result.transactionId} gameId=${result.gameId} params=${paramNames(rawQuery)}`);
 
   // 本番では AdMob の広告ユニット ID を環境変数で絞る（設定されていれば一致が必要）
   const allowedUnits = (process.env.ADMOB_REWARDED_AD_UNIT_IDS ?? "")
