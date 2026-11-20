@@ -57,6 +57,7 @@ import {
   horizonStepHost,
 } from "../../../../../lib/tutorial/tutorialHorizonSteps";
 import { tutorialSkipConfirmProps } from "../../../../../lib/tutorial/tutorialSkipConfirmProps";
+import { unitIntroCopy } from "../../../../../lib/onboarding/unitIntroCopy";
 import {
   subscribeTutorialRestartNative,
   requestTutorialClearedNative,
@@ -273,7 +274,7 @@ export default function TutorialLiveHostNative({ page, language }: Props) {
         <TutorialLiveCoachNative
           open
           title={step0 ? p.rankingsTitle : p.rankingsBoardsTitle}
-          body={step0 ? p.rankingsBody : p.rankingsBoardsBody}
+          body={step0 ? unitIntroCopy(language).rankingsBody : p.rankingsBoardsBody}
           skipLabel={m.tutorial.skip}
           nextLabel={m.common.ok}
           backLabel={step0 ? undefined : m.tutorial.back}

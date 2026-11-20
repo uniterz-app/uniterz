@@ -8,6 +8,8 @@ import {
 } from "@/lib/games/liveGameStats";
 
 const LIVE_POLL_MS = 60_000;
+/** まだ box が無い（試合前など）ときは間隔を空ける */
+const EMPTY_POLL_MS = 180_000;
 
 export type UseLiveGameStatsOptions = {
   /** Native など相対パスが使えないとき（末尾スラッシュなし） */
@@ -58,6 +60,7 @@ export function useLiveGameStats(
 
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let triedGameDoc = false;
     const abort = new AbortController();
 
     const clearTimer = () => {
@@ -82,9 +85,12 @@ export function useLiveGameStats(
       if (!alive) return;
       if (reportRef.current?.phase === "final") return;
       if (pausedRef.current) return;
-      timer = setTimeout(() => {
-        void fetchOnce();
-      }, LIVE_POLL_MS);
+      timer = setTimeout(
+        () => {
+          void fetchOnce();
+        },
+        reportRef.current ? LIVE_POLL_MS : EMPTY_POLL_MS
+      );
     };
 
     const fetchOnce = async () => {
@@ -111,7 +117,9 @@ export function useLiveGameStats(
 
       if (!alive) return;
 
-      if (!next) {
+      // games doc は丸ごと読むことになるので、API が空のときも最初の 1 回だけ
+      if (!next && !triedGameDoc) {
+        triedGameDoc = true;
         try {
           next = await reportFromGameDoc();
         } catch {

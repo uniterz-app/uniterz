@@ -1101,10 +1101,7 @@ const en: Messages = {
         "From **Groups**, **apply** to an open squad or join with an **invite code**.\nDuring the event, **weekly (×4)** and **monthly (×1)** standings update.\n**All members** of top squads receive **UNIT**.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
-        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** you can **redeem** for **jerseys**, **hats**, and more.\nTap the coin to open your **history**.",
-      horizonUnitHowTitle: "Earning UNIT",
-      horizonUnitHowBody:
-        "Earn from **weekly/monthly rankings**, **Squad Battle**, and **friend invites**.\nSave UNIT to **redeem** jerseys, hats, and more.",
+        "The highlighted **coin** is your **UNIT balance**.\nEarn UNIT from top **weekly/monthly rankings**, **Squad Battle**, and **friend invites**.\nRedeem for **jerseys**, **hats**, and more. Missed picks never cost UNIT.",
       horizonCareerTitle: "Career",
       horizonCareerBody:
         "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",

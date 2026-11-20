@@ -22,6 +22,8 @@ export type ProfileSideMenuLabels = {
   terms: string;
   contact: string;
   privacy: string;
+  /** 広告の同意を変更（EU などの地域だけ表示） */
+  adsConsent: string;
   commercialLaw: string;
   password: string;
   notifications: string;
@@ -198,6 +200,15 @@ export function profileSideMenuLabels(
       es: "Política de privacidad",
       pt: "Política de privacidade",
       fr: "Politique de confidentialité",
+    }),
+    adsConsent: L(lang, {
+      ja: "広告の同意を変更",
+      en: "Change ad consent",
+      ko: "광고 동의 변경",
+      zh: "更改广告同意",
+      es: "Cambiar consentimiento de anuncios",
+      pt: "Alterar consentimento de anúncios",
+      fr: "Modifier le consentement publicitaire",
     }),
     commercialLaw: L(lang, {
       ja: "特定商取引法に基づく表記",

@@ -1084,10 +1084,7 @@ const zh: Messages = {
         "在**小组**标签中，向有空位的小队**申请加入**，或用**邀请码**进入。\n活动期间会更新**周榜（通常 4 次）**与**月榜（1 次）**。\n**靠前小队的全员**都会获得 **UNIT**。",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
-        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
-      horizonUnitHowTitle: "Earning UNIT",
-      horizonUnitHowBody:
-        "可通过**周/月排行榜**、**小队对战**、**邀请好友**等奖励获得。\n攒下的 UNIT 可**兑换**球衣、帽子等。",
+        "高亮的**金币**就是你的 **UNIT 余额**。\n通过**周/月排行榜**、**小队对战**、**邀请好友**获得，可**兑换**球衣、帽子等。\n预测失误不会扣除 UNIT。",
       horizonCareerTitle: "Career",
       horizonCareerBody:
         "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",

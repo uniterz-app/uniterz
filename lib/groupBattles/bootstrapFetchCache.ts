@@ -9,13 +9,19 @@ type CacheEntry<T> = { value: T; at: number };
 const fresh = new Map<string, CacheEntry<unknown>>();
 const inflight = new Map<string, Promise<unknown>>();
 
+/**
+ * キーに閲覧者（uid）を含める。アカウントを切り替えた直後に前のユーザーの
+ * 招待・申請・公開スクワッドが 45 秒見えないようにする。
+ */
 export function groupBattleBootstrapCacheKey(opts: {
   battleId?: string | null;
   period?: string | null;
   label?: string | null;
   weekIndex?: number | null;
+  viewerUid?: string | null;
 }): string {
   return [
+    opts.viewerUid ?? "",
     opts.battleId ?? "",
     opts.period ?? "",
     opts.label ?? "",

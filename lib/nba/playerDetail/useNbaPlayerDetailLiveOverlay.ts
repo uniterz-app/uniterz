@@ -15,6 +15,7 @@ import type { NbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPrevie
 import type { NbaPlayerStatLeadersBundle } from "@/lib/predict/nbaPlayerStatLeadersMocks";
 import type { NbaPlayerDetailApiPayload } from "@/lib/nba/playerDetail/loadPlayerDetailBundle";
 import {
+  appendInProgressSeasonToCareer,
   applyCuratedPlayerAwardsToPlayerDetail,
   applyInjuryToPlayerDetail,
   applyOffRosterPlayerToPlayerDetail,
@@ -211,6 +212,15 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
       );
     }
     next = applyCuratedPlayerAwardsToPlayerDetail(next, playerId);
+    // キャリア ingest は手動。進行中シーズンはロスターの今季平均で 1 行足して前季までと見比べる
+    if (hit && bundle.careerSeasons.careerSeasons) {
+      next = appendInProgressSeasonToCareer(
+        next,
+        hit,
+        bundle.careerSeasons.careerSeasons,
+        bundle.roster.averagesSeasonKey
+      );
+    }
 
     if (bundle.season) {
       next = { ...next, asOfLabel: bundle.season };

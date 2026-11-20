@@ -141,8 +141,8 @@ function ScanLines({
   );
 }
 
-function CurrentBadge({ abbr, fill, sm }: Resolved) {
-  return <OutlineGlowBadge abbr={abbr} fill={fill} sm={sm} />;
+function CurrentBadge(props: Resolved) {
+  return <OutlineGlowBadge {...props} />;
 }
 
 function OutlineGlowBadge({ abbr, fill, sm }: Resolved) {

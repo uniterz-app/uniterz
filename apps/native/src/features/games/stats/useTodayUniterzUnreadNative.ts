@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused } from "@react-navigation/native";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import {
   TODAY_UNITERZ_SEEN_STORAGE_KEY,
@@ -25,6 +26,9 @@ async function loadSeen(): Promise<string | null> {
 }
 
 export function useTodayUniterzUnreadNative(pollMs?: number) {
+  // Games ホームは他画面の下に残るので、見えていないあいだはポーリングしない
+  const focused = useIsFocused();
+  const activePollMs = focused ? pollMs : undefined;
   const [latest, setLatest] = useState<string | null>(null);
   const [seen, setSeen] = useState<string | null>(seenCache ?? null);
 
@@ -52,8 +56,13 @@ export function useTodayUniterzUnreadNative(pollMs?: number) {
         // 点が出ないだけ
       }
     };
+    if (!focused) {
+      return () => {
+        alive = false;
+      };
+    }
     void load();
-    const id = pollMs ? setInterval(load, pollMs) : null;
+    const id = activePollMs ? setInterval(load, activePollMs) : null;
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") void load();
     });
@@ -62,7 +71,7 @@ export function useTodayUniterzUnreadNative(pollMs?: number) {
       if (id != null) clearInterval(id);
       sub.remove();
     };
-  }, [pollMs]);
+  }, [activePollMs, focused]);
 
   const markSeen = useCallback(() => {
     if (!latest) return;

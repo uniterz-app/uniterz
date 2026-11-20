@@ -8,11 +8,11 @@ import {
   View,
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { auth, db } from "../../lib/firebase";
+import { auth } from "../../lib/firebase";
+import { initNewUserDocNative } from "./initNewUserDocNative";
 import type { AuthStackParamList } from "../../navigation/types";
 import AuthFormShellNative from "./AuthFormShellNative";
 import { mapAuthErrorMessage } from "./authShared";
@@ -60,17 +60,7 @@ export default function SignupScreenNative() {
         normalized,
         password
       );
-      await setDoc(
-        doc(db, "users", cred.user.uid),
-        {
-          displayName: "",
-          bio: "",
-          photoURL: cred.user.photoURL ?? "",
-          createdAt: serverTimestamp(),
-          counts: { posts: 0 },
-        },
-        { merge: true }
-      );
+      await initNewUserDocNative(cred.user.uid, cred.user.photoURL);
       const code = normalizeReferralInviteCode(inviteCode);
       if (code) {
         try {

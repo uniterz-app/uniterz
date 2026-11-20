@@ -1099,10 +1099,7 @@ const de: Messages = {
         "From **Groups**, **apply** to an open squad or join with an **invite code**.\nDuring the event, **weekly (×4)** and **monthly (×1)** standings update.\n**All members** of top squads receive **UNIT**.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
-        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
-      horizonUnitHowTitle: "Earning UNIT",
-      horizonUnitHowBody:
-        "Verdienen über Belohnungen aus **Wochen-/Monatsrankings**, **Squad Battle** und **Freundes-Einladungen**.\nUNIT gegen **Trikots**, **Caps** usw. **einlösen**.",
+        "Die markierte **Münze** ist dein **UNIT-Guthaben**.\nVerdienen über **Wochen-/Monatsrankings**, **Squad Battle** und **Freundes-Einladungen**, **einlösen** gegen **Trikots**, **Caps** usw.\nFalsche Tipps kosten dich nie UNIT.",
       horizonCareerTitle: "Career",
       horizonCareerBody:
         "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",

@@ -135,6 +135,27 @@ function cacheSet<T>(
   map.set(id, { at: Date.now(), value });
 }
 
+/** 1 回読んだ games doc から 3 種類とも埋める（別々に読み直さない） */
+function primeEnrichmentCaches(
+  id: string,
+  raw: Record<string, unknown> | null
+): void {
+  if (!raw) {
+    cacheSet(marketCache, id, null);
+    cacheSet(roundMetaCache, id, null);
+    cacheSet(pkCache, id, null);
+    return;
+  }
+  const pcts = marketPctsFromGameDoc(raw);
+  cacheSet(
+    marketCache,
+    id,
+    pcts ? { homeRate: pcts.homePct / 100, awayRate: pcts.awayPct / 100 } : null
+  );
+  cacheSet(roundMetaCache, id, roundMetaFromGameDoc(raw));
+  cacheSet(pkCache, id, resolvePkScore(raw));
+}
+
 async function fetchMissingGameDocs(
   db: Firestore,
   gameIds: readonly string[]
@@ -165,10 +186,12 @@ async function fetchMissingGameDocs(
             const data = docSnap.data() as Record<string, unknown>;
             out[docSnap.id] = data;
             primeGameDocCacheForResult(docSnap.id, data, true);
+            primeEnrichmentCaches(docSnap.id, data);
           }
           for (const id of chunk) {
             if (!found.has(id)) {
               primeGameDocCacheForResult(id, null, false);
+              primeEnrichmentCaches(id, null);
             }
           }
         } catch {

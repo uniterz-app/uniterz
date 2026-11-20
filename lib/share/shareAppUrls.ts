@@ -55,8 +55,8 @@ export function getAppStoreAppId(): string | null {
 }
 
 /**
- * 共有本文: キャプション + ディープリンク + ダウンロード URL（OS でストアへ振り分け）。
- * rank / result / profile の OS 共有・SNS Intent はここを通す。
+ * 共有本文: キャプション + ディープリンク。ダウンロード URL（/get）は付けない
+ * （招待文だけが明示的に `getAppDownloadShareUrl()` を渡す）。
  */
 export function buildShareOutboundMessage(
   caption: string,
@@ -72,7 +72,6 @@ export function buildShareOutboundMessage(
   };
 
   pushUnique(deepLinkUrl);
-  pushUnique(getAppDownloadShareUrl());
   return message;
 }
 

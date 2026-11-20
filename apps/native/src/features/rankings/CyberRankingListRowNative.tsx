@@ -490,7 +490,6 @@ export function CyberRankingListRowNative({
     return (
       <Pressable
         onPress={onPress}
-        delayPressIn={0}
         accessibilityRole="button"
         style={({ pressed }) => [pressed ? styles.rowPressed : null]}
       >

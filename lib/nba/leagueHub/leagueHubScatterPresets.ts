@@ -661,7 +661,19 @@ export type LeagueHubTeamMetric =
   | "fgPctAllowed"
   | "fg3PctAllowed"
   | "cnsPts"
-  | "pullupPts";
+  | "pullupPts"
+  /** FORM: 終わった試合の相手の今の勝率の平均（0–1） */
+  | "scheduleSos"
+  /** FORM: 5 点差以内の勝率（0–1） */
+  | "closeWinPct"
+  /** FORM: 3IN4 の勝率（0–1） */
+  | "threeInFourWinPct"
+  /** FORM: UNITERZ 予想の勝ち数（選んだ割合の合計） */
+  | "picksExpectedWins"
+  /** FORM: その対象試合での実際の勝ち数 */
+  | "picksWins"
+  /** FORM: エース欠場時の勝率（0–1） */
+  | "aceOutWinPct";
 
 export const LEAGUE_HUB_TEAM_STRENGTH: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
   id: "strength",
@@ -1188,6 +1200,121 @@ export const LEAGUE_HUB_TEAM_SIZE: LeagueHubScatterPreset<LeagueHubTeamMetric> =
     tl: { ja: "スモールボール", en: "SMALL BALL" },
     br: { ja: "大きくてじっくり", en: "BIG AND SLOW" },
     bl: { ja: "小さくてじっくり", en: "SMALL HALF-COURT" },
+  },
+};
+
+/** FORM — hub の schedule / picks / close / 3IN4 / ace-out を散布図にしたもの */
+export const LEAGUE_HUB_TEAM_SCHEDULE_SOS: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "scheduleSos",
+  label: { ja: "日程の厳しさ", en: "SCHEDULE" },
+  hint: {
+    ja: "右ほどこれまで当たった相手の今の勝率が高い。上ほど自分も勝っている。右上はキツい日程なのに勝っている。",
+    en: "Right = tougher opponents so far (their current win %). Up = more wins. Top right = winning through a hard schedule.",
+  },
+  x: {
+    metric: "scheduleSos",
+    label: { ja: "終わった試合の相手の平均勝率", en: "OPP WIN% FACED" },
+    format: "pct",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "SOS" },
+  quadrants: {
+    tr: { ja: "キツい日程で勝つ", en: "BATTLE TESTED" },
+    tl: { ja: "楽な日程で勝つ", en: "SOFT SCHEDULE" },
+    br: { ja: "キツくて苦戦", en: "GRINDING" },
+    bl: { ja: "楽でも勝てない", en: "WASTING EASY" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_PICKS: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "picks",
+  label: { ja: "みんなの予想", en: "UNITERZ PICKS" },
+  hint: {
+    ja: "右ほど UNITERZ のみんながそのチームを勝つと見ていた（選んだ割合の合計）。上ほど実際に勝っている。左上はみんなより勝っている。3 試合以上。",
+    en: "Right = more expected wins from UNITERZ pick share. Up = actual wins. Top left = beating the crowd. 3+ games.",
+  },
+  x: {
+    metric: "picksExpectedWins",
+    label: { ja: "予想の勝ち数（選んだ割合の合計）", en: "EXPECTED WINS (pick share)" },
+    format: "one",
+  },
+  y: {
+    metric: "picksWins",
+    label: { ja: "実際の勝ち数", en: "ACTUAL WINS" },
+    format: "one",
+  },
+  marks: { tl: "PICKS" },
+  quadrants: {
+    tr: { ja: "本命どおり勝つ", en: "AS EXPECTED" },
+    tl: { ja: "予想より勝つ", en: "UNDERRATED" },
+    br: { ja: "本命なのに負ける", en: "OVERRATED" },
+    bl: { ja: "どちらも少ない", en: "LOW PROFILE" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_CLOSE: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "close",
+  label: { ja: "接戦", en: "CLOSE GAMES" },
+  hint: {
+    ja: "右ほど 5 点差以内の試合で勝っている。上ほど全体でも勝っている。接戦だけ強い／大差でしか勝てない、が分かる。2 試合以上。",
+    en: "Right = better in games decided by 5 or fewer. Up = overall win %. Spot close-game specialists vs blowout teams. 2+ close games.",
+  },
+  x: {
+    metric: "closeWinPct",
+    label: { ja: "接戦（≤5 点）の勝率", en: "CLOSE (≤5) WIN%" },
+    format: "pct",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "CLOSE" },
+  quadrants: {
+    tr: { ja: "接戦も全体も強い", en: "CLUTCH CONTENDER" },
+    tl: { ja: "大差で勝つ", en: "BLOWOUT WINS" },
+    br: { ja: "接戦に強いが全体は苦戦", en: "CLOSE ONLY" },
+    bl: { ja: "接戦に弱い", en: "CLOSE COLLAPSE" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_THREE_IN_FOUR: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "threeInFour",
+  label: { ja: "3IN4", en: "3IN4" },
+  hint: {
+    ja: "右ほど 4 日で 3 試合目でも勝っている。上ほど全体でも勝っている。過密日程に強いチーム。2 試合以上。",
+    en: "Right = better in the third game in four nights. Up = overall win %. Spot teams that hold up on dense stretches. 2+ such games.",
+  },
+  x: {
+    metric: "threeInFourWinPct",
+    label: { ja: "3IN4 の勝率", en: "3IN4 WIN%" },
+    format: "pct",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "3IN4" },
+  quadrants: {
+    tr: { ja: "過密でも勝つ", en: "IRON SCHEDULE" },
+    tl: { ja: "空いた日程で勝つ", en: "RESTED WINS" },
+    br: { ja: "過密に強いが全体は苦戦", en: "SURVIVES 3IN4" },
+    bl: { ja: "過密に崩れる", en: "CRUMBLES" },
+  },
+};
+
+export const LEAGUE_HUB_TEAM_ACE_OUT: LeagueHubScatterPreset<LeagueHubTeamMetric> = {
+  id: "aceOut",
+  label: { ja: "エース欠場", en: "ACE OUT" },
+  hint: {
+    ja: "右ほどエースが欠場した試合でも勝っている。上ほど全体でも勝っている。左上はエース依存が強い。欠場 2 試合以上。",
+    en: "Right = better when the ace sits. Up = overall win %. Top left = star-dependent. 2+ games without the ace.",
+  },
+  x: {
+    metric: "aceOutWinPct",
+    label: { ja: "エース欠場時の勝率", en: "WIN% WITHOUT ACE" },
+    format: "pct",
+  },
+  y: WIN_PCT_AXIS,
+  marks: { tl: "ACE OUT" },
+  quadrants: {
+    tr: { ja: "誰が出ても勝つ", en: "NEXT MAN UP" },
+    tl: { ja: "エースが要る", en: "STAR DEPENDENT" },
+    br: { ja: "エース無しでも回るが全体は苦戦", en: "DEPTH, NOT WINS" },
+    bl: { ja: "エース無しで崩れる", en: "NO ACE, NO CHANCE" },
   },
 };
 

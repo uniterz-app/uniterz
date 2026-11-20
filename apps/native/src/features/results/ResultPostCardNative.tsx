@@ -116,22 +116,6 @@ const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
 
 const AnimatedResultCardPressable = Animated.createAnimatedComponent(Pressable);
 
-const LEAGUE_LABEL: Record<string, string> = {
-  nba: "NBA",
-  bj: "B1",
-  pl: "PL",
-  j1: "J1",
-  wc: "WC",
-};
-
-const LEAGUE_PILL_BG: Record<string, string> = {
-  nba: "#1D428A",
-  bj: "#C8102E",
-  pl: "#3A0CA3",
-  j1: "#E10600",
-  wc: "#56042C",
-};
-
 function toNumber(v: unknown, fallback = 0) {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
@@ -363,8 +347,6 @@ function ResultPostCardNativeInner({
     });
   const isBasketballCard = leagueKey === "nba" || leagueKey === "bj";
   const listScoreDensity = isBasketballCard ? "listBasketball" : "list";
-  const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
-
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
   const homeRecordLine = useTeamRecordLineNative(
@@ -733,7 +715,6 @@ function ResultPostCardNativeInner({
       >
         <AnimatedResultCardPressable
           collapsable={false}
-          delayPressIn={0}
           accessibilityRole="button"
           accessibilityLabel={L(loc, {
             ja: "リザルト詳細を開く",
@@ -824,7 +805,6 @@ function ResultPostCardNativeInner({
     <Animated.View style={[styles.cardPressBleed, entrance.cardShellMotionStyle]}>
       <AnimatedResultCardPressable
         collapsable={false}
-        delayPressIn={0}
         style={styles.resultCardPressable}
         onPressIn={() => {
           entrance.pressed.value = reduceMotionList
@@ -873,20 +853,6 @@ function ResultPostCardNativeInner({
           Boolean(shellOverflowStyle) || shellStrokeWidth > 1
         }
       >
-        {(leagueKey !== "nba" && leagueKey !== "wc") ? (
-        <View style={styles.cardBadgeOverlay} pointerEvents="none">
-          <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
-            <View
-              style={[
-                styles.leaguePill,
-                { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
-              ]}
-            >
-              <Text style={styles.leaguePillText}>{pillText}</Text>
-            </View>
-          </Animated.View>
-        </View>
-        ) : null}
         <Animated.View
           style={[styles.cardBadgeOutcomeAbsolute, entrance.hitMissBadgeStyle]}
           pointerEvents="none"

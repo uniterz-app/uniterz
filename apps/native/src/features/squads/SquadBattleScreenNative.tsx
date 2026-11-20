@@ -3330,7 +3330,17 @@ export default function SquadBattleScreenNative() {
           weekIndex: rankPeriod === "weekly" ? weekIndex : null,
         });
         if (cancelled) return;
-        bootstrapPeriodKeyRef.current = periodKey;
+        // 初回は週を 1 で取りに行くため、今週が 1 以外のとき bootstrap の順位は別の週。描かず、今週で取り直す
+        const resolvedWeekForBoot = boot?.battle
+          ? resolveSquadBattleWeekIndex({
+              weeklyLabels: boot.battle.weeklyLabels ?? [],
+            })
+          : null;
+        const rankingsForRequestedWeek =
+          rankPeriod !== "weekly" ||
+          resolvedWeekForBoot == null ||
+          resolvedWeekForBoot === weekIndex;
+        bootstrapPeriodKeyRef.current = rankingsForRequestedWeek ? periodKey : "";
         if (!boot?.battle) {
           setLiveBattleId(null);
           setLiveBattlePhase(null);
@@ -3369,31 +3379,33 @@ export default function SquadBattleScreenNative() {
             ? mapCurrentMySquadToUiSquad(boot.mySquad, user?.uid ?? null)
             : null
         );
-        const rankings = boot.rankings;
-        if (rankings?.snapshot?.rows?.length) {
-          setBoardStatus(rankings.snapshot.status);
-          setBoardBuiltAtMs(
-            Number(rankings.snapshot.builtAtMs) > 0
-              ? Number(rankings.snapshot.builtAtMs)
-              : null
-          );
-          setLiveLeaderboard(
-            mapGroupBattleSnapshotRowsToSquads(
-              rankings.snapshot.rows,
-              mySquadId
-            )
-          );
-        } else {
-          setLiveLeaderboard(rankings?.snapshot ? [] : null);
-          if (rankings?.snapshot) {
+        const rankings = rankingsForRequestedWeek ? boot.rankings : null;
+        if (rankingsForRequestedWeek) {
+          if (rankings?.snapshot?.rows?.length) {
             setBoardStatus(rankings.snapshot.status);
             setBoardBuiltAtMs(
               Number(rankings.snapshot.builtAtMs) > 0
                 ? Number(rankings.snapshot.builtAtMs)
                 : null
             );
+            setLiveLeaderboard(
+              mapGroupBattleSnapshotRowsToSquads(
+                rankings.snapshot.rows,
+                mySquadId
+              )
+            );
           } else {
-            setBoardBuiltAtMs(null);
+            setLiveLeaderboard(rankings?.snapshot ? [] : null);
+            if (rankings?.snapshot) {
+              setBoardStatus(rankings.snapshot.status);
+              setBoardBuiltAtMs(
+                Number(rankings.snapshot.builtAtMs) > 0
+                  ? Number(rankings.snapshot.builtAtMs)
+                  : null
+              );
+            } else {
+              setBoardBuiltAtMs(null);
+            }
           }
         }
         setLiveOpenSquads(

@@ -17,6 +17,26 @@ export function profileAwardsBracketCopy(language: string | null | undefined) {
       pt: "Nenhuma previsão de temporada",
       fr: "Aucune prédiction de saison",
     }),
+    /** 他人のプロフィール・締切前（予想はまだ公開されない） */
+    hiddenBeforeDeadline: L(lang, {
+      ja: "提出期限後に公開されます。",
+      en: "Predictions become visible after the deadline.",
+      ko: "제출 기한 이후에 공개됩니다.",
+      zh: "截止后公开。",
+      es: "Las predicciones se publican después del plazo.",
+      pt: "As previsões ficam visíveis após o prazo.",
+      fr: "Les prédictions seront visibles après la date limite.",
+    }),
+    /** 他人のプロフィール・本人が非公開にしている */
+    hiddenPrivate: L(lang, {
+      ja: "この人はシーズン予想を非公開にしています。",
+      en: "This user has kept their season predictions private.",
+      ko: "이 사용자는 시즌 예측을 비공개로 설정했습니다.",
+      zh: "该用户已将赛季预测设为私密。",
+      es: "Este usuario ha mantenido sus predicciones de temporada privadas.",
+      pt: "Este usuário manteve suas previsões de temporada privadas.",
+      fr: "Cet utilisateur a gardé ses prédictions de saison privées.",
+    }),
     /** 締切前・未提出（自分）向けヒント */
     submitOpenHint: L(lang, {
       ja: "提出期限前です。ここからアワード／順位予想を提出できます。",

@@ -13,11 +13,22 @@ import type { PostWithMillis } from "../results/nativeResultModel";
 type SettledTodayCacheEntry = {
   posts: PostWithMillis[];
   resolved: boolean;
+  fetchedAtMs?: number;
   promise?: Promise<PostWithMillis[]>;
 };
 
 const settledTodayCache = new Map<string, SettledTodayCacheEntry>();
 const SETTLED_TODAY_TIMEOUT_MS = 15_000;
+/** 試合日のあいだも予想は順に確定していくので、取り直すまでの時間 */
+const SETTLED_TODAY_TTL_MS = 3 * 60_000;
+
+function isFresh(entry: SettledTodayCacheEntry | undefined): boolean {
+  return (
+    entry?.resolved === true &&
+    entry.fetchedAtMs != null &&
+    Date.now() - entry.fetchedAtMs < SETTLED_TODAY_TTL_MS
+  );
+}
 
 /** プロフィール Overview は NBA のみ */
 export const NATIVE_PROFILE_SETTLED_TODAY_CTX: ProfileStatsStreakContext = {
@@ -35,14 +46,14 @@ function settledTodayCacheKey(
 
 function readResolvedPosts(key: string): PostWithMillis[] | null {
   const cached = settledTodayCache.get(key);
-  if (!cached?.resolved) return null;
-  return cached.posts;
+  if (!isFresh(cached)) return null;
+  return cached!.posts;
 }
 
-function markSettledTodayFailed(key: string): PostWithMillis[] {
-  const empty: PostWithMillis[] = [];
-  settledTodayCache.set(key, { posts: empty, resolved: true });
-  return empty;
+/** 前回の成功結果（期限切れでも）。取り直し中・失敗時に空にしないため */
+function readStalePosts(key: string): PostWithMillis[] {
+  const cached = settledTodayCache.get(key);
+  return cached?.resolved ? cached.posts : [];
 }
 
 async function loadSettledTodayOnce(
@@ -52,7 +63,7 @@ async function loadSettledTodayOnce(
   key: string
 ): Promise<PostWithMillis[]> {
   const cached = settledTodayCache.get(key);
-  if (cached?.resolved) return cached.posts;
+  if (isFresh(cached)) return cached!.posts;
   if (cached?.promise) return cached.promise;
 
   const promise = withTimeout(
@@ -61,15 +72,31 @@ async function loadSettledTodayOnce(
     "settled-today-timeout"
   )
     .then((posts) => {
-      settledTodayCache.set(key, { posts, resolved: true });
+      settledTodayCache.set(key, {
+        posts,
+        resolved: true,
+        fetchedAtMs: Date.now(),
+      });
       return posts;
     })
     .catch((err) => {
       console.warn("[useNativeProfileSettledTodayResults]", err);
-      return markSettledTodayFailed(key);
+      const prev = settledTodayCache.get(key);
+      const posts = prev?.resolved ? prev.posts : [];
+      if (prev?.resolved) {
+        settledTodayCache.set(key, { ...prev, promise: undefined });
+      } else {
+        settledTodayCache.delete(key);
+      }
+      return posts;
     });
 
-  settledTodayCache.set(key, { posts: [], resolved: false, promise });
+  settledTodayCache.set(key, {
+    posts: cached?.posts ?? [],
+    resolved: cached?.resolved ?? false,
+    fetchedAtMs: cached?.fetchedAtMs,
+    promise,
+  });
   return promise;
 }
 
@@ -82,7 +109,7 @@ export function prefetchNativeProfileSettledTodayResults(
   if (!safeUid) return;
   const slateDateKey = peekLatestNbaSlateDateKey(getUniterzApiBaseUrl());
   const key = settledTodayCacheKey(safeUid, ctx, slateDateKey);
-  if (settledTodayCache.get(key)?.resolved) return;
+  if (isFresh(settledTodayCache.get(key))) return;
   void loadSettledTodayOnce(safeUid, ctx, slateDateKey, key);
 }
 
@@ -100,11 +127,15 @@ export function useNativeProfileSettledTodayResults(
     key: string | null;
     posts: PostWithMillis[];
     loading: boolean;
-  }>(() => ({
-    key: requestKey,
-    posts: resolvedPosts ?? [],
-    loading: Boolean(requestKey) && resolvedPosts == null,
-  }));
+  }>(() => {
+    const hasPrior =
+      requestKey != null && settledTodayCache.get(requestKey)?.resolved === true;
+    return {
+      key: requestKey,
+      posts: resolvedPosts ?? (requestKey ? readStalePosts(requestKey) : []),
+      loading: Boolean(requestKey) && resolvedPosts == null && !hasPrior,
+    };
+  });
 
   useEffect(() => {
     if (!requestKey || !uid) {
@@ -122,10 +153,11 @@ export function useNativeProfileSettledTodayResults(
       return;
     }
 
+    const stale = readStalePosts(safeRequestKey);
     setState((prev) => ({
       key: safeRequestKey,
-      posts: prev.key === safeRequestKey ? prev.posts : [],
-      loading: true,
+      posts: prev.key === safeRequestKey ? prev.posts : stale,
+      loading: stale.length === 0 && !settledTodayCache.get(safeRequestKey)?.resolved,
     }));
 
     void loadSettledTodayOnce(safeUid, ctx, dateKey, safeRequestKey)
@@ -137,7 +169,7 @@ export function useNativeProfileSettledTodayResults(
         if (!alive) return;
         setState({
           key: safeRequestKey,
-          posts: markSettledTodayFailed(safeRequestKey),
+          posts: readStalePosts(safeRequestKey),
           loading: false,
         });
       });
