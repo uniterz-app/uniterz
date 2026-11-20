@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidateRankingUserFields } from "@/lib/rankings/rankingCommentCache";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 
 /* =====================
    Stripe（遅延初期化）
@@ -137,7 +138,8 @@ export async function POST(req: Request) {
   console.log("[SUBSCRIPTION] UPDATE:", updateData);
 
   await db.collection("users").doc(uid).set(updateData, { merge: true });
-  revalidateRankingUserFields();
+  // 期限の延長だけならランキングの Pro 表示は変わらない
+  if (!userDataIsPro(userData)) revalidateRankingUserFields();
 
   console.log("[SUBSCRIPTION] User updated:", uid);
 

@@ -45,6 +45,7 @@ async function pendingPredecessors(
     .collection("games")
     .where("finalAt", ">=", Timestamp.fromMillis(finalAtMs - LOOKBACK_MS))
     .where("finalAt", "<=", Timestamp.fromMillis(finalAtMs))
+    .select("final", "resultComputedAtV2", "league", "finalAt")
     .get();
   const earlier = snap.docs.filter((d) => {
     if (d.id === gameId) return false;

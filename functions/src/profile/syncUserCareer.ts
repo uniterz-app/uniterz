@@ -2,7 +2,7 @@
  * user_career/{uid} を settle / 期間確定 / GB / Unit / Skin から差分更新。
  * lib/profile/userCareer.ts と同じスキーマ（v1）。
  */
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, getFirestore } from "firebase-admin/firestore";
 import {
   normalizeNbaSeasonPhase,
   resolveNbaRankingBucketKeys,
@@ -395,17 +395,25 @@ export async function syncUserCareerUnitsEarned(
   if (add <= 0) return;
   const db = getFirestore();
   const ref = db.collection(COLLECTION).doc(uid);
-  await ref.set(
-    {
-      v: SCHEMA_V,
-      uid,
-      "summary.lifetimeUnitsEarned": FieldValue.increment(add),
-      updatedAtMs: Date.now(),
-      source: "units",
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
+  /** 旧版が set(merge) で書いたリテラル名 "summary.lifetimeUnitsEarned" をネスト側へ寄せて消す */
+  const literalKey = "summary.lifetimeUnitsEarned";
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const literal = safeInt(snap.get(new FieldPath(literalKey)));
+    tx.set(
+      ref,
+      {
+        v: SCHEMA_V,
+        uid,
+        summary: { lifetimeUnitsEarned: FieldValue.increment(add + literal) },
+        ...(literal > 0 ? { [literalKey]: FieldValue.delete() } : {}),
+        updatedAtMs: Date.now(),
+        source: "units",
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  });
 }
 
 export async function syncUserCareerUnlockedSkinCount(

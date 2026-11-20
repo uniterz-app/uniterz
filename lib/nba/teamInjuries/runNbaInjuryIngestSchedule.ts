@@ -36,6 +36,8 @@ export type RunNbaInjuryIngestScheduleResult = {
   baselineSlot?: NbaInjuryIngestBaselineSlot;
   seasonKey: string;
   skipped: boolean;
+  /** 取り直したが中身が前回と同じ（公開キャッシュを捨てなくてよい） */
+  unchanged?: boolean;
   skipReason?:
     | "no_games_today"
     | "no_pregame_window"
@@ -140,6 +142,7 @@ export async function runNbaInjuryIngestSchedule(
     baselineSlot: input.baselineSlot,
     seasonKey,
     skipped: ingested.skipped === true,
+    ...(ingested.unchanged ? { unchanged: true } : {}),
     ...(ingested.skipReason ? { skipReason: ingested.skipReason } : {}),
     teamCount: ingested.teamCount,
     injuryCount: ingested.injuryCount,

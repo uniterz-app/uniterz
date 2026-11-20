@@ -201,6 +201,10 @@ export async function buildGroupBattlePeriodSnapshot(
       ...doc,
       builtAt: FieldValue.serverTimestamp(),
       finalizedAt: shouldFinal ? FieldValue.serverTimestamp() : null,
+      // Functions `grantAllFinalGroupBattleUnits` が拾う印
+      ...(shouldFinal && prevSnap.data()?.status !== "final"
+        ? { unitsPending: true }
+        : {}),
     },
     { merge: true }
   );

@@ -52,6 +52,7 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaPlayerShotZones: DEFAULT_TTL_SEC,
   nbaPlayerSeasonMetrics: DEFAULT_TTL_SEC,
   nbaPlayerOutImpact: DEFAULT_TTL_SEC,
+  nbaPlayerKanaNames: DEFAULT_TTL_SEC,
 };
 
 export type NbaPublicDocCollection = keyof typeof NBA_PUBLIC_DOC_CACHE_TTL;

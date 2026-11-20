@@ -108,24 +108,34 @@ export async function grantGroupBattleUnits(input: {
   return { granted, skipped };
 }
 
-/** final スナップを走査して未付与分を付与 */
+/** 付与待ち（unitsPending）の final スナップだけ付与し、終わったら印を外す */
 export async function grantAllFinalGroupBattleUnits(): Promise<number> {
   const db = getFirestore(adminApp);
   const snap = await db
     .collection("group_battle_period_snapshots")
-    .where("status", "==", "final")
+    .where("unitsPending", "==", true)
     .limit(50)
+    .select("battleId", "period", "label", "status")
     .get();
 
   let total = 0;
   for (const doc of snap.docs) {
     const d = doc.data();
-    const result = await grantGroupBattleUnits({
-      battleId: String(d.battleId),
-      period: d.period === "monthly" ? "monthly" : "weekly",
-      label: String(d.label),
-    });
-    total += result.granted;
+    if (d.status !== "final") continue;
+    try {
+      const result = await grantGroupBattleUnits({
+        battleId: String(d.battleId),
+        period: d.period === "monthly" ? "monthly" : "weekly",
+        label: String(d.label),
+      });
+      total += result.granted;
+      await doc.ref.set(
+        { unitsPending: false, unitsGrantedAt: FieldValue.serverTimestamp() },
+        { merge: true }
+      );
+    } catch (err) {
+      console.error(`[grantAllFinalGroupBattleUnits] ${doc.id} failed`, err);
+    }
   }
   console.log(`[grantAllFinalGroupBattleUnits] granted=${total}`);
   return total;

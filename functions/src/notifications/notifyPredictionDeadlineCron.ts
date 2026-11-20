@@ -12,6 +12,16 @@ const LOOKAHEAD_LIMIT = 40;
 /** 今日〜直近スレートで予想している人を「未予想リマインド」対象の母集団にする */
 const ACTIVE_SLATE_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_SLATE_LIMIT = 120;
+const GAME_FIELDS = [
+  "final",
+  "startAtJst",
+  "predictorUids",
+  "home",
+  "away",
+  "pushNotifiedDeadline60At",
+  "pushNotifiedDeadline30At",
+  "pushNotifiedDeadline10At",
+] as const;
 
 type DeadlineBucket = {
   minutes: 10 | 30 | 60;
@@ -87,6 +97,7 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
         .where("startAtJst", ">=", Timestamp.fromMillis(now))
         .where("startAtJst", "<=", Timestamp.fromDate(deadlineUntil))
         .limit(LOOKAHEAD_LIMIT)
+        .select(...GAME_FIELDS)
         .get()
     )
   );
@@ -112,6 +123,7 @@ export async function runNotifyPredictionDeadlineCron(): Promise<void> {
         .where("startAtJst", ">=", Timestamp.fromMillis(now))
         .where("startAtJst", "<=", Timestamp.fromDate(slateUntil))
         .limit(ACTIVE_SLATE_LIMIT)
+        .select(...GAME_FIELDS)
         .get()
     )
   );

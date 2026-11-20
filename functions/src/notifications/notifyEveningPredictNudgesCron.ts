@@ -7,7 +7,7 @@ import { loadUidsWhoPredictedOnDateFromDaily } from "./loadUidsWhoPredictedOnDat
 
 const PUSH_LEAGUES = ["nba", "bj", "j1", "pl", "wc"] as const;
 
-/** lib/predict/seasonPredictDeadline.ts と同じ開幕ティップ */
+/** lib/predict/seasonPredictDeadline.ts と同じ開幕ティップ（不一致は `node scripts/check-season-predict-deadlines.mjs` で検出） */
 const SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS = Date.parse(
   "2026-10-21T04:00:00+09:00"
 );

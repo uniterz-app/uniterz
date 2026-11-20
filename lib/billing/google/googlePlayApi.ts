@@ -23,6 +23,10 @@ export type GoogleSubscriptionPurchaseV2 = {
   subscriptionState?: GoogleSubscriptionState;
   linkedPurchaseToken?: string;
   testPurchase?: Record<string, never>;
+  acknowledgementState?:
+    | "ACKNOWLEDGEMENT_STATE_UNSPECIFIED"
+    | "ACKNOWLEDGEMENT_STATE_PENDING"
+    | "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED";
   lineItems?: Array<{
     productId?: string;
     expiryTime?: string;
@@ -34,6 +38,8 @@ export type GoogleSubscriptionPurchaseV2 = {
 export type GoogleProductPurchase = {
   purchaseState?: number;
   purchaseTimeMillis?: string;
+  /** 0 未承認 / 1 承認済み */
+  acknowledgementState?: number;
 };
 
 export class GooglePlayApiError extends Error {
@@ -60,9 +66,17 @@ function playClient(): JWT {
 }
 
 async function playGet<T>(path: string): Promise<T> {
+  return playRequest<T>(path, "GET");
+}
+
+async function playRequest<T>(path: string, method: "GET" | "POST"): Promise<T> {
   const url = `${API_BASE}/${encodeURIComponent(googlePlayPackageName())}/${path}`;
   try {
-    const res = await playClient().request<T>({ url, method: "GET" });
+    const res = await playClient().request<T>({
+      url,
+      method,
+      ...(method === "POST" ? { data: {} } : {}),
+    });
     return res.data;
   } catch (e) {
     const status =
@@ -86,5 +100,26 @@ export function fetchGoogleProductPurchase(
 ): Promise<GoogleProductPurchase> {
   return playGet(
     `purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}`
+  );
+}
+
+/** 3 日以内に承認しないと Google が自動返金する。アプリの finishTransaction が届かない場合の保険 */
+export async function acknowledgeGoogleSubscription(
+  productId: string,
+  purchaseToken: string
+): Promise<void> {
+  await playRequest(
+    `purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`,
+    "POST"
+  );
+}
+
+export async function acknowledgeGoogleProduct(
+  productId: string,
+  purchaseToken: string
+): Promise<void> {
+  await playRequest(
+    `purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}:acknowledge`,
+    "POST"
   );
 }

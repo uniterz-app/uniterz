@@ -82,6 +82,18 @@ async function buildOne(
   todayKey: string
 ) {
   const db = getFirestore(adminApp);
+  const snapId = `${battleId}_${period}_${label}`;
+  const prevRef = db.collection(SNAPSHOTS).doc(snapId);
+  const prev = await prevRef.get();
+  const prevData = prev.data();
+  // 確定後に作り直すと付与済み Unit と順位がずれる
+  if (prevData?.status === "final") {
+    if (prevData.unitsPending == null && prevData.unitsGrantedAt == null) {
+      await prevRef.set({ unitsPending: true }, { merge: true });
+    }
+    return;
+  }
+
   const squadSnap = await db
     .collection(COLLECTION)
     .doc(battleId)
@@ -139,12 +151,9 @@ async function buildOne(
     }
   }
 
-  const snapId = `${battleId}_${period}_${label}`;
-  const prevRef = db.collection(SNAPSHOTS).doc(snapId);
-  const prev = await prevRef.get();
   const prevRanks = new Map<string, number>();
   if (prev.exists) {
-    const rows = (prev.data()?.rows as Array<{ squadId: string; rank: number }>) ?? [];
+    const rows = (prevData?.rows as Array<{ squadId: string; rank: number }>) ?? [];
     for (const r of rows) prevRanks.set(r.squadId, r.rank);
   }
 
@@ -174,6 +183,7 @@ async function buildOne(
       rows,
       builtAt: FieldValue.serverTimestamp(),
       finalizedAt: shouldFinal ? FieldValue.serverTimestamp() : null,
+      ...(shouldFinal ? { unitsPending: true } : {}),
     },
     { merge: true }
   );

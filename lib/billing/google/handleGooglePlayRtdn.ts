@@ -1,6 +1,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import {
+  refreshGoogleOneTimeByToken,
   refreshGoogleSubscriptionByToken,
   revokeGoogleProIfCurrent,
 } from "@/lib/billing/google/applyGooglePlayEntitlement";
@@ -12,7 +13,11 @@ export type GooglePlayRtdnPayload = {
   packageName?: string;
   subscriptionNotification?: { notificationType?: number; purchaseToken?: string };
   voidedPurchaseNotification?: { purchaseToken?: string };
-  oneTimeProductNotification?: { notificationType?: number; purchaseToken?: string };
+  oneTimeProductNotification?: {
+    notificationType?: number;
+    purchaseToken?: string;
+    sku?: string;
+  };
   testNotification?: unknown;
 };
 
@@ -30,6 +35,14 @@ export async function handleGooglePlayRtdn(
   const subToken = payload.subscriptionNotification?.purchaseToken?.trim();
   if (subToken) {
     await refreshGoogleSubscriptionByToken(db, subToken);
+    return;
+  }
+
+  const oneTime = payload.oneTimeProductNotification;
+  const oneTimeToken = oneTime?.purchaseToken?.trim();
+  const oneTimeSku = oneTime?.sku?.trim();
+  if (oneTimeToken && oneTimeSku) {
+    await refreshGoogleOneTimeByToken(db, oneTimeSku, oneTimeToken);
     return;
   }
 

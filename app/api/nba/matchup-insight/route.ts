@@ -21,6 +21,10 @@ import {
 } from "@/lib/nba/insights/gameProInsightStore";
 import { buildProInsightPreviewTeaser } from "@/lib/predict/proInsightPreviewTeaser";
 import { sanitizeProInsightPredictKit } from "@/lib/nba/insights/predictKit/predictKitTypes";
+import {
+  hasProPickGameUnlock,
+  proPickFirstFreeAvailable,
+} from "@/lib/pro/proPickGameAccess";
 
 async function loadMatchupInsightPayload(gameId: string) {
   const db = getAdminDb();
@@ -113,18 +117,30 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const isPro = await assertProUser(uid);
     const wantsTeaser = searchParams.get("teaser") === "1";
-    if (!isPro && !wantsTeaser) {
-      return NextResponse.json(
-        { ok: false, error: "pro_required", locked: true },
-        { status: 403 }
-      );
-    }
 
     const gameId = (searchParams.get("gameId") ?? "").trim();
     if (!gameId) {
       return NextResponse.json(
         { ok: false, error: "gameId_required" },
         { status: 400 }
+      );
+    }
+
+    // Free でも、この試合を解除済み（初回の無料 / 広告）なら Pro と同じ中身を返す
+    const db = getAdminDb();
+    const unlocked = !isPro && (await hasProPickGameUnlock(db, uid, gameId));
+    const hasAccess = isPro || unlocked;
+    if (!hasAccess && !wantsTeaser) {
+      return NextResponse.json(
+        { ok: false, error: "pro_required", locked: true },
+        { status: 403 }
+      );
+    }
+    if (unlocked && wantsTeaser) {
+      // 解除済みの Free は、クライアントが通常の取得（teaser なし）に切り替える
+      return NextResponse.json(
+        { ok: true, gameId, locked: false, unlocked: true },
+        { headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
@@ -144,7 +160,7 @@ export async function GET(req: Request) {
       );
     }
 
-    if (!isPro) {
+    if (!hasAccess) {
       const teaser = buildProInsightPreviewTeaser(result.body.narrative);
       const hasKit = result.body.predictKit != null;
       if (!teaser && !hasKit) {
@@ -153,6 +169,10 @@ export async function GET(req: Request) {
           { status: 403 }
         );
       }
+      // 初回の無料解除が使えるか（ボタンの文言を「無料」にするため）
+      const firstFreeAvailable = hasKit
+        ? await proPickFirstFreeAvailable(db, uid)
+        : false;
       return NextResponse.json(
         {
           ok: true,
@@ -161,6 +181,7 @@ export async function GET(req: Request) {
           teaser,
           hasKit,
           kitRecord: result.body.predictKit?.record ?? null,
+          firstFreeAvailable,
         },
         { headers: { "Cache-Control": "private, no-store" } }
       );

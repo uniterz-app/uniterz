@@ -153,6 +153,17 @@ export async function resolveUidByAppleOriginalTransactionId(
   return uid || null;
 }
 
+/** 購入索引の持ち主が退会済み（墓標）か。退会前に索引を外していなかった旧データの付け替え判定用 */
+export async function isBillingOwnerDeleted(
+  db: Firestore,
+  ownerUid: string
+): Promise<boolean> {
+  const [snap] = await db.getAll(db.collection("users").doc(ownerUid), {
+    fieldMask: ["deletedAt"],
+  });
+  return !snap?.exists || snap.get("deletedAt") != null;
+}
+
 export async function resolveUidByStripeSubscriptionId(
   db: Firestore,
   subscriptionId: string

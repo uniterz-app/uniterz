@@ -4,6 +4,12 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
+import {
+  appleOriginalTransactionIndexRef,
+  googlePurchaseTokenIndexRef,
+  stripeCustomerIndexRef,
+  stripeSubscriptionIndexRef,
+} from "@/lib/billing/userBillingSecure";
 
 /** 削除は直前の再認証（パスワード再入力）を必須にする */
 const RECENT_AUTH_MAX_AGE_SEC = 5 * 60;
@@ -43,6 +49,38 @@ async function cancelStripeSubscription(subscriptionId: string): Promise<void> {
   }
 }
 
+/**
+ * 購入 → uid の索引を外す。残すと同じストア購入を作り直したアカウントで復元できず（owned_by_other_user）、
+ * ストア通知も削除済み uid に届き続ける
+ */
+async function releaseBillingIndexes(
+  db: FirebaseFirestore.Firestore,
+  uid: string,
+  billing: FirebaseFirestore.DocumentData
+): Promise<void> {
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const refs: FirebaseFirestore.DocumentReference[] = [];
+  const appleId = str(billing.appleOriginalTransactionId);
+  if (appleId) refs.push(appleOriginalTransactionIndexRef(db, appleId));
+  const googleToken = str(billing.googlePurchaseToken);
+  if (googleToken) refs.push(googlePurchaseTokenIndexRef(db, googleToken));
+  const customerId = str(billing.stripeCustomerId);
+  if (customerId) refs.push(stripeCustomerIndexRef(db, customerId));
+  const subscriptionId = str(billing.stripeSubscriptionId);
+  if (subscriptionId) refs.push(stripeSubscriptionIndexRef(db, subscriptionId));
+  if (refs.length === 0) return;
+  const snaps = await db.getAll(...refs);
+  const batch = db.batch();
+  let n = 0;
+  for (const snap of snaps) {
+    if (snap.exists && snap.data()?.uid === uid) {
+      batch.delete(snap.ref);
+      n += 1;
+    }
+  }
+  if (n > 0) await batch.commit();
+}
+
 async function releaseUserSlugs(
   db: FirebaseFirestore.Firestore,
   uid: string,
@@ -80,19 +118,27 @@ export async function DELETE(req: Request) {
       if (typeof subId === "string" && subId) {
         await cancelStripeSubscription(subId);
       }
+      await releaseBillingIndexes(db, uid, billing.data() ?? {});
     } catch (billingErr) {
       console.warn("DELETE /api/me/account billing read:", billingErr);
     }
 
     await releaseUserSlugs(db, uid, tombstoneHandle);
 
-    // pushTokens を可能な範囲で掃除
+    // pushTokens を可能な範囲で掃除（pushTokenOwners の doc ID は pushTokens と同じ）
     try {
       const tokens = await userRef.collection("pushTokens").limit(200).get();
       if (!tokens.empty) {
+        const ownerRefs = tokens.docs.map((d) =>
+          db.collection("pushTokenOwners").doc(d.id)
+        );
+        const owners = await db.getAll(...ownerRefs);
         const batch = db.batch();
         for (const docSnap of tokens.docs) {
           batch.delete(docSnap.ref);
+        }
+        for (const owner of owners) {
+          if (owner.exists && owner.data()?.uid === uid) batch.delete(owner.ref);
         }
         await batch.commit();
       }
@@ -149,6 +195,9 @@ export async function DELETE(req: Request) {
         proSkinLockedNoticeIds: FieldValue.delete(),
         proSkinUnlockSeason: FieldValue.delete(),
         proSkinHeldIds: FieldValue.delete(),
+        favoriteNbaTeamId: FieldValue.delete(),
+        favoriteNbaPlayerIds: FieldValue.delete(),
+        favoriteNbaPlayers: FieldValue.delete(),
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true }

@@ -75,19 +75,25 @@ export async function POST(req: Request) {
                 : "full";
 
     const db = getAdminDb();
-    const respond = <T extends { ok: boolean }>(result: T) => {
-      revalidateMatchupInsightCache();
-      revalidateNbaDocCache([
-        "nbaTeamSeasonRecords",
-        "nbaTeamInsightExtras",
-        "nbaTeamAceOutRecords",
-      ]);
+    /** 毎時・15 分ごとの cron が空振りのたびにキャッシュを捨てると Vercel が Firestore を読み直す */
+    const respond = <T extends { ok: boolean }>(
+      result: T,
+      changed: { insight: boolean; teamDocs: boolean }
+    ) => {
+      if (changed.insight) revalidateMatchupInsightCache();
+      if (changed.teamDocs) {
+        revalidateNbaDocCache([
+          "nbaTeamSeasonRecords",
+          "nbaTeamInsightExtras",
+          "nbaTeamAceOutRecords",
+        ]);
+      }
       return NextResponse.json(result, { status: result.ok ? 200 : 207 });
     };
 
     if (mode === "batch_poll") {
       const result = await pollProInsightNarrativeBatches(db);
-      return respond(result);
+      return respond(result, { insight: result.polled > 0, teamDocs: false });
     }
 
     const refreshKits = async (kitMode: "daily" | "hourly") => {
@@ -97,14 +103,16 @@ export async function POST(req: Request) {
         return { error: e instanceof Error ? e.message : String(e) };
       }
     };
+    const kitsChanged = (r: Awaited<ReturnType<typeof refreshKits>>) =>
+      "kitWritten" in r && r.kitWritten > 0;
 
     // ナラティブ（OpenAI）は作らない。cron が送るモード名は変えずに予想の材料だけ回す
-    if (mode === "batch_submit") {
-      return respond({ ok: true, narrative: "stopped", predictKits: await refreshKits("daily") });
-    }
-
-    if (mode === "narrative_patch") {
-      return respond({ ok: true, narrative: "stopped", predictKits: await refreshKits("hourly") });
+    if (mode === "batch_submit" || mode === "narrative_patch") {
+      const predictKits = await refreshKits(mode === "batch_submit" ? "daily" : "hourly");
+      return respond(
+        { ok: true, narrative: "stopped", predictKits },
+        { insight: kitsChanged(predictKits), teamDocs: false }
+      );
     }
 
     const result = await ingestNbaProBriefs(db, {
@@ -120,7 +128,7 @@ export async function POST(req: Request) {
       rebuildPriorRecords: body.rebuildPriorRecords === true,
     });
 
-    return respond(result);
+    return respond(result, { insight: true, teamDocs: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

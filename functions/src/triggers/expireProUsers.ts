@@ -15,6 +15,8 @@ export const expireProUsers = onSchedule(
   {
     schedule: "every day 03:00",
     timeZone: "Asia/Tokyo",
+    // index の setGlobalOptions より先に読み込まれるので明示する
+    region: "asia-northeast1",
   },
   async () => {
     const now = Timestamp.now();

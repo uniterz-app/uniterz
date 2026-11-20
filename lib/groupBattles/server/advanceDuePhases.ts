@@ -30,7 +30,10 @@ export async function advanceDueGroupBattlePhases(
   const advanced: AdvanceDuePhasesResult["advanced"] = [];
   const errors: AdvanceDuePhasesResult["errors"] = [];
 
-  const snap = await db.collection(GROUP_BATTLE_COLLECTION).limit(80).get();
+  const snap = await db
+    .collection(GROUP_BATTLE_COLLECTION)
+    .where("phase", "in", ["announced", "recruiting", "battle", "settling", "final"])
+    .get();
   const battles = snap.docs.map((d) =>
     parseBattleDoc(d.id, d.data() as Record<string, unknown>)
   );

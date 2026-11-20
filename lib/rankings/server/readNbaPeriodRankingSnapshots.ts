@@ -108,7 +108,7 @@ export async function readNbaPeriodRankingSnapshots(opts: {
           new FieldPath("prevRanks", opts.uid),
         ],
       })
-    : await db.getAll(...refs);
+    : await db.getAll(...refs, { fieldMask: ["range", "count", "rows"] });
   if (snaps.every((s) => !s.exists)) return null;
 
   const myUid = opts.uid ?? null;
@@ -195,7 +195,12 @@ async function buildMyPeriodRow(
   const refs = dateKeys.map((key) =>
     db.collection("user_stats_v2_daily").doc(`${uid}_${key}`)
   );
-  const snaps = await db.getAll(...refs);
+  const snaps = await db.getAll(...refs, {
+    fieldMask: [
+      new FieldPath("rankingBySeason", CURRENT_NBA_SEASON_KEY),
+      new FieldPath("leagues", "nba"),
+    ],
+  });
 
   let posts = 0;
   let wins = 0;
@@ -229,8 +234,18 @@ async function buildMyPeriodRow(
   let countryCode: string | null = null;
   let plan: "free" | "pro" | null = null;
   try {
-    const userSnap = await db.collection("users").doc(uid).get();
-    if (userSnap.exists) {
+    const [userSnap] = await db.getAll(db.collection("users").doc(uid), {
+      fieldMask: [
+        "displayName",
+        "handle",
+        "photoURL",
+        "avatarUrl",
+        "countryCode",
+        "plan",
+        "proUntil",
+      ],
+    });
+    if (userSnap?.exists) {
       const u = userSnap.data() as Record<string, unknown>;
       const name =
         typeof u.displayName === "string" ? u.displayName.trim() : "";
