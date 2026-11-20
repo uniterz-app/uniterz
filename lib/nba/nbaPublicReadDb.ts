@@ -53,6 +53,8 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaPlayerSeasonMetrics: DEFAULT_TTL_SEC,
   nbaPlayerOutImpact: DEFAULT_TTL_SEC,
   nbaPlayerKanaNames: DEFAULT_TTL_SEC,
+  /** トレード Buzz / 確定。書き込み後は tag 破棄。期限は保険だけ */
+  nbaTradeBuzz: DEFAULT_TTL_SEC,
 };
 
 export type NbaPublicDocCollection = keyof typeof NBA_PUBLIC_DOC_CACHE_TTL;
