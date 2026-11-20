@@ -56,6 +56,11 @@ export default function AdminHomePage() {
           title="NBA 罰金"
           desc="選手の罰金を手入力（リーグ表・詳細の FINES に反映）"
         />
+        <Card
+          href="/admin/nba-trade-buzz"
+          title="トレード Buzz"
+          desc="噂と確定トレード。保存するとアプリにすぐ出る（再ビルド不要）"
+        />
       </div>
     </AdminGuard>
   );
