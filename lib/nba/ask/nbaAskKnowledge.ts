@@ -604,7 +604,7 @@ const ENTRIES: Entry[] = [
           "・SCORING: 予想スコアと合計点、リーグ平均よりロースコア寄りかハイスコア寄りか",
           "・TOP SCORER: 両チームで最多得点になる確率が高い選手",
           `・精度: 勝つチームを当てた割合、勝つ確率 ${PREDICT_KIT_RECORD_STRONG_PCT}% 以上の試合だけの割合、得点王の1番手が当たった割合。今季の終わった試合をその試合より前のデータだけで予想し直した検証と、本番の予想の試合後の採点から出しています`,
-          "前日の夜に作り、欠場情報が変わると作り直します。更新されるとタブに黄色の点が付き、予想が大きく変わったときは通知も届きます（PRO・通知設定で切り替え）。無料プランでは精度だけ見られ、この試合の中身は PRO で表示されます。当たることを保証するものではありません。",
+          "前日の夜に作り、欠場情報が変わると作り直します。更新されるとタブに黄色の点が付き、予想が大きく変わったときは通知も届きます（PRO・通知設定で切り替え）。無料プランは最初の1試合だけ広告なしで中身を見られ、2試合目からは短い広告のあとです。当たることを保証するものではありません。",
         ].join("\n"),
         [
           "PRO PICK is the prediction kit in the PRO PICK tab of the pick screen (tap a game card before tip-off). PRO only; not for preseason.",
@@ -612,7 +612,7 @@ const ENTRIES: Entry[] = [
           "- SCORING: projected score and total, and whether it leans low or high versus the league average",
           "- TOP SCORER: players most likely to be the game's top scorer",
           `- Accuracy: how often it picked the winner, the rate on games at ${PREDICT_KIT_RECORD_STRONG_PCT}%+ win probability, and the top-scorer hit rate. Measured by re-predicting this season's finished games using only data from before each game, plus grading the live picks after each game`,
-          "Built the evening before and rebuilt when injury news changes. Updates put a yellow dot on the tab, and a big change sends a notification (PRO; toggle in notification settings). Free users see the accuracy only; the game's kit shows on PRO. It doesn't guarantee a correct pick.",
+          "Built the evening before and rebuilt when injury news changes. Updates put a yellow dot on the tab, and a big change sends a notification (PRO; toggle in notification settings). Free users can open the first game with no ad; from the second game a short ad is required. It doesn't guarantee a correct pick.",
         ].join("\n")
       ),
   },

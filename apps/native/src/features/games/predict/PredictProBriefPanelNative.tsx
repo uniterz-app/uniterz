@@ -560,6 +560,9 @@ export default function PredictProBriefPanelNative({
                 ) : (
                   <Text style={styles.gateBody}>{gate.body}</Text>
                 )}
+                {onPressProPickUnlock && firstFreeAvailable ? (
+                  <Text style={styles.firstFreeHint}>{unlockCopy.firstFreeHint}</Text>
+                ) : null}
                 {onPressProPickUnlock ? (
                   <Pressable
                     onPress={onPressProPickUnlock}
@@ -841,6 +844,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: "rgba(255,255,255,0.72)",
+    textAlign: "center",
+  },
+  firstFreeHint: {
+    fontFamily: OXANIUM_700,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "#F6C344",
     textAlign: "center",
   },
   cta: {
