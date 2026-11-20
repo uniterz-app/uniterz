@@ -29,19 +29,28 @@ async function loadVerifierKeys(): Promise<VerifierKey[]> {
   return keys;
 }
 
+/**
+ * 広告の用途（custom_data で決まる）。
+ * - `pro_pick`: PRO PICK の「この試合だけ」解除（`{"gameId": "..."}`）
+ * - `trade_buzz`: トレード Buzz の 1 日 1 回の解除（`{"feature": "trade_buzz"}`）
+ */
+export type AdMobSsvPurpose =
+  | { kind: "pro_pick"; gameId: string }
+  | { kind: "trade_buzz" };
+
 export type AdMobSsvResult =
   | {
       ok: true;
       transactionId: string;
       userId: string;
-      gameId: string;
+      purpose: AdMobSsvPurpose;
       adUnit: string | null;
     }
   | { ok: false; reason: string };
 
 /**
  * `rawQuery` は `?` より後ろの、加工していない文字列。
- * 必要なのは transaction_id / user_id / custom_data（JSON の gameId）/ ad_unit。
+ * 必要なのは transaction_id / user_id / custom_data（用途の判定）/ ad_unit。
  */
 export async function verifyAdMobSsv(rawQuery: string): Promise<AdMobSsvResult> {
   const marker = "&signature=";
@@ -81,20 +90,25 @@ export async function verifyAdMobSsv(rawQuery: string): Promise<AdMobSsvResult> 
   const userId = params.get("user_id")?.trim() ?? "";
   if (!transactionId || !userId) return { ok: false, reason: "missing_fields" };
 
-  let gameId = "";
+  let custom: { gameId?: unknown; feature?: unknown } = {};
   try {
-    const custom = JSON.parse(params.get("custom_data") ?? "{}") as { gameId?: unknown };
-    gameId = typeof custom.gameId === "string" ? custom.gameId.trim() : "";
+    custom = JSON.parse(params.get("custom_data") ?? "{}") as typeof custom;
   } catch {
-    gameId = "";
+    custom = {};
   }
-  if (!gameId) return { ok: false, reason: "missing_game_id" };
+  const gameId = typeof custom.gameId === "string" ? custom.gameId.trim() : "";
+  const feature = typeof custom.feature === "string" ? custom.feature.trim() : "";
+
+  let purpose: AdMobSsvPurpose | null = null;
+  if (feature === "trade_buzz") purpose = { kind: "trade_buzz" };
+  else if (gameId) purpose = { kind: "pro_pick", gameId };
+  if (!purpose) return { ok: false, reason: "missing_purpose" };
 
   return {
     ok: true,
     transactionId,
     userId,
-    gameId,
+    purpose,
     adUnit: params.get("ad_unit"),
   };
 }
