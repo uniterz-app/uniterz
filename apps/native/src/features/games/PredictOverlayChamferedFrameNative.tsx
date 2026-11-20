@@ -38,6 +38,8 @@ type Props = {
   cornerMaskColor?: string;
   /** true で根を clip（スコア入力など枠ずれ防止） */
   overflowHidden?: boolean;
+  /** 指定すると線形グラデの代わりに、角切りの中へこの塗りを置く */
+  renderFill?: (size: { w: number; h: number }) => ReactNode;
   children: ReactNode;
 };
 
@@ -62,6 +64,7 @@ export default function PredictOverlayChamferedFrameNative({
   maskCorners = true,
   cornerMaskColor = "rgba(10,14,22,1)",
   overflowHidden = false,
+  renderFill,
   children,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -106,14 +109,18 @@ export default function PredictOverlayChamferedFrameNative({
             pointerEvents="none"
           >
             <Group clip={skiaPath}>
-              <Rect x={0} y={0} width={size.w} height={size.h}>
-                <SkiaLinearGradient
-                  start={vec(size.w * 0.5, 0)}
-                  end={vec(size.w * 0.5, size.h)}
-                  colors={[...gradientColors]}
-                  positions={[...gradientLocations]}
-                />
-              </Rect>
+              {renderFill ? (
+                renderFill(size)
+              ) : (
+                <Rect x={0} y={0} width={size.w} height={size.h}>
+                  <SkiaLinearGradient
+                    start={vec(size.w * 0.5, 0)}
+                    end={vec(size.w * 0.5, size.h)}
+                    colors={[...gradientColors]}
+                    positions={[...gradientLocations]}
+                  />
+                </Rect>
+              )}
             </Group>
           </Canvas>
           <View
