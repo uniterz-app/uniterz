@@ -15,7 +15,6 @@ export type ProfileSideMenuLabels = {
   unitHistory: string;
   unitRedeem: string;
   announcements: string;
-  tradeBuzz: string;
   plan: string;
   proSkin: string;
   help: string;
@@ -146,15 +145,6 @@ export function profileSideMenuLabels(
       es: "Anuncios",
       pt: "Avisos",
       fr: "Annonces",
-    }),
-    tradeBuzz: L(lang, {
-      ja: "トレード Buzz",
-      en: "Trade Buzz",
-      ko: "트레이드 Buzz",
-      zh: "交易 Buzz",
-      es: "Trade Buzz",
-      pt: "Trade Buzz",
-      fr: "Trade Buzz",
     }),
     plan: L(lang, {
       ja: "プランの確認",

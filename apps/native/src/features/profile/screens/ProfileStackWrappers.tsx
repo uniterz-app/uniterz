@@ -12,7 +12,6 @@ import MobilePlanStatusScreen from "../mobileScreens/MobilePlanStatusScreen";
 import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNative";
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import TradeBallotPreviewScreenNative from "../../games/predict/tradeBallot/TradeBallotPreviewScreenNative";
-import TradeBuzzPreviewScreenNative from "../../games/predict/buzz/TradeBuzzPreviewScreenNative";
 import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
 import LeagueStatsRailPreviewScreenNative from "../../games/stats/LeagueStatsRailPreviewScreenNative";
 import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
@@ -160,14 +159,6 @@ export function TradeBallotPreviewScreenWrapper() {
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   return (
     <TradeBallotPreviewScreenNative onClose={() => navigation.goBack()} />
-  );
-}
-
-export function TradeBuzzPreviewScreenWrapper() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
-  return (
-    <TradeBuzzPreviewScreenNative onClose={() => navigation.goBack()} />
   );
 }
 

@@ -113,6 +113,12 @@ function GamesStackScreen() {
           }
         />
         <GamesStack.Screen
+          name="TradeBuzz"
+          getComponent={() =>
+            require("../features/games/screens/TradeBuzzScreenNative").default
+          }
+        />
+        <GamesStack.Screen
           name="NbaAsk"
           getComponent={() =>
             require("../features/games/ask/NbaAskScreenNative").default
@@ -513,13 +519,6 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
-        <ProfileStack.Screen
-          name="TradeBuzzPreview"
-          getComponent={() =>
-            require("../features/profile/screens/ProfileStackWrappers")
-              .TradeBuzzPreviewScreenWrapper
-          }
-        />
         {__DEV__ ? (
           <ProfileStack.Screen
             name="SquadBattlePreview"

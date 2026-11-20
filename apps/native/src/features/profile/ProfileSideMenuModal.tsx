@@ -101,7 +101,6 @@ type Props = {
     | "restartTutorial"
     | "seasonPreview"
     | "tradeBallotPreview"
-    | "tradeBuzzPreview"
     | "weeklyReportPreview"
     | "monthlyReportPreview"
     | "squadBattlePreview"
@@ -301,7 +300,6 @@ export default function ProfileSideMenuModal({
       | "restartTutorial"
       | "seasonPreview"
       | "tradeBallotPreview"
-      | "tradeBuzzPreview"
       | "weeklyReportPreview"
       | "monthlyReportPreview"
       | "squadBattlePreview"
@@ -508,13 +506,6 @@ export default function ProfileSideMenuModal({
                       onPress={() => openUserPage("announcements")}
                     >
                       {labels.announcements}
-                    </SideMenuItemButtonNative>
-                    <SideMenuItemButtonNative
-                      icon="newspaper-variant-outline"
-                      labelStyle={labelStyle}
-                      onPress={() => openUserPage("tradeBuzzPreview")}
-                    >
-                      {labels.tradeBuzz}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
                       icon="bell-outline"
