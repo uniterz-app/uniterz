@@ -113,6 +113,12 @@ function GamesStackScreen() {
           }
         />
         <GamesStack.Screen
+          name="TradeBuzz"
+          getComponent={() =>
+            require("../features/games/screens/TradeBuzzScreenNative").default
+          }
+        />
+        <GamesStack.Screen
           name="NbaAsk"
           getComponent={() =>
             require("../features/games/ask/NbaAskScreenNative").default

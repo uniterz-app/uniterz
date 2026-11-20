@@ -285,6 +285,7 @@ import { useTeamRecordMap } from "./useTeamRecordMap";
 import GamesRightEdgeTabsNative from "./GamesRightEdgeTabsNative";
 import { useTodayUniterzUnreadNative } from "./stats/useTodayUniterzUnreadNative";
 import { TODAY_UNITERZ_POLL_MS } from "../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
+import { useTradeBuzzUnreadNative } from "./predict/buzz/useTradeBuzzUnreadNative";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
 import GamesCalendarSheetNative from "./GamesCalendarSheetNative";
@@ -659,6 +660,7 @@ export default function GamesHomeScreen({
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
   const { unread: todayUniterzUnread } = useTodayUniterzUnreadNative(TODAY_UNITERZ_POLL_MS);
+  const { unread: tradeBuzzUnread } = useTradeBuzzUnreadNative();
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser, loading: planLoading } = useNativeUserPlan(fUser?.uid);
@@ -3745,7 +3747,9 @@ export default function GamesHomeScreen({
         onOpenStanding={() => navigation.navigate("Standings")}
         onOpenStats={() => navigation.navigate("LeagueStats", { tab: "team" })}
         onOpenToday={() => navigation.navigate("DailyLeaders")}
+        onOpenBuzz={() => navigation.navigate("TradeBuzz")}
         todayUnread={todayUniterzUnread}
+        buzzUnread={tradeBuzzUnread}
         statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome"}
         fadeIn
