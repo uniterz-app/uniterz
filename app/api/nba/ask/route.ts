@@ -19,9 +19,11 @@ import {
 import {
   consumeNbaAskSafetyCaps,
   readNbaAskStatsAllowance,
-  recordNbaAskStatsUse,
   refundNbaAskDaily,
+  releaseNbaAskStatsReservation,
+  reserveNbaAskStatsUse,
 } from "@/lib/nba/ask/nbaAskQuota";
+import { writeNbaAskQuestionLog } from "@/lib/nba/ask/nbaAskQuestionLog";
 
 async function requireUid(req: Request): Promise<string | null> {
   const authz = req.headers.get("authorization") || req.headers.get("Authorization");
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const stats = await readNbaAskStatsAllowance(db, uid, isPro);
+    const stats = await reserveNbaAskStatsUse(db, uid, isPro);
     const timeZone = resolveNbaAskTimeZone(body?.timeZone, language);
     let result: Awaited<ReturnType<typeof runNbaAsk>> | null = null;
     try {
@@ -122,16 +124,18 @@ export async function POST(req: Request) {
     }
     if (!result?.answer) {
       await refundNbaAskDaily(db, uid);
+      if (stats.reserved) await releaseNbaAskStatsReservation(db, uid);
       return NextResponse.json({ ok: false, error: "empty_answer" }, { status: 502 });
     }
 
     let statsFreeRemaining = stats.freeRemaining;
-    if (result.usedStats) {
-      await recordNbaAskStatsUse(db, uid);
-      if (statsFreeRemaining != null) statsFreeRemaining = Math.max(0, statsFreeRemaining - 1);
+    if (stats.reserved && !result.usedStats) {
+      await releaseNbaAskStatsReservation(db, uid);
+      if (statsFreeRemaining != null) statsFreeRemaining += 1;
     }
     const leaked = nbaAskAnswerLeaksInternal(result.answer);
     const answer = leaked ? nbaAskRedactedRefusal(language) : result.answer;
+    const question = turns[turns.length - 1]!.content;
     // 実際の費用を測るため（1 質問 1 行）
     console.info(
       "[nba-ask] usage",
@@ -139,10 +143,28 @@ export async function POST(req: Request) {
         pro: isPro,
         stats: result.usedStats,
         leaked,
+        fast: result.fast,
+        kind: result.intent.kind,
+        query: result.intent.query,
         in: result.promptTokens,
         out: result.completionTokens,
+        cached: result.cachedTokens,
       })
     );
+    // 改良用ログ（答え全文は残さない・失敗しても返答は返す）
+    void writeNbaAskQuestionLog(db, {
+      uid,
+      question,
+      language,
+      isPro,
+      usedStats: result.usedStats,
+      fast: result.fast,
+      leaked,
+      intent: result.intent,
+      promptTokens: result.promptTokens,
+      completionTokens: result.completionTokens,
+      cachedTokens: result.cachedTokens,
+    }).catch((e) => console.error("[nba-ask] question-log", e));
     return NextResponse.json({
       ok: true,
       answer,
@@ -150,6 +172,8 @@ export async function POST(req: Request) {
       opens: leaked ? [] : result.opens,
       board: leaked ? null : result.board,
       games: leaked ? null : result.games,
+      moves: leaked ? null : result.moves,
+      view: leaked ? null : result.view,
     });
   } catch (e: unknown) {
     console.error("[POST /api/nba/ask]", e);

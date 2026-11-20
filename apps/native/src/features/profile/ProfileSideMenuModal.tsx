@@ -101,7 +101,6 @@ type Props = {
     | "restartTutorial"
     | "seasonPreview"
     | "tradeBallotPreview"
-    | "tradeBuzzPreview"
     | "weeklyReportPreview"
     | "monthlyReportPreview"
     | "squadBattlePreview"
@@ -301,7 +300,6 @@ export default function ProfileSideMenuModal({
       | "restartTutorial"
       | "seasonPreview"
       | "tradeBallotPreview"
-      | "tradeBuzzPreview"
       | "weeklyReportPreview"
       | "monthlyReportPreview"
       | "squadBattlePreview"
@@ -725,14 +723,6 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("tradeBallotPreview")}
                         >
                           トレードバレット
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="newspaper-variant-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("tradeBuzzPreview")}
-                        >
-                          トレード Buzz
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="file-chart-outline"

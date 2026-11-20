@@ -167,8 +167,20 @@ const COUNTRY: Record<string, string> = {
   Belgium: "ベルギー",
   Poland: "ポーランド",
   Denmark: "デンマーク",
+  DRC: "コンゴ民主共和国",
+  Portugal: "ポルトガル",
+  Nicaragua: "ニカラグア",
 };
 
 export function countryJa(country: string): string {
   return COUNTRY[country.trim()] ?? country;
+}
+
+/** 「日本人選手」「フランス出身」→ ロスターの国名（USA / United States のように同じ国の表記はまとめて返す） */
+export function countriesInText(text: string): string[] {
+  const hit = Object.entries(COUNTRY).find(([, jaName]) => new RegExp(`${jaName}(?:人|出身|国籍|の選手|から来た)`).test(text));
+  if (!hit) return [];
+  return Object.entries(COUNTRY)
+    .filter(([, jaName]) => jaName === hit[1])
+    .map(([en]) => en);
 }

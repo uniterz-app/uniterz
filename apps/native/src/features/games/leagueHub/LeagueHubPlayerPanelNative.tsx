@@ -580,7 +580,7 @@ function draftLabel(r: LeagueHubLadderRow, ja: boolean): string {
   return ja ? `${r.draftRound} 巡 ${r.draftNumber} 位` : `R${r.draftRound} #${r.draftNumber}`;
 }
 
-type AwardId = "mvp" | "rookies" | "dpoy" | "sixth" | "mip";
+export type AwardId = "mvp" | "rookies" | "dpoy" | "sixth" | "mip";
 
 /** LADDER タブに上から並べる順 */
 const AWARD_SECTIONS: readonly { id: AwardId; title: string }[] = [
@@ -689,15 +689,143 @@ function awardRowText(
   }
 }
 
-function HubPtsDeltaSection({
+export function LeagueHubAwardLadderNative({
   hub,
   lang,
+  award,
+  limit,
   onSelectPlayer,
 }: {
   hub: NbaLeagueHubDoc;
   lang: HubLang;
+  award: AwardId;
+  limit?: number;
   onSelectPlayer: (playerId: string) => void;
 }) {
+  const ja = lang === "ja";
+  const all = (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
+  const rows = limit ? all.slice(0, limit) : all;
+  const hasPrev = hub.ladderPrev?.[award] != null;
+  const built = new Date(hub.builtAtMs);
+  const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
+  const title = AWARD_SECTIONS.find((s) => s.id === award)?.title ?? "";
+  return (
+    <HubShareSectionNative title={title} hint={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} stamp={stamp} lang={lang}>
+      {rows.length > 0 ? (
+        <HubCellHeader labels={awardCellLabels(award, ja)} caption={awardCellCaption(award, ja)} framed />
+      ) : null}
+      {rows.length === 0
+        ? noData(lang)
+        : rows.map((r, i) => (
+            <HubRow
+              key={r.playerId}
+              rank={i + 1}
+              rankMove={ladderMove(r, i, hasPrev)}
+              teamId={r.teamId}
+              name={r.name}
+              {...awardRowText(award, r, ja)}
+              onPress={() => onSelectPlayer(r.playerId)}
+              framed
+            />
+          ))}
+      <CaptureFootnote text={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} />
+    </HubShareSectionNative>
+  );
+}
+
+type HubSectionProps = {
+  hub: NbaLeagueHubDoc;
+  lang: HubLang;
+  onSelectPlayer: (playerId: string) => void;
+};
+
+export function HubTopGamesSection({ hub, lang, onSelectPlayer }: HubSectionProps) {
+  const ja = lang === "ja";
+  const built = new Date(hub.builtAtMs);
+  const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
+  return (
+    <HubShareSectionNative
+      title="TOP PERFORMANCES"
+      stamp={stamp}
+      lang={lang}
+      hint={
+        hub.topGames
+          ? `${hub.topGames.startLabel} – ${hub.topGames.endLabel} · ${
+              ja ? "1 試合の Game Score 順" : "single games by Game Score"
+            }`
+          : undefined
+      }
+    >
+      {hub.topGames && hub.topGames.games.length > 0 ? (
+        <View>
+          <HubCellHeader labels={["PTS", "REB", "AST"]} framed />
+          {hub.topGames.games.map((g, i) => (
+            <HubRow
+              key={`${g.playerId}-${g.gameId}`}
+              rank={i + 1}
+              teamId={g.teamId}
+              name={g.name}
+              sub={topGameSub(g)}
+              cells={[String(g.pts), String(g.reb), String(g.ast)]}
+              valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
+              onPress={() => onSelectPlayer(g.playerId)}
+              framed
+            />
+          ))}
+        </View>
+      ) : (
+        noData(lang)
+      )}
+    </HubShareSectionNative>
+  );
+}
+
+export function HubHotColdSection({ hub, lang, onSelectPlayer }: HubSectionProps) {
+  const ja = lang === "ja";
+  return (
+    <HubSection
+      title="HOT / COLD"
+      hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
+    >
+      <HubTwoCol
+        leftTitle="HOT"
+        rightTitle="COLD"
+        left={
+          hub.hot.length === 0
+            ? noData(lang)
+            : hub.hot.map((r) => (
+                <HubRow
+                  key={r.playerId}
+                  teamId={r.teamId}
+                  name={r.name}
+                  value={r.recent.toFixed(1)}
+                  valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                  framed
+                />
+              ))
+        }
+        right={
+          hub.cold.length === 0
+            ? noData(lang)
+            : hub.cold.map((r) => (
+                <HubRow
+                  key={r.playerId}
+                  teamId={r.teamId}
+                  name={r.name}
+                  value={r.recent.toFixed(1)}
+                  valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                  framed
+                />
+              ))
+        }
+      />
+    </HubSection>
+  );
+}
+
+export function HubPtsDeltaSection({ hub, lang, onSelectPlayer }: HubSectionProps) {
   const ja = lang === "ja";
   const delta = hub.ptsDelta;
   if (!delta) return null;
@@ -724,13 +852,54 @@ function HubPtsDeltaSection({
           : "Change in points per game from last season. 20+ games last season; this season 40% of the league-high games and 15+ minutes. Top 10."
       }
     >
-      <HubTwoCol leftTitle="UP" rightTitle="DOWN" left={rows(delta.up)} right={rows(delta.down)} />
+      <HubTwoCol
+        stacked
+        leftTitle="UP"
+        rightTitle="DOWN"
+        left={rows(delta.up)}
+        right={rows(delta.down)}
+      />
+    </HubSection>
+  );
+}
+
+export function HubSeasonHighsSection({
+  hub,
+  lang,
+  onSelectPlayer,
+  initialStat = "pts",
+}: HubSectionProps & { initialStat?: LeagueHubHighStat }) {
+  const [high, setHigh] = useState<LeagueHubHighStat>(initialStat);
+  return (
+    <HubSection title="SEASON HIGHS">
+      <HubChips
+        items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
+          id,
+          label: HIGH_LABEL[id],
+        }))}
+        value={high}
+        onChange={setHigh}
+      />
+      {(hub.highs[high] ?? []).length === 0
+        ? noData(lang)
+        : hub.highs[high].map((r, i) => (
+            <HubRow
+              key={`${r.playerId}-${r.gameId}`}
+              rank={i + 1}
+              teamId={r.teamId}
+              name={r.name}
+              sub={`vs ${r.oppAbbr} · ${r.dateLabel}`}
+              value={String(r.value)}
+              valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
+              onPress={() => onSelectPlayer(r.playerId)}
+              framed
+            />
+          ))}
     </HubSection>
   );
 }
 
 export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelectPlayer }: Props) {
-  const [high, setHigh] = useState<LeagueHubHighStat>("pts");
   const [countId, setCountId] = useState<CountId>("pts20");
   const ja = lang === "ja";
 
@@ -745,8 +914,6 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             ? hub.counts.doubleDouble
             : hub.counts.tripleDouble;
   const isStreak = countId === "pts20" || countId === "ddStreak";
-  const ladderRows = (award: AwardId) =>
-    (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
   const built = new Date(hub.builtAtMs);
   const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
   /** 切り替えてもマップの追加選手などを残すため、隠すだけでアンマウントしない */
@@ -783,42 +950,9 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
       </View>
 
       <View style={shown("ladder")}>
-        {AWARD_SECTIONS.map(({ id: award, title }) => {
-          const rows = ladderRows(award);
-          const hasPrev = hub.ladderPrev?.[award] != null;
-          return (
-            <HubShareSectionNative
-              key={award}
-              title={title}
-              hint={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}
-              stamp={stamp}
-              lang={lang}
-            >
-              {rows.length > 0 ? (
-                <HubCellHeader
-                  labels={awardCellLabels(award, ja)}
-                  caption={awardCellCaption(award, ja)}
-                  framed
-                />
-              ) : null}
-              {rows.length === 0
-                ? noData(lang)
-                : rows.map((r, i) => (
-                    <HubRow
-                      key={r.playerId}
-                      rank={i + 1}
-                      rankMove={ladderMove(r, i, hasPrev)}
-                      teamId={r.teamId}
-                      name={r.name}
-                      {...awardRowText(award, r, ja)}
-                      onPress={() => onSelectPlayer(r.playerId)}
-                      framed
-                    />
-                  ))}
-              <CaptureFootnote text={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} />
-            </HubShareSectionNative>
-          );
-        })}
+        {AWARD_SECTIONS.map(({ id: award }) => (
+          <LeagueHubAwardLadderNative key={award} hub={hub} lang={lang} award={award} onSelectPlayer={onSelectPlayer} />
+        ))}
       </View>
 
       <View style={shown("onoff")}>
@@ -835,109 +969,15 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
       </View>
 
       <View style={shown("trend")}>
-        <HubShareSectionNative
-          title="TOP PERFORMANCES"
-          stamp={stamp}
-          lang={lang}
-          hint={
-            hub.topGames
-              ? `${hub.topGames.startLabel} – ${hub.topGames.endLabel} · ${
-                  ja ? "1 試合の Game Score 順" : "single games by Game Score"
-                }`
-              : undefined
-          }
-        >
-          {hub.topGames && hub.topGames.games.length > 0 ? (
-            <View>
-              <HubCellHeader labels={["PTS", "REB", "AST"]} framed />
-              {hub.topGames.games.map((g, i) => (
-                <HubRow
-                  key={`${g.playerId}-${g.gameId}`}
-                  rank={i + 1}
-                  teamId={g.teamId}
-                  name={g.name}
-                  sub={topGameSub(g)}
-                  cells={[String(g.pts), String(g.reb), String(g.ast)]}
-                  valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
-                  onPress={() => onSelectPlayer(g.playerId)}
-                  framed
-                />
-              ))}
-            </View>
-          ) : (
-            noData(lang)
-          )}
-        </HubShareSectionNative>
+        <HubTopGamesSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
-        <HubSection
-          title="HOT / COLD"
-          hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
-        >
-          <HubTwoCol
-            leftTitle="HOT"
-            rightTitle="COLD"
-            left={
-              hub.hot.length === 0
-                ? noData(lang)
-                : hub.hot.map((r) => (
-                    <HubRow
-                      key={r.playerId}
-                      teamId={r.teamId}
-                      name={r.name}
-                      value={r.recent.toFixed(1)}
-                      valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
-                      onPress={() => onSelectPlayer(r.playerId)}
-                      framed
-                    />
-                  ))
-            }
-            right={
-              hub.cold.length === 0
-                ? noData(lang)
-                : hub.cold.map((r) => (
-                    <HubRow
-                      key={r.playerId}
-                      teamId={r.teamId}
-                      name={r.name}
-                      value={r.recent.toFixed(1)}
-                      valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
-                      onPress={() => onSelectPlayer(r.playerId)}
-                      framed
-                    />
-                  ))
-            }
-          />
-        </HubSection>
+        <HubHotColdSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <HubPtsDeltaSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <PlayerSplitsSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
-        <HubSection title="SEASON HIGHS">
-          <HubChips
-            items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
-              id,
-              label: HIGH_LABEL[id],
-            }))}
-            value={high}
-            onChange={setHigh}
-          />
-          {(hub.highs[high] ?? []).length === 0
-            ? noData(lang)
-            : hub.highs[high].map((r, i) => (
-                <HubRow
-                  key={`${r.playerId}-${r.gameId}`}
-                  rank={i + 1}
-                  teamId={r.teamId}
-                  name={r.name}
-                  sub={`vs ${r.oppAbbr} · ${r.dateLabel}`}
-                  value={String(r.value)}
-                  valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
-                  onPress={() => onSelectPlayer(r.playerId)}
-                  framed
-                />
-              ))}
-        </HubSection>
+        <HubSeasonHighsSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <HubSection
           title="STREAKS & COUNTS"

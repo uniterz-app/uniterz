@@ -38,6 +38,8 @@ export type GamesStackParamList = {
   Standings: undefined;
   /** 今日の試合のスタッツリーダー（Games 右端 TODAY） */
   DailyLeaders: undefined;
+  /** トレード Buzz / 確定トレード（Games 右端 BUZZ） */
+  TradeBuzz: undefined;
   /** NBA スタッツを AI に質問するチャット（Games ヘッダー右上） */
   NbaAsk: undefined;
   TeamDetail: { teamId: string };
@@ -174,8 +176,6 @@ export type ProfileStackParamList = {
   SeasonPredictPreview: undefined;
   /** __DEV__ TDL トレード予想バレット（モック） */
   TradeBallotPreview: undefined;
-  /** __DEV__ トレード Buzz / 確定（モック） */
-  TradeBuzzPreview: undefined;
   /** __DEV__ SQUAD BATTLE 全画面プレビュー */
   SquadBattlePreview: undefined;
   /** __DEV__ 週間/月間レポート UI プレビュー（mock） */

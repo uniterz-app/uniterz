@@ -4,8 +4,12 @@ import {
   nbaAskCardTeamName,
   nbaAskGameCardId,
   parseNbaAskBoard,
+  parseNbaAskMoves,
+  parseNbaAskView,
   type NbaAskBoard,
   type NbaAskGameCard,
+  type NbaAskMoves,
+  type NbaAskView,
 } from "./nbaAskBoard";
 import { isNbaAskDestinationId, type NbaAskDestinationId } from "./nbaAskDestinations";
 
@@ -20,6 +24,10 @@ export type NbaAskTurnClient = {
   board?: NbaAskBoard;
   /** 試合は一覧のカード */
   games?: NbaAskGameCard[];
+  /** オフシーズンの IN / OUT */
+  moves?: NbaAskMoves;
+  /** 詳細ページと同じ部品（答えの上に出す） */
+  view?: NbaAskView;
 };
 
 export type NbaAskStatus = {
@@ -40,6 +48,8 @@ export type NbaAskReply =
       opens: NbaAskDestinationId[];
       board?: NbaAskBoard;
       games?: NbaAskGameCard[];
+      moves?: NbaAskMoves;
+      view?: NbaAskView;
     }
   | { ok: false; error: NbaAskError };
 
@@ -148,6 +158,8 @@ export async function postNbaAsk(input: {
         opens: opensOf(json.opens),
         board: parseNbaAskBoard(json.board),
         games: gamesOf(json.games),
+        moves: parseNbaAskMoves(json.moves),
+        view: parseNbaAskView(json.view),
       };
     }
     const error: NbaAskError =

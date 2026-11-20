@@ -3745,6 +3745,7 @@ export default function GamesHomeScreen({
         onOpenStanding={() => navigation.navigate("Standings")}
         onOpenStats={() => navigation.navigate("LeagueStats", { tab: "team" })}
         onOpenToday={() => navigation.navigate("DailyLeaders")}
+        onOpenBuzz={() => navigation.navigate("TradeBuzz")}
         todayUnread={todayUniterzUnread}
         statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome"}

@@ -37,6 +37,7 @@ export const PRO_FUNNEL_SOURCES = [
   "insight",
   "pro_league",
   "ask",
+  "trade_buzz",
   "favorite",
   "pro_skin",
   "other",

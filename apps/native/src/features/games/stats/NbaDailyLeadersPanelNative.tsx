@@ -1,31 +1,20 @@
 /** Web `NbaDailyLeadersPanel` 相当 — 今日の試合の主要スタッツ Top20 */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AppState,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { AppState, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../rankings/CyberSlantedTabNative";
-import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
-import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
-import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import RankingsListEntranceRowNative from "../../rankings/RankingsListEntranceRowNative";
-import { inkAlpha, teamInk } from "../leagueHub/leagueHubUiNative";
+import NbaDailyLeaderRowNative from "./NbaDailyLeaderRowNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
-import { formatNbaPlayerListName } from "../../../../../../lib/nba/formatNbaPlayerListName";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { fetchLatestNbaSlateDateKey } from "../../../../../../lib/games/latestNbaSlate";
 import { TIMEZONE_ET } from "../../../../../../lib/time/zonedTime";
 import {
   DAILY_LEADER_STATS,
-  dailyLeaderSideStats,
   type DailyLeaderStatKey,
   type DailyLeadersPayload,
 } from "../../../../../../lib/nba/dailyLeaders/buildDailyLeaders";
@@ -43,11 +32,6 @@ const LIST_ENTRANCE_DURATION_MS = 320;
 
 const POLL_MS = 60_000;
 
-function rankColor(rank: number): string {
-  if (rank === 1) return "#FCD34D";
-  if (rank <= 3) return CYBER_TAB_CYAN;
-  return "rgba(255,255,255,0.45)";
-}
 type Props = {
   language: string;
   /** 畳んだときのサマリー先頭（上段タブ名） */
@@ -66,6 +50,8 @@ export default function NbaDailyLeadersPanelNative({
     [language]
   );
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  // 下に詳細画面を重ねたあいだは 60 秒ごとの取り直しを止める
+  const focused = useIsFocused();
   const [stat, setStat] = useState<DailyLeaderStatKey>("pts");
   const [data, setData] = useState<DailyLeadersPayload | null>(null);
   const [failed, setFailed] = useState(false);
@@ -91,14 +77,15 @@ export default function NbaDailyLeadersPanelNative({
   }, [load]);
 
   useEffect(() => {
+    if (!focused) return;
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") void load();
     });
     return () => sub.remove();
-  }, [load]);
+  }, [load, focused]);
 
   useEffect(() => {
-    if (!data?.hasLive) return;
+    if (!data?.hasLive || !focused) return;
     let id: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (id) return;
@@ -120,7 +107,7 @@ export default function NbaDailyLeadersPanelNative({
       stop();
       sub.remove();
     };
-  }, [data?.hasLive, load]);
+  }, [data?.hasLive, load, focused]);
 
   const rows = data?.boards[stat] ?? [];
   const statLabel =
@@ -185,68 +172,24 @@ export default function NbaDailyLeadersPanelNative({
             { paddingBottom: bottomContentReserveY + 12 },
           ]}
         >
-          {rows.map((r, i) => {
-            const ink = teamInk(r.teamId);
-            return (
-              <RankingsListEntranceRowNative
-                key={`${r.playerId}-${r.gameId}`}
-                index={Math.min(i, LIST_ENTRANCE_MAX_STAGGER_INDEX)}
-                entranceKey={stat}
-                staggerMs={LIST_ENTRANCE_STAGGER_MS}
-                durationMs={LIST_ENTRANCE_DURATION_MS}
-              >
-                <Pressable
-                  onPress={() => onSelectPlayer?.(r.playerId)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [
-                    styles.card,
-                    { borderColor: inkAlpha(ink, 0.75), backgroundColor: inkAlpha(ink, 0.1) },
-                    pressed && styles.cardPressed,
-                  ]}
-                >
-                  <Text style={[styles.rank, { color: rankColor(i + 1) }]}>
-                    {i + 1}
-                  </Text>
-                  <View style={styles.who}>
-                    <View style={styles.nameRow}>
-                      <Text style={styles.name} numberOfLines={1}>
-                        {formatNbaPlayerListName(
-                          `${r.firstName} ${r.lastName}`,
-                          r.playerId
-                        )}
-                      </Text>
-                      <TeamAbbrBadgeNative teamId={r.teamId} />
-                    </View>
-                    <View style={styles.subRow}>
-                      <Text style={styles.sub}>
-                        {r.isHome ? "vs" : "@"} {r.oppAbbr}
-                      </Text>
-                      {r.stats ? (
-                        <Text style={styles.sideStats} numberOfLines={1}>
-                          {dailyLeaderSideStats(r.stats, stat).map((s) => (
-                            <Text key={s.key}>
-                              {" · "}
-                              <Text style={styles.sideValue}>{s.value}</Text>{" "}
-                              {s.label}
-                            </Text>
-                          ))}
-                        </Text>
-                      ) : null}
-                      {r.live ? (
-                        <Text style={styles.live}>● {copy.live}</Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  <View style={styles.valueCol}>
-                    <Text style={[styles.value, i === 0 && styles.valueTop]}>
-                      {r.value}
-                    </Text>
-                    <Text style={styles.valueLabel}>{statLabel}</Text>
-                  </View>
-                </Pressable>
-              </RankingsListEntranceRowNative>
-            );
-          })}
+          {rows.map((r, i) => (
+            <RankingsListEntranceRowNative
+              key={`${r.playerId}-${r.gameId}`}
+              index={Math.min(i, LIST_ENTRANCE_MAX_STAGGER_INDEX)}
+              entranceKey={stat}
+              staggerMs={LIST_ENTRANCE_STAGGER_MS}
+              durationMs={LIST_ENTRANCE_DURATION_MS}
+            >
+              <NbaDailyLeaderRowNative
+                row={r}
+                rank={i + 1}
+                stat={stat}
+                statLabel={statLabel}
+                liveLabel={copy.live}
+                onPress={() => onSelectPlayer?.(r.playerId)}
+              />
+            </RankingsListEntranceRowNative>
+          ))}
         </ScrollView>
       )}
     </View>
@@ -293,80 +236,5 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 12,
     gap: 6,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minHeight: 60,
-    paddingLeft: 14,
-    paddingRight: 14,
-    paddingVertical: 8,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  cardPressed: { opacity: 0.75 },
-  rank: {
-    width: 26,
-    textAlign: "center",
-    fontFamily: RANK_DISPLAY_FONT,
-    fontSize: 28,
-    lineHeight: 30,
-    transform: [{ skewX: "-6deg" }],
-  },
-  who: { flex: 1, minWidth: 0, gap: 5 },
-  nameRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  name: {
-    flexShrink: 1,
-    fontFamily: "Oxanium_600SemiBold",
-    fontWeight: "600",
-    fontSize: 15,
-    letterSpacing: 0.4,
-    color: "rgba(255,255,255,0.95)",
-    textTransform: "uppercase",
-    includeFontPadding: false,
-    transform: [{ skewX: "-6deg" }],
-  },
-  subRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sub: {
-    fontFamily: METRIC_FONT,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: "rgba(255,255,255,0.5)",
-    textTransform: "uppercase",
-    transform: [{ skewX: "-6deg" }],
-  },
-  sideStats: {
-    flexShrink: 1,
-    fontFamily: METRIC_FONT,
-    fontSize: 10,
-    letterSpacing: 0.6,
-    color: "rgba(255,255,255,0.4)",
-    transform: [{ skewX: "-6deg" }],
-  },
-  sideValue: { color: "rgba(255,255,255,0.85)" },
-  live: {
-    fontFamily: METRIC_FONT,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: "#f87171",
-    transform: [{ skewX: "-6deg" }],
-  },
-  valueCol: { alignItems: "flex-end", minWidth: 44 },
-  value: {
-    fontFamily: "Oxanium_800ExtraBold",
-    fontSize: 26,
-    lineHeight: 28,
-    color: "#fff",
-    fontVariant: ["tabular-nums"],
-    transform: [{ skewX: "-6deg" }],
-  },
-  valueTop: { color: CYBER_TAB_CYAN },
-  valueLabel: {
-    fontFamily: METRIC_FONT,
-    fontSize: 9,
-    letterSpacing: 1.4,
-    color: "rgba(255,255,255,0.4)",
-    transform: [{ skewX: "-6deg" }],
   },
 });

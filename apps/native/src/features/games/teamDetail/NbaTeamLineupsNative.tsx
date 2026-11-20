@@ -27,15 +27,19 @@ export default function NbaTeamLineupsNative({
   teamId,
   isJa,
   accent,
+  initialSize = 5,
+  initialSide = "most",
 }: {
   teamId: string;
   isJa: boolean;
   accent: string;
+  initialSize?: number;
+  initialSide?: string;
 }) {
   const { hub } = useNbaLeagueHubNative();
   const boards = hub?.teams.find((t) => t.teamId === teamId)?.lineupBoards ?? [];
-  const [size, setSize] = useState<(typeof SIZES)[number]>(5);
-  const [side, setSide] = useState<Side>("most");
+  const [size, setSize] = useState<(typeof SIZES)[number]>(SIZES.find((n) => n === initialSize) ?? 5);
+  const [side, setSide] = useState<Side>(initialSide === "best" || initialSide === "worst" ? initialSide : "most");
   const [player, setPlayer] = useState<string | null>(null);
   if (boards.length === 0) return null;
   const board = boards.find((row) => row.size === size);
