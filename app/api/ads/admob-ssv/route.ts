@@ -25,9 +25,11 @@ function paramNames(rawQuery: string): string {
 export async function GET(req: Request) {
   const rawQuery = req.url.split("?")[1] ?? "";
   const result = await verifyAdMobSsv(rawQuery);
+  // 署名が確認できないものは報酬にしない。ただし Google は 200 以外に再送するため、
+  // 受け取り自体は 200 で返す（記録はしない）。
   if (!result.ok) {
-    console.warn(`[admob-ssv] rejected reason=${result.reason} params=${paramNames(rawQuery)}`);
-    return new NextResponse(`rejected: ${result.reason}`, { status: 403 });
+    console.warn(`[admob-ssv] ignored reason=${result.reason} params=${paramNames(rawQuery)}`);
+    return new NextResponse(`ignored: ${result.reason}`, { status: 200 });
   }
   console.log(`[admob-ssv] verified tx=${result.transactionId} gameId=${result.gameId} params=${paramNames(rawQuery)}`);
 
@@ -37,7 +39,8 @@ export async function GET(req: Request) {
     .map((s) => s.trim())
     .filter(Boolean);
   if (allowedUnits.length > 0 && (!result.adUnit || !allowedUnits.includes(result.adUnit))) {
-    return new NextResponse("rejected: ad_unit", { status: 403 });
+    console.warn(`[admob-ssv] ignored reason=ad_unit`);
+    return new NextResponse("ignored: ad_unit", { status: 200 });
   }
 
   const db = getAdminDb();
