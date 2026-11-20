@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { verifyAdMobSsv } from "@/lib/ads/admobSsvVerify";
-
-/** `lib/pro/proPickGameAccess.ts` の PRO_PICK_AD_REWARDS_COLLECTION と同じ値（そちらの変更が入るまで単独で動かすため） */
-const PRO_PICK_AD_REWARDS_COLLECTION = "proPickAdRewards";
+import { PRO_PICK_AD_REWARDS_COLLECTION } from "@/lib/pro/proPickGameAccess";
+import { grantTradeBuzzUnlockFromAd } from "@/lib/ads/tradeBuzzAdUnlock";
 
 /**
  * GET /api/ads/admob-ssv?...（AdMob のサーバー側検証コールバック）
  *
- * 署名が正しい報酬だけ `proPickAdRewards/{transaction_id}` に 1 回記録する。
- * 解除は `POST /api/nba/pro-pick-unlock` がこの記録を消費して行う。
+ * 署名が正しい報酬だけ、用途ごとに 1 回記録する。
+ * - PRO PICK（custom_data の gameId）: `proPickAdRewards/{transaction_id}`。解除は `POST /api/nba/pro-pick-unlock` が消費
+ * - トレード Buzz（custom_data の feature = trade_buzz）: 今日（日本時間）の解除 `tradeBuzzUnlocks/{uid}_{日付}`
  * 同じ transaction_id は 2 回目以降無視する（再送に強くする）。
  */
 /** ログ用: パラメータの名前だけ（値は出さない） */
@@ -31,26 +31,50 @@ export async function GET(req: Request) {
     console.warn(`[admob-ssv] ignored reason=${result.reason} params=${paramNames(rawQuery)}`);
     return new NextResponse(`ignored: ${result.reason}`, { status: 200 });
   }
-  console.log(`[admob-ssv] verified tx=${result.transactionId} gameId=${result.gameId} params=${paramNames(rawQuery)}`);
+  console.log(
+    `[admob-ssv] verified tx=${result.transactionId} purpose=${result.purpose.kind} params=${paramNames(rawQuery)}`
+  );
 
-  // 本番では AdMob の広告ユニット ID を環境変数で絞る（設定されていれば一致が必要）
-  const allowedUnits = (process.env.ADMOB_REWARDED_AD_UNIT_IDS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (allowedUnits.length > 0 && (!result.adUnit || !allowedUnits.includes(result.adUnit))) {
-    console.warn(`[admob-ssv] ignored reason=ad_unit`);
-    return new NextResponse("ignored: ad_unit", { status: 200 });
+  // 広告ユニットは用途ごとに分ける（設定されていれば一致が必要。違えば記録しない）
+  //  - PRO PICK: ADMOB_REWARDED_AD_UNIT_IDS
+  //  - トレード Buzz: ADMOB_TRADE_BUZZ_AD_UNIT_IDS（未設定なら PRO PICK の一覧で代用）
+  const parseUnits = (raw: string | undefined) =>
+    (raw ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  const proPickUnits = parseUnits(process.env.ADMOB_REWARDED_AD_UNIT_IDS);
+  const buzzUnits = parseUnits(process.env.ADMOB_TRADE_BUZZ_AD_UNIT_IDS);
+  const unit = result.adUnit ?? "";
+  if (result.purpose.kind === "trade_buzz") {
+    const allowed = buzzUnits.length > 0 ? buzzUnits : proPickUnits;
+    if (allowed.length > 0 && !allowed.includes(unit)) {
+      console.warn(`[admob-ssv] ignored reason=ad_unit purpose=trade_buzz`);
+      return new NextResponse("ignored: ad_unit", { status: 200 });
+    }
+  } else {
+    // PRO PICK の報酬で Buzz 専用ユニットは受け付けない（用途を混ぜない）
+    if (buzzUnits.includes(unit) || (proPickUnits.length > 0 && !proPickUnits.includes(unit))) {
+      console.warn(`[admob-ssv] ignored reason=ad_unit purpose=pro_pick`);
+      return new NextResponse("ignored: ad_unit", { status: 200 });
+    }
   }
 
   const db = getAdminDb();
+  if (result.purpose.kind === "trade_buzz") {
+    await grantTradeBuzzUnlockFromAd(db, {
+      transactionId: result.transactionId,
+      uid: result.userId,
+    });
+    return new NextResponse("ok", { status: 200 });
+  }
   try {
     await db
       .collection(PRO_PICK_AD_REWARDS_COLLECTION)
       .doc(result.transactionId)
       .create({
         uid: result.userId,
-        gameId: result.gameId,
+        gameId: result.purpose.gameId,
         claimed: false,
         createdAt: FieldValue.serverTimestamp(),
       });
