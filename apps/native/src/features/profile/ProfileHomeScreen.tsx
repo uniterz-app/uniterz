@@ -1108,8 +1108,10 @@ export default function ProfileHomeScreen({
   const skipFirstFocusStatsRef = useRef(true);
   const statsLoadingRef = useRef(statsBundle.loading);
   const statsSummaryRef = useRef(statsBundle.summary);
+  const statsErrorRef = useRef(statsBundle.error);
   statsLoadingRef.current = statsBundle.loading;
   statsSummaryRef.current = statsBundle.summary;
+  statsErrorRef.current = statsBundle.error;
   useFocusEffect(
     useCallback(() => {
       if (!targetUid || !authReady) return;
@@ -1117,7 +1119,10 @@ export default function ProfileHomeScreen({
         skipFirstFocusStatsRef.current = false;
         return;
       }
-      if (statsLoadingRef.current && !statsSummaryRef.current) {
+      if (
+        statsErrorRef.current ||
+        (statsLoadingRef.current && !statsSummaryRef.current)
+      ) {
         statsBundle.refetch();
       }
     }, [targetUid, authReady, statsBundle.refetch])
@@ -1323,13 +1328,13 @@ export default function ProfileHomeScreen({
           <Text style={styles.warnText}>
             {!__DEV__
               ? L(lang, {
-                  ja: "データを読み込めませんでした。しばらくしてから画面を引き下げて再読み込みしてください。",
-                  en: "Couldn't load your data. Pull to refresh in a moment.",
-                  ko: "데이터를 불러오지 못했습니다. 잠시 후 당겨서 새로고침하세요.",
-                  zh: "无法加载数据。请稍后下拉刷新。",
-                  es: "No se pudieron cargar los datos. Desliza para actualizar en un momento.",
-                  pt: "Não foi possível carregar os dados. Puxe para atualizar em breve.",
-                  fr: "Impossible de charger les données. Tirez pour actualiser dans un instant.",
+                  ja: "データを読み込めませんでした。しばらくしてから再読み込みしてください。",
+                  en: "Couldn't load your data. Try again in a moment.",
+                  ko: "데이터를 불러오지 못했습니다. 잠시 후 다시 시도하세요.",
+                  zh: "无法加载数据。请稍后重试。",
+                  es: "No se pudieron cargar los datos. Inténtalo de nuevo en un momento.",
+                  pt: "Não foi possível carregar os dados. Tente novamente em breve.",
+                  fr: "Impossible de charger les données. Réessayez dans un instant.",
                 })
               : isFirestoreTransient
               ? L(lang, {
@@ -1353,6 +1358,20 @@ export default function ProfileHomeScreen({
                   })
                 : t.apiMissing}
           </Text>
+          <SlantCtaNative
+            label={L(lang, {
+              ja: "再読み込み",
+              en: "Retry",
+              ko: "다시 시도",
+              zh: "重试",
+              es: "Reintentar",
+              pt: "Tentar novamente",
+              fr: "Réessayer",
+            })}
+            variant="accent"
+            square
+            onPress={() => statsBundle.refetch()}
+          />
         </View>
       );
     }
@@ -1981,6 +2000,10 @@ export default function ProfileHomeScreen({
         }
         else if (page === "seasonPreview" && __DEV__)
           navigation.navigate("SeasonPredictPreview");
+        else if (page === "tradeBallotPreview" && __DEV__)
+          navigation.navigate("TradeBallotPreview");
+        else if (page === "tradeBuzzPreview" && __DEV__)
+          navigation.navigate("TradeBuzzPreview");
         else if (page === "weeklyReportPreview" && __DEV__)
           navigation.navigate("MonthlyReportPreview", { tab: "weekly" });
         else if (page === "monthlyReportPreview" && __DEV__)
@@ -2022,6 +2045,8 @@ export default function ProfileHomeScreen({
           navigation.navigate("RankingCommentDesignPreview");
         else if (page === "monthlyBadgePreview" && __DEV__)
           navigation.navigate("MonthlyBadgePreview");
+        else if (page === "lab3dPreview" && __DEV__)
+          navigation.navigate("Lab3dPreview");
       }}
     />
     <ProfileBadgeDetailModal

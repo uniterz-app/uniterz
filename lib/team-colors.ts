@@ -104,6 +104,13 @@ export function getTeamPrimaryColor(
   league: League,
   teamId: string | null | undefined
 ): string {
+  return readableOnLightTheme(rawTeamPrimaryColor(league, teamId));
+}
+
+function rawTeamPrimaryColor(
+  league: League,
+  teamId: string | null | undefined
+): string {
   if (!teamId) return "#ffffff";
 
   switch (league) {
@@ -131,7 +138,9 @@ export function getTeamJerseyPrimaryColor(
 ): string {
   if (!teamId) return getTeamPrimaryColor(league, teamId);
   if (league === "nba") {
-    return jerseyPrimaryOverridesNBA[teamId] ?? getTeamPrimaryColor(league, teamId);
+    return readableOnLightTheme(
+      jerseyPrimaryOverridesNBA[teamId] ?? getTeamPrimaryColor(league, teamId)
+    );
   }
   return getTeamPrimaryColor(league, teamId);
 }
@@ -147,10 +156,38 @@ const abbrBadgeColorOverridesNBA: Record<string, string> = {
 
 /** チーム略称バッジ（TeamAbbrBadge）の枠・文字色 */
 export function getTeamAbbrBadgeColor(teamId: string): string {
-  return (
+  return readableOnLightTheme(
     abbrBadgeColorOverridesNBA[teamId] ??
-    softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
+      softenTeamUiColor(getTeamJerseyPrimaryColor("nba", teamId))
   );
+}
+
+/**
+ * Native の白テーマか。`globalThis.__uzc`（apps/native/src/theme/themeColorRuntime.ts）は
+ * 黒テーマでは色を素通しする。Web・サーバーには無い。
+ */
+function isNativeLightTheme(): boolean {
+  const themed = (globalThis as { __uzc?: (c: string) => string }).__uzc;
+  return typeof themed === "function" && themed("#ffffff") !== "#ffffff";
+}
+
+/** 白地で文字・枠が沈む明るさの上限（相対輝度） */
+const LIGHT_THEME_MAX_TEAM_LUM = 0.1;
+
+/**
+ * 白テーマのときだけ、白・銀・薄い黄などの明るいチーム色を同じ色相のまま濃くする。
+ * 暗い色はそのまま（白地で読める）。何度かけても結果は同じ。
+ */
+function readableOnLightTheme(hex: string): string {
+  if (!isNativeLightTheme()) return hex;
+  const rgb = parseHexRgb(hex);
+  if (!rgb) return hex;
+  const lum = relativeLuminance(hex);
+  if (lum <= LIGHT_THEME_MAX_TEAM_LUM) return hex;
+  const f = (LIGHT_THEME_MAX_TEAM_LUM / lum) ** (1 / 2.2);
+  const toHex = (n: number) =>
+    Math.min(255, Math.max(0, Math.round(n * f))).toString(16).padStart(2, "0");
+  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
 }
 
 /**
@@ -227,9 +264,10 @@ export function getTeamUiAccentColor(
   league: League,
   teamId: string | null | undefined
 ): string {
-  return readableTeamAccentOnDark(
-    softenTeamUiColor(getTeamJerseyPrimaryColor(league, teamId))
-  );
+  const soft = softenTeamUiColor(getTeamJerseyPrimaryColor(league, teamId));
+  return isNativeLightTheme()
+    ? readableOnLightTheme(soft)
+    : readableTeamAccentOnDark(soft);
 }
 
 /**
@@ -242,7 +280,7 @@ export function getTeamRosterMarkColor(
   teamId: string | null | undefined
 ): string {
   const primary = getTeamJerseyPrimaryColor(league, teamId);
-  if (relativeLuminance(primary) >= 0.08) return primary;
+  if (isNativeLightTheme() || relativeLuminance(primary) >= 0.08) return primary;
   const secondary = getTeamJerseySecondaryColor(league, teamId);
   if (relativeLuminance(secondary) >= 0.08) return secondary;
   return getTeamUiAccentColor(league, teamId);
@@ -519,7 +557,11 @@ export function resolveMatchupUiAccents(
     jerseyPrimariesClash(homeAccent, awayAccent);
 
   if (!clash) {
-    return { homeAccent, awayAccent, clash: false };
+    return {
+      homeAccent: readableOnLightTheme(homeAccent),
+      awayAccent: readableOnLightTheme(awayAccent),
+      clash: false,
+    };
   }
 
   // アウェイ側を副色／代替色へ（ホームは主色寄りを維持）
@@ -539,7 +581,11 @@ export function resolveMatchupUiAccents(
     );
   }
 
-  return { homeAccent, awayAccent, clash: true };
+  return {
+    homeAccent: readableOnLightTheme(homeAccent),
+    awayAccent: readableOnLightTheme(awayAccent),
+    clash: true,
+  };
 }
 
 /** マッチアップ内のチーム用アクセント（タグ塗りなど） */

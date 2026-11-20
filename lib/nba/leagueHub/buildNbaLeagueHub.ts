@@ -23,6 +23,7 @@ import {
   type LeagueHubTopGame,
   type LeagueHubTopGames,
   type LeagueHubTrendRow,
+  type LeagueHubPtsDeltaRow,
   type LeagueHubWeek,
   type LeagueHubWeekRow,
   type LeagueHubZoneBoard,
@@ -115,6 +116,23 @@ export type BuildNbaLeagueHubInput = {
   previousLadders?: Pick<NbaLeagueHubDoc, "ladderWeek" | "ladderPrev"> | null;
   /** 相手の得点源を守った時間と、抑えた FG% */
   aceGuard?: Map<string, { minutes: number; suppress: number }> | null;
+  /** 相手の得点上位3人。minutes / suppress はエースと同じ単位 */
+  toughGuard?: Map<string, { minutes: number; suppress: number }> | null;
+  /** 守備側 → マークした相手 */
+  matchups?: Map<string, { playerId: string; seconds: number; fgm: number; fga: number }[]> | null;
+  /** 攻撃側 → 自分をマークした相手 */
+  guardedBy?: Map<string, { playerId: string; seconds: number; fgm: number; fga: number }[]> | null;
+  onOff?: Map<string, { onNet: number; offNet: number; onMin: number; offMin: number }> | null;
+  lineups?: Map<string, { ids: string[]; min: number; net: number; pm?: number; off?: number; def?: number; games?: number }[]> | null;
+  lineupBoards?: Map<
+    string,
+    {
+      size: 2 | 3 | 4 | 5;
+      most: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+      best: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+      worst: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[];
+    }[]
+  > | null;
 };
 
 const SCATTER_PLAYER_LIMIT = 220;
@@ -137,6 +155,8 @@ const MIP_PRIOR_MIN_GP = 20;
 const MIP_ESTABLISHED_PTS = 25;
 /** 伸び率の分母の下限（3 → 8 点のような低い前季を過大にしない） */
 const MIP_REL_FLOOR_PTS = 8;
+/** 前季比の平均得点で、出番が消えただけの選手を下がった側に並べない */
+const PTS_DELTA_MIN_MINUTES = 15;
 const DAY_MS = 86_400_000;
 /** 「いま続いている」とみなす最終出場からの日数 */
 const ACTIVE_WITHIN_DAYS = 10;
@@ -181,7 +201,7 @@ function metricDigits(id: string): number {
   ) {
     return 3;
   }
-  if (id === "ace_suppress") return 3;
+  if (id === "ace_suppress" || id === "tough_suppress") return 3;
   return id === "drive_ppd" ? 2 : 1;
 }
 
@@ -287,6 +307,40 @@ function rankMap<T extends { id: string }>(pool: T[], get: (item: T) => number):
   return new Map([...pool].sort((a, b) => get(b) - get(a)).map((p, i) => [p.id, i + 1]));
 }
 
+function lineupNames(ids: string[], roster: BuildNbaLeagueHubInput["roster"]): string[] {
+  return ids.flatMap((id) => {
+    const name = roster.get(id)?.name;
+    return name ? [name] : [];
+  });
+}
+
+function namedLineups(
+  units: { ids: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[],
+  size: number,
+  roster: BuildNbaLeagueHubInput["roster"]
+): { names: string[]; min: number; net: number; pm: number; off?: number; def?: number; games?: number }[] {
+  return units.flatMap((unit) => {
+    const names = lineupNames(unit.ids, roster);
+    if (names.length !== size) return [];
+    return [{ names, min: unit.min, net: unit.net, pm: unit.pm, ...lineupOptionalFields(unit) }];
+  });
+}
+
+/** Firestore は undefined を書けないので、値のある項目だけ載せる */
+function lineupOptionalFields(unit: { pm?: number; off?: number; def?: number; games?: number }): {
+  pm?: number;
+  off?: number;
+  def?: number;
+  games?: number;
+} {
+  return {
+    ...(typeof unit.pm === "number" ? { pm: unit.pm } : {}),
+    ...(typeof unit.off === "number" ? { off: unit.off } : {}),
+    ...(typeof unit.def === "number" ? { def: unit.def } : {}),
+    ...(typeof unit.games === "number" ? { games: unit.games } : {}),
+  };
+}
+
 export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDoc {
   const { seasonKey, roster, metrics } = input;
 
@@ -324,6 +378,40 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       m.ace_guard_min = round(ace.minutes, 1);
       m.ace_suppress = round(ace.suppress, 3);
     }
+    const tough = input.toughGuard?.get(playerId);
+    if (tough && tough.minutes > 0) {
+      m.tough_guard_min = round(tough.minutes, 1);
+      m.tough_suppress = round(tough.suppress, 3);
+    }
+    const seasonFg = (id: string) => {
+      const v = input.metrics.get(id)?.values.fg_pct;
+      if (v == null || !Number.isFinite(v) || v <= 0) return undefined;
+      return round(v > 1 ? v / 100 : v, 3);
+    };
+    const toMatchups = (
+      rows: { playerId: string; seconds: number; fgm: number; fga: number }[] | undefined,
+      /** このシュートを打った選手。DF は相手、OF は本人 */
+      shooterId?: string
+    ) =>
+      (rows ?? []).flatMap((row) => {
+        const opp = input.roster.get(row.playerId);
+        if (!opp) return [];
+        const usualFgPct = seasonFg(shooterId ?? row.playerId);
+        return [
+          {
+            playerId: row.playerId,
+            name: opp.name,
+            teamId: opp.teamId,
+            minutes: round(row.seconds / 60, 1),
+            fgPct: row.fga > 0 ? round(row.fgm / row.fga, 3) : 0,
+            fgm: row.fgm,
+            fga: row.fga,
+            ...(usualFgPct != null ? { usualFgPct } : {}),
+          },
+        ];
+      });
+    const matchups = toMatchups(input.matchups?.get(playerId));
+    const guardedBy = toMatchups(input.guardedBy?.get(playerId), playerId);
     players.push({
       playerId,
       name: r.name,
@@ -333,6 +421,9 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       gp: entry.gp,
       min: round(min, 1),
       m,
+      ...(matchups.length > 0 ? { matchups } : {}),
+      ...(guardedBy.length > 0 ? { guardedBy } : {}),
+      ...(input.onOff?.get(playerId) ? { onOff: input.onOff.get(playerId) } : {}),
     });
   }
   players.sort((a, b) => b.gp * b.min - a.gp * a.min);
@@ -728,6 +819,34 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     pieDelta: round(p.dPie, 3),
   }));
 
+  // 前季比の平均得点: 前季 20 試合以上・今季はリーグ最多試合数の 4 割以上かつ平均 15 分以上
+  const ptsDeltaMinGp = Math.max(3, Math.round(maxGp * 0.4));
+  const ptsDeltaRows: LeagueHubPtsDeltaRow[] = prior
+    ? [...metrics.entries()].flatMap(([id, e]) => {
+        const before = prior.get(id);
+        if (!before || before.gp < MIP_PRIOR_MIN_GP || e.gp < ptsDeltaMinGp) return [];
+        if ((e.values.min ?? 0) < PTS_DELTA_MIN_MINUTES) return [];
+        const pts = e.values.pts;
+        const prevPts = before.values.pts;
+        if (pts == null || prevPts == null) return [];
+        const ref = refOf(id, e.teamId);
+        if (!ref) return [];
+        return [{ ...ref, pts: round(pts, 1), prevPts: round(prevPts, 1), diff: round(pts - prevPts, 1) }];
+      })
+    : [];
+  const ptsDelta = prior
+    ? {
+        up: ptsDeltaRows
+          .filter((r) => r.diff > 0)
+          .sort((a, b) => b.diff - a.diff || b.pts - a.pts)
+          .slice(0, LONG_LIST_LIMIT),
+        down: ptsDeltaRows
+          .filter((r) => r.diff < 0)
+          .sort((a, b) => a.diff - b.diff || b.prevPts - a.prevPts)
+          .slice(0, LONG_LIST_LIMIT),
+      }
+    : null;
+
   // 新人: 前季までに NBA 出場が無い（ドラフト外・指名後に出なかった選手も含む）。
   // チーム試合の 5 割以上・平均 12 分以上。Game Score 6 割・PIE 2 割・総出場時間 2 割
   const startYear = seasonStartYear(seasonKey);
@@ -884,6 +1003,18 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
       schedule: schedules?.get(s.teamId) ?? null,
       picks: picks?.get(s.teamId) ?? null,
       m,
+      lineups: (input.lineups?.get(s.teamId) ?? []).flatMap((unit) => {
+        const names = lineupNames(unit.ids, input.roster);
+        if (names.length < 5) return [];
+        return [{ names, min: unit.min, net: unit.net, ...lineupOptionalFields(unit) }];
+      }),
+      lineupBoards: (input.lineupBoards?.get(s.teamId) ?? []).flatMap((board) => {
+        const most = namedLineups(board.most, board.size, input.roster);
+        const best = namedLineups(board.best, board.size, input.roster);
+        const worst = namedLineups(board.worst, board.size, input.roster);
+        if (most.length === 0 && best.length === 0 && worst.length === 0) return [];
+        return [{ size: board.size, most, best, worst }];
+      }),
     };
   });
 
@@ -901,6 +1032,7 @@ export function buildNbaLeagueHub(input: BuildNbaLeagueHubInput): NbaLeagueHubDo
     },
     hot: [...trends].filter((t) => t.diff > 0).sort((a, b) => b.diff - a.diff).slice(0, LONG_LIST_LIMIT),
     cold: [...trends].filter((t) => t.diff < 0).sort((a, b) => a.diff - b.diff).slice(0, LONG_LIST_LIMIT),
+    ptsDelta,
     week,
     topGames,
     rookies: withPrev(rookies, ladderPrev?.rookies),

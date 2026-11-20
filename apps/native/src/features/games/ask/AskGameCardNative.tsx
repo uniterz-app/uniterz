@@ -72,10 +72,8 @@ export default function AskGameCardNative({
   language: string;
   onPress?: () => void;
 }) {
-  const scored =
-    game.scoreHome != null &&
-    game.scoreAway != null &&
-    (game.status === "final" || game.status === "live");
+  /** 試合中のスコアは出さない（ネタバレ防止） */
+  const scored = game.scoreHome != null && game.scoreAway != null && game.status === "final";
   const label = ctaLabel(game.status, language);
   return (
     <Pressable

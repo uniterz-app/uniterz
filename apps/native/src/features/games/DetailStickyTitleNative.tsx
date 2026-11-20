@@ -11,6 +11,7 @@ import {
   type NativeSyntheticEvent,
 } from "react-native";
 import { METRIC_FONT } from "../rankings/rankingsUiTheme";
+import { notifyBackEdgeScroll } from "../profile/backEdgeScrollNative";
 
 /** 固定バーの名前行の高さ（タブ切替時、本体のタブがこの下に来るよう戻す） */
 const TITLE_ROW_H = 37;
@@ -61,6 +62,7 @@ export function useDetailStickyTitleNative() {
     Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
       useNativeDriver: true,
       listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        notifyBackEdgeScroll();
         const y = e.nativeEvent.contentOffset.y;
         currentY.current = y;
         const next = thresholdRef.current > 0 && y >= thresholdRef.current;

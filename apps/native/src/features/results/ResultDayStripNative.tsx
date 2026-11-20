@@ -8,11 +8,17 @@ import { useResultDayHeaderEntrance } from "./useResultHomeEntrance";
 export default function ResultDayStripNative({
   dateLabel,
   dayPoints,
+  pickupPoints = null,
+  splitByPickup = false,
   entranceActive = false,
   sectionStaggerIndex = 0,
 }: {
   dateLabel: string;
   dayPoints: NativeDayPointsHeader;
+  /** splitByPickup のとき、同じ日の PICK UP 集計。null は対象なし */
+  pickupPoints?: NativeDayPointsHeader;
+  /** 日付帯の ALL と PICK UP を上下2段にする */
+  splitByPickup?: boolean;
   entranceActive?: boolean;
   sectionStaggerIndex?: number;
 }) {
@@ -26,10 +32,28 @@ export default function ResultDayStripNative({
     <View style={resultDayStripPanelNative.outer}>
       <Animated.View style={[resultDayStripPanelNative.panel, clipStyle]}>
         <View style={resultDayStripPanelNative.row}>
-          <Animated.View style={[resultDayStripPanelNative.dateCol, dateClusterStyle]}>
-            <Text style={resultDayStripPanelNative.date}>{dateLabel}</Text>
+          <Animated.View
+            style={[
+              splitByPickup ? styles.splitDateCol : resultDayStripPanelNative.dateCol,
+              dateClusterStyle,
+            ]}
+          >
+            <Text
+              style={[
+                resultDayStripPanelNative.date,
+                splitByPickup ? styles.splitDate : null,
+              ]}
+            >
+              {dateLabel}
+            </Text>
           </Animated.View>
-          {dayPoints?.variant === "total" ? (
+          {splitByPickup ? (
+            <Animated.View style={[styles.splitTrack, rightClusterStyle]}>
+              <DaySplitCell label="ALL" points={dayPoints} />
+              <View style={styles.splitRule} />
+              <DaySplitCell label="PICK UP" points={pickupPoints} />
+            </Animated.View>
+          ) : dayPoints?.variant === "total" ? (
             <>
               <Animated.View style={[resultDayStripPanelNative.hitCol, rightClusterStyle]}>
                 {typeof dayPoints.hitTotal === "number" && dayPoints.hitTotal > 0 ? (
@@ -65,7 +89,117 @@ export default function ResultDayStripNative({
   );
 }
 
+function DaySplitCell({
+  label,
+  points,
+}: {
+  label: string;
+  points: NativeDayPointsHeader;
+}) {
+  const hit =
+    points?.variant === "total" &&
+    typeof points.hitTotal === "number" &&
+    points.hitTotal > 0
+      ? `${points.hitWins ?? 0}/${points.hitTotal}`
+      : null;
+  return (
+    <View style={styles.splitCell}>
+      <Text style={styles.splitKind} numberOfLines={1}>
+        {label}
+      </Text>
+      {points?.variant === "total" ? (
+        <View style={styles.splitNums}>
+          {hit ? <Text style={styles.splitHitNums}>{hit}</Text> : null}
+          <Text style={styles.splitValue}>{points.value}</Text>
+          <Text style={styles.splitUnit}>{points.unit}</Text>
+        </View>
+      ) : (
+        <Text style={styles.splitPending} numberOfLines={1}>
+          {points?.variant === "pending" ? "未確定" : "—"}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  splitDateCol: {
+    justifyContent: "center",
+    alignItems: "flex-start",
+    paddingLeft: 12,
+    paddingRight: 6,
+    paddingVertical: 6,
+  },
+  splitDate: {
+    fontSize: 13,
+    lineHeight: 15,
+    letterSpacing: -0.3,
+  },
+  splitTrack: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    paddingRight: 12,
+    paddingVertical: 5,
+    gap: 3,
+  },
+  splitRule: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginLeft: 72,
+  },
+  splitCell: {
+    minHeight: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  splitKind: {
+    width: 64,
+    flexShrink: 0,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: "rgba(255,255,255,0.72)",
+  },
+  splitNums: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  splitHitNums: {
+    ...dayStripNumberText,
+    flexShrink: 0,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.95)",
+    letterSpacing: -0.4,
+    lineHeight: 16,
+  },
+  splitValue: {
+    ...dayStripNumberText,
+    flexShrink: 0,
+    fontSize: 15,
+    color: "rgba(255,255,255,0.98)",
+    letterSpacing: -0.4,
+    lineHeight: 17,
+  },
+  splitUnit: {
+    flexShrink: 0,
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.92)",
+  },
+  splitPending: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+    color: "rgba(248,250,252,0.88)",
+  },
   dayHitWrap: {
     flexDirection: "row",
     alignItems: "baseline",

@@ -24,6 +24,8 @@ type Props = {
   reduceMotion: boolean;
   /** リーグ切替などでページ入場をやり直すキー */
   motionKey: string;
+  markedKeys?: ReadonlySet<string> | null;
+  markColor?: string | null;
 };
 
 /** Web モバイル `GamesPage` の月ヘッダー＋`DayStrip` ブロック相当 */
@@ -42,6 +44,8 @@ export default function GamesDateNavigatorNative({
   entranceEnabled,
   reduceMotion,
   motionKey,
+  markedKeys,
+  markColor,
 }: Props) {
   const webMotion = !reduceMotion;
 
@@ -75,6 +79,8 @@ export default function GamesDateNavigatorNative({
           onSelect={onSelectDate}
           entranceEnabled={entranceEnabled}
           reduceMotion={reduceMotion}
+          markedKeys={markedKeys}
+          markColor={markColor}
         />
       </Animated.View>
     </View>

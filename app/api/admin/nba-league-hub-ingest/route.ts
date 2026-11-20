@@ -28,7 +28,7 @@ export async function POST(req: Request) {
         : CURRENT_NBA_SEASON_KEY;
 
     const result = await ingestNbaLeagueHub(getAdminDb(), { seasonKey });
-    revalidateNbaDocCache(["nbaLeagueHub"]);
+    revalidateNbaDocCache(["nbaLeagueHub", "nbaLeagueHubDetail"]);
     return NextResponse.json(result);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

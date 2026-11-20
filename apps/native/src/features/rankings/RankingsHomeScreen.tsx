@@ -99,6 +99,7 @@ import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { RankingsDivisionTabsNative } from "./RankingsDivisionTabsNative";
 import { RankingsProLeagueTeaserNative } from "./RankingsProLeagueTeaserNative";
 import RankingCommentEditorNative from "./RankingCommentEditorNative";
+import { useTrackViewNative } from "../../analytics/useTrackViewNative";
 import {
   divisionFromNbaBoard,
   type NbaRankingBoard,
@@ -205,6 +206,18 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     (user.plan !== "pro" ||
       openSeasonBulk.proRequired ||
       periodBulk.proRequired);
+
+  const analyticsView =
+    category === "bracket"
+      ? { title: "Rankings: Bracket", path: "rankings/bracket" }
+      : nbaBoard === "playoffs"
+        ? { title: "Rankings: Playoffs", path: "rankings/playoffs" }
+        : nbaBoard === "open"
+          ? openProLocked
+            ? { title: "Rankings: PRO LEAGUE (Locked)", path: "rankings/pro-league-locked" }
+            : { title: "Rankings: PRO LEAGUE", path: "rankings/pro-league" }
+          : { title: "Rankings: PICK UP", path: "rankings/pick-up" };
+  useTrackViewNative(analyticsView.title, analyticsView.path);
 
   /**
    * Ranking Progress（日次順位推移）。
@@ -578,6 +591,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
       rank,
       valueText: `${formatMetricDecimals(n, d)}${unit}`,
       deltaPlaces: listRow?.rankDeltaPlaces ?? myRankDeltaPlaces ?? null,
+      total: rankingListCount > 0 ? rankingListCount : null,
     };
   }, [
     rankingHasNoEntries,
@@ -587,6 +601,7 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
     metric,
     myValue,
     myRankDeltaPlaces,
+    rankingListCount,
   ]);
 
   const scrollToTop = useCallback(() => {
@@ -765,18 +780,23 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </View>
             ) : null}
 
+            {/**
+             * 枝ごとに key を分ける。同じ View を使い回すと、平坦化される loadingWrap と
+             * 実体の listSectionTop が同じ tag で入れ替わり、Android Fabric が
+             * 「Unable to find viewState」で落ちて画面がグレーになる。
+             */}
             {!listReady ? (
-              <View style={styles.loadingWrap}>
+              <View key="list-loading" style={styles.loadingWrap}>
                 <CandleChartLoaderNative scale={0.85} label={t.loading} />
               </View>
             ) : shouldShowRankingsPreseasonNotice(rankingHasNoEntries) ? (
-              <View style={styles.noDataWrap}>
+              <View key="list-preseason" style={styles.noDataWrap}>
                 <Text style={styles.preseasonNotice}>
                   {rankingsPreseasonNotice(language)}
                 </Text>
               </View>
             ) : rankingHasNoEntries ? (
-              <View style={styles.noDataWrap}>
+              <View key="list-empty" style={styles.noDataWrap}>
                 <Text
                   style={[
                     styles.noData,
@@ -788,6 +808,8 @@ export default function RankingsHomeScreen({ bottomReserveY }: Props) {
               </View>
             ) : (
               <View
+                key="list-podium"
+                collapsable={false}
                 style={[
                   styles.listSectionTop,
                   nbaBoard === "open" ? styles.listSectionProTop : null,

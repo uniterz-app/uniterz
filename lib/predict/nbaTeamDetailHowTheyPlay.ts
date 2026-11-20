@@ -391,6 +391,18 @@ const REBOUNDING_ROWS = NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.filter(
   (d) => d.category === "rebounding"
 );
 
+/** TRACK の中身。シュートの型、ドライブ、パス、ボール保持で分ける */
+export const TEAM_TRACK_GROUPS: readonly {
+  id: "shot" | "drive" | "pass" | "ball";
+  short: string;
+  ids: readonly string[];
+}[] = [
+  { id: "shot", short: "SHOT", ids: ["cnsFgPct", "pullupFgPct"] },
+  { id: "drive", short: "DRIVE", ids: ["drives", "driveFgPct"] },
+  { id: "pass", short: "PASS", ids: ["passes", "potentialAst", "astPtsCreated", "screenAstPts"] },
+  { id: "ball", short: "BALL", ids: ["touches", "secPerTouch", "paintTouches", "distMiles", "speed"] },
+];
+
 const TRACKING_ROWS: readonly {
   id: string;
   short: string;
@@ -445,6 +457,34 @@ const TRACKING_ROWS: readonly {
     short: "D-FG",
     hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "driveFgPct")!.hint,
     metric: "driveFgPct",
+    hasPts: false,
+  },
+  {
+    id: "screenAstPts",
+    short: "SCR",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "screenAstPts")!.hint,
+    metric: "screenAstPts",
+    hasPts: false,
+  },
+  {
+    id: "touches",
+    short: "TCH",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "touches")!.hint,
+    metric: "touches",
+    hasPts: false,
+  },
+  {
+    id: "secPerTouch",
+    short: "SEC",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "secPerTouch")!.hint,
+    metric: "secPerTouch",
+    hasPts: false,
+  },
+  {
+    id: "distMiles",
+    short: "MI",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "distMiles")!.hint,
+    metric: "distMiles",
     hasPts: false,
   },
   {

@@ -67,6 +67,10 @@ export default function ProfileAwardsTabNative({
   const [standings, setStandings] = useState<NbaSeasonStandingsPrediction | null>(
     standingsProp ?? null
   );
+  /** サーバーが返せないと言った理由（締切前 / 非公開）。本人には来ない */
+  const [hiddenReason, setHiddenReason] = useState<
+    "before_deadline" | "private" | null
+  >(null);
 
   useEffect(() => {
     if (controlled) {
@@ -84,6 +88,7 @@ export default function ProfileAwardsTabNative({
       setPrediction(null);
       setCandidates([]);
       setStandings(null);
+      setHiddenReason(null);
       setLoading(false);
       return;
     }
@@ -96,9 +101,11 @@ export default function ProfileAwardsTabNative({
           fetchProfileSeasonStandingsNative(uid, CURRENT_NBA_SEASON_KEY),
         ]);
         if (cancelled) return;
+        let reason: "before_deadline" | "private" | null = null;
         if (awardsRes.status === "fulfilled") {
           setPrediction(awardsRes.value.prediction);
           setCandidates(awardsRes.value.candidates ?? []);
+          reason = awardsRes.value.hidden ?? null;
         } else {
           console.error("ProfileAwardsTabNative awards", awardsRes.reason);
           setPrediction(null);
@@ -106,10 +113,12 @@ export default function ProfileAwardsTabNative({
         }
         if (standingsRes.status === "fulfilled") {
           setStandings(standingsRes.value.prediction);
+          reason = reason ?? standingsRes.value.hidden ?? null;
         } else {
           console.error("ProfileAwardsTabNative standings", standingsRes.reason);
           setStandings(null);
         }
+        setHiddenReason(reason);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -138,7 +147,13 @@ export default function ProfileAwardsTabNative({
       <View style={styles.noDataBox} accessibilityRole="text">
         <Text style={styles.noData}>NO DATA</Text>
         <Text style={styles.noDataHint}>
-          {canOfferSubmit ? copy.submitOpenHint : copy.noSeasonPredictions}
+          {canOfferSubmit
+            ? copy.submitOpenHint
+            : hiddenReason === "before_deadline"
+              ? copy.hiddenBeforeDeadline
+              : hiddenReason === "private"
+                ? copy.hiddenPrivate
+                : copy.noSeasonPredictions}
         </Text>
         {canOfferSubmit ? (
           <View style={styles.ctaCol}>

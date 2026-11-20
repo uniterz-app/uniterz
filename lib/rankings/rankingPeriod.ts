@@ -98,6 +98,31 @@ export function currentRankingPeriodLabel(
   return resolveRankingPeriodRange(period, now).labelKey;
 }
 
+/** 1 つ前の期間 labelKey（weekly: 7 日前の月曜 / monthly: 前月 YYYY-MM） */
+export function previousRankingPeriodLabel(
+  period: Exclude<RankingPeriod, "season">,
+  label: string
+): string {
+  if (period === "weekly") return addDaysToDateKey(label, -7);
+  const [y, m] = label.split("-").map(Number);
+  const prev = new Date(Date.UTC(y, m - 2, 1));
+  return `${prev.getUTCFullYear()}-${pad2(prev.getUTCMonth() + 1)}`;
+}
+
+/**
+ * 期間のフル終端（今日で切らない）。
+ * weekly: 月曜+6 / monthly: 月末。
+ */
+export function rankingPeriodFullEndKey(
+  period: Exclude<RankingPeriod, "season">,
+  label: string
+): string {
+  if (period === "weekly") return addDaysToDateKey(label, 6);
+  const [y, m] = label.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${y}-${pad2(m)}-${pad2(lastDay)}`;
+}
+
 /** labelKey の形式チェック（weekly: YYYY-MM-DD / monthly: YYYY-MM） */
 export function isValidPeriodLabel(
   period: Exclude<RankingPeriod, "season">,

@@ -30,7 +30,7 @@ function empty(lang: HubLang) {
   return <HubEmpty text={lang === "ja" ? "まだ試合が少ないです" : "Not enough games yet"} />;
 }
 
-type SplitMode = "homeAway" | "b2b";
+export type SplitMode = "homeAway" | "b2b";
 
 const SPLIT_HINTS: Record<SplitMode, Record<HubLang, string>> = {
   homeAway: {
@@ -44,8 +44,13 @@ const SPLIT_HINTS: Record<SplitMode, Record<HubLang, string>> = {
 };
 
 /** ホーム / アウェー・B2B 2 日目の得点差 */
-export function PlayerSplitsSection({ hub, lang, onSelectPlayer }: Props) {
-  const [mode, setMode] = useState<SplitMode>("homeAway");
+export function PlayerSplitsSection({
+  hub,
+  lang,
+  onSelectPlayer,
+  initialMode = "homeAway",
+}: Props & { initialMode?: SplitMode }) {
+  const [mode, setMode] = useState<SplitMode>(initialMode);
   const ja = lang === "ja";
   const s = hub.playerSplits;
   if (!s) return null;
@@ -153,11 +158,16 @@ export function MilestonesSection({ hub, lang, onSelectPlayer }: Props) {
   );
 }
 
-type ValueMode = "best" | "worst";
+export type ValueMode = "best" | "worst";
 
 /** 年俸の順位と働き（Game Score）の順位の差 */
-export function ValueSection({ hub, lang, onSelectPlayer }: Props) {
-  const [mode, setMode] = useState<ValueMode>("best");
+export function ValueSection({
+  hub,
+  lang,
+  onSelectPlayer,
+  initialMode = "best",
+}: Props & { initialMode?: ValueMode }) {
+  const [mode, setMode] = useState<ValueMode>(initialMode);
   const ja = lang === "ja";
   const v = hub.value;
   if (v === undefined) return null;

@@ -29,6 +29,7 @@ import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import ProfileBackEdgeHandleNative from "../profile/ProfileBackEdgeHandleNative";
+import { notifyBackEdgeScroll } from "../profile/backEdgeScrollNative";
 import {
   PREDICT_MODAL_EXIT_COMPLETION_MS,
   predictModalBackdropEnter,
@@ -137,10 +138,11 @@ export default function ResultDetailScreen({
         nav.push("TeamDetailPreview", { teamId: id });
         return;
       }
-      navigation.navigate(
-        "TeamDetailPreview" as never,
-        { teamId: id } as never
-      );
+      (
+        navigation as unknown as NavigationProp<{
+          TeamDetailPreview: { teamId: string };
+        }>
+      ).navigate("TeamDetailPreview", { teamId: id });
     },
     [navigation]
   );
@@ -156,10 +158,11 @@ export default function ResultDetailScreen({
         nav.push("PlayerDetailPreview", { playerId: id });
         return;
       }
-      navigation.navigate(
-        "PlayerDetailPreview" as never,
-        { playerId: id } as never
-      );
+      (
+        navigation as unknown as NavigationProp<{
+          PlayerDetailPreview: { playerId: string };
+        }>
+      ).navigate("PlayerDetailPreview", { playerId: id });
     },
     [navigation]
   );
@@ -413,6 +416,8 @@ export default function ResultDetailScreen({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 pointerEvents="auto"
+                onScroll={notifyBackEdgeScroll}
+                scrollEventThrottle={16}
               >
                 <View style={styles.modalContent}>
                   {loading ? (
@@ -511,7 +516,12 @@ const styles = StyleSheet.create({
     flex: 1,
     zIndex: 1,
     justifyContent: "flex-start",
-    paddingHorizontal: spacing.md,
+    paddingRight: spacing.md,
+    /**
+     * 左の余白はスクロールの中に置く。
+     * 左辺 PICK UP は枠の外へ 8px 出るので、枠の外だと ScrollView に切られる。
+     */
+    paddingLeft: 0,
   },
   scroll: {
     width: "100%",
@@ -519,6 +529,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     alignItems: "stretch",
     paddingTop: spacing.sm,
+    paddingLeft: spacing.md,
   },
   modalContent: {
     width: "100%",

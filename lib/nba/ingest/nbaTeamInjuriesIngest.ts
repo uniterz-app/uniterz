@@ -42,6 +42,8 @@ export type NbaTeamInjuriesIngestResult = {
   gamesInjurySynced?: number;
   /** 件数ガードで書き込みを見送った */
   skipped?: boolean;
+  /** BDL の内容が前回と同じで teams を書き直さなかった */
+  unchanged?: boolean;
   skipReason?: "suspicious_drop";
   previousInjuryCount?: number;
 };
@@ -68,8 +70,8 @@ export async function ingestNbaTeamInjuriesFromBdl(
   const docRef = db
     .collection(NBA_TEAM_INJURIES_COLLECTION)
     .doc(normalizeTeamInjuriesSeasonKey(seasonKey));
+  const prev = (await docRef.get()).data();
   if (!input.force) {
-    const prev = (await docRef.get()).data();
     const previousInjuryCount = countInjuries(prev?.teams);
     const suspicious =
       previousInjuryCount >= DROP_GUARD_MIN_PREVIOUS &&
@@ -104,10 +106,24 @@ export async function ingestNbaTeamInjuriesFromBdl(
     console.warn("[ingestNbaTeamInjuriesFromBdl] return game lookup failed", err);
   }
 
-  const { teamCount } = await writeTeamInjuriesSnapshot(db, seasonKey, teams, {
-    source: "firestore",
-    serverTimestamp: FieldValue.serverTimestamp(),
-  });
+  // 中身が同じなら teams を書き直さない（公開 API のキャッシュも捨てずに済む）
+  const unchanged =
+    prev?.teams != null && stableJson(prev.teams) === stableJson(teams);
+  let teamCount = Object.keys(teams).length;
+  if (unchanged) {
+    await docRef.set(
+      {
+        updatedAt: FieldValue.serverTimestamp(),
+        dropGuardSinceMs: FieldValue.delete(),
+      },
+      { merge: true }
+    );
+  } else {
+    ({ teamCount } = await writeTeamInjuriesSnapshot(db, seasonKey, teams, {
+      source: "firestore",
+      serverTimestamp: FieldValue.serverTimestamp(),
+    }));
+  }
 
   let gamesInjurySynced = 0;
   try {
@@ -117,5 +133,25 @@ export async function ingestNbaTeamInjuriesFromBdl(
     console.warn("[ingestNbaTeamInjuriesFromBdl] game injuryReport sync failed", err);
   }
 
-  return { ok: true, seasonKey, teamCount, injuryCount, gamesInjurySynced };
+  return {
+    ok: true,
+    seasonKey,
+    teamCount,
+    injuryCount,
+    gamesInjurySynced,
+    ...(unchanged ? { unchanged: true } : {}),
+  };
+}
+
+/** キー順に依らない比較用の JSON（Firestore から読んだ map はキー順が書いたときと違う） */
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+            a < b ? -1 : a > b ? 1 : 0
+          )
+        )
+      : v
+  );
 }

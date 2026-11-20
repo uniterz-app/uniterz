@@ -53,13 +53,12 @@ import {
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
-  CYBER_TAB_CYAN,
 } from "../../rankings/CyberSlantedTabNative";
 import {
   METRIC_FONT,
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
-import { CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
+import { CYBER_TAB_CYAN, CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import TeamAbbrBadgeNative from "../TeamAbbrBadgeNative";
 

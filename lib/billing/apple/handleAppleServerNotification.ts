@@ -23,7 +23,10 @@ import {
   proUntilFromAppleTransaction,
   trialEndAtFromAppleTransaction,
 } from "@/lib/billing/apple/proUntilFromAppleTransaction";
-import { resolveUidByAppleOriginalTransactionId } from "@/lib/billing/userBillingSecure";
+import {
+  resolveUidByAppleOriginalTransactionId,
+  userBillingSecureRef,
+} from "@/lib/billing/userBillingSecure";
 
 async function decodeTxFromNotification(
   notification: ResponseBodyV2DecodedPayload
@@ -123,6 +126,12 @@ export async function handleAppleServerNotification(
         originalTransactionId
       );
       if (!uid) return;
+      /** 解約後に Google / Stripe へ乗り換えた人の Pro を Apple の期限切れで外さない */
+      const secure = (await userBillingSecureRef(db, uid).get()).data() ?? {};
+      const provider = String(secure.billingProvider ?? "").trim();
+      if (provider && provider !== "apple") return;
+      const currentOid = String(secure.appleOriginalTransactionId ?? "").trim();
+      if (currentOid && currentOid !== originalTransactionId) return;
       await revokeProEntitlement(db, uid);
       return;
     }

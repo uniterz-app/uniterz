@@ -149,6 +149,7 @@ export function buildTeamGameLogFromGames(input: {
         recent: {
           dateLabel: formatDateLabel(startMs),
           ...(gameId ? { gameId } : null),
+          startMs,
           oppTeamId,
           oppAbbr,
           home,

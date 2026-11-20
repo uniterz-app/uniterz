@@ -97,7 +97,7 @@ import {
   isProfilePlanProWaveBgVariant,
   type ProfilePlanProWaveBgVariant,
 } from "../../../../../../lib/profile/profilePlanProWaveBgVariants";
-import { UNITERZ_LOGO_ASSET } from "../../../../../../lib/units/uniterzLogoAsset";
+import { UNITERZ_LOGO_FLAT_ASSET } from "../../../../../../lib/units/uniterzLogoFlat";
 import { PROFILE_UNITERZ_LOGO_SCATTER } from "../../../../../../lib/profile/profilePlanProUniterzLogoScatter";
 import {
   getProfilePlanProFormHudSvg,
@@ -786,9 +786,11 @@ function LabLayers({
   );
 }
 
-const UNITERZ_LOGO_PNG = require("../../../../assets/brand/uniterz-logo.png");
+const UNITERZ_LOGO_PNG = require("../../../../assets/brand/uniterz-logo-flat.png");
+const UNITERZ_LOGO_ASPECT =
+  UNITERZ_LOGO_FLAT_ASSET.width / UNITERZ_LOGO_FLAT_ASSET.height;
 
-/** Web `wave-uniterz-logo` — 確定版ロゴ PNG（まばら配置） */
+/** Web `wave-uniterz-logo` — アーチなしの直立ロゴ PNG（まばら配置） */
 function UniterzLogoSkinLayers({
   width,
   height,
@@ -836,7 +838,7 @@ function UniterzLogoSkinLayers({
     ],
   }));
 
-  const logoAspect = UNITERZ_LOGO_ASSET.aspectRatio;
+  const logoAspect = UNITERZ_LOGO_ASPECT;
 
   return (
     <Animated.View

@@ -26,6 +26,9 @@ type Props = {
   selectedKey: string;
   todayKey: string;
   onSelectKey: (key: string) => void;
+  /** お気に入りチームが試合する日（日付キー）と印の色 */
+  markedKeys?: ReadonlySet<string> | null;
+  markColor?: string | null;
 };
 
 function monthOf(key: string): string {
@@ -71,6 +74,8 @@ export default function GamesCalendarSheetNative({
   selectedKey,
   todayKey,
   onSelectKey,
+  markedKeys,
+  markColor,
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const [month, setMonth] = useState(() => monthOf(selectedKey));
@@ -203,6 +208,7 @@ export default function GamesCalendarSheetNative({
                 const selected = key === selectedKey;
                 const isToday = key === todayKey;
                 const count = hasGame ? (gameCountByKey?.[key] ?? 0) : 0;
+                const marked = hasGame && !!markColor && !!markedKeys?.has(key);
                 return (
                   <View key={key} style={styles.cell}>
                     <Pressable
@@ -238,6 +244,12 @@ export default function GamesCalendarSheetNative({
                         >
                           {countLabel(count)}
                         </Text>
+                      ) : null}
+                      {marked ? (
+                        <View
+                          pointerEvents="none"
+                          style={[styles.mark, { backgroundColor: markColor }]}
+                        />
                       ) : null}
                     </Pressable>
                   </View>
@@ -365,6 +377,16 @@ const styles = StyleSheet.create({
     color: ACCENT,
   },
   countTextSelected: { color: "#F3E8FF" },
+  mark: {
+    position: "absolute",
+    top: 3,
+    right: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+  },
   todayBtn: {
     marginTop: 10,
     alignSelf: "center",

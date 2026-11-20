@@ -1,10 +1,12 @@
 /**
  * 試合カードのスコア表示設定（users/{uid}/private/displayPrefs の `prefs`）。
  * ライブ中・試合終了スコアとも既定で非表示（ネタバレ防止）。
+ * チームの勝敗（W-L・順位）は既定で表示。勝敗の変化で結果がわかるのを避けたい人だけ切る。
  */
 export type MatchScoreDisplayPrefs = {
   showLiveScore: boolean;
   showFinalScore: boolean;
+  showTeamRecord: boolean;
 };
 
 export type MatchScoreDisplayPrefKey = keyof MatchScoreDisplayPrefs;
@@ -12,6 +14,7 @@ export type MatchScoreDisplayPrefKey = keyof MatchScoreDisplayPrefs;
 export const DEFAULT_MATCH_SCORE_DISPLAY_PREFS: MatchScoreDisplayPrefs = {
   showLiveScore: false,
   showFinalScore: false,
+  showTeamRecord: true,
 };
 
 export function parseMatchScoreDisplayPrefs(raw: unknown): MatchScoreDisplayPrefs {
@@ -24,6 +27,7 @@ export function parseMatchScoreDisplayPrefs(raw: unknown): MatchScoreDisplayPref
   return {
     showLiveScore: boolOr("showLiveScore"),
     showFinalScore: boolOr("showFinalScore"),
+    showTeamRecord: boolOr("showTeamRecord"),
   };
 }
 
@@ -32,21 +36,25 @@ export const MATCH_SCORE_DISPLAY_COPY = {
     pageTitle: "表示設定",
     pageDescription: "アプリの表示を自分好みに切り替えます",
     section: "スコア表示",
-    hint: "試合カードに表示するスコアを選べます",
+    hint: "試合カードに表示するスコアと勝敗を選べます",
     liveTitle: "ライブ中のスコア",
     liveDesc: "試合中のカードに途中経過のスコアと試合時間を表示します",
     finalTitle: "試合終了スコア",
     finalDesc: "終了した試合のカードに最終スコアを表示します",
+    recordTitle: "チームの勝敗",
+    recordDesc: "試合カードのチーム名の下に勝敗と順位を表示します。オフにすると勝敗の変化で結果がわかるのを防げます",
   },
   en: {
     pageTitle: "Display",
     pageDescription: "Customize how the app shows information",
     section: "SCORE DISPLAY",
-    hint: "Choose which scores appear on match cards",
+    hint: "Choose which scores and records appear on match cards",
     liveTitle: "Live score",
     liveDesc: "Show the in-progress score and game clock on live match cards",
     finalTitle: "Final score",
     finalDesc: "Show the final score on finished match cards",
+    recordTitle: "Team records",
+    recordDesc: "Show each team's W-L and standing under its name on match cards. Turn off so record changes don't reveal results",
   },
 } as const;
 

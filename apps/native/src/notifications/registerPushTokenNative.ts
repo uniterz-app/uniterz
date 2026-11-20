@@ -2,11 +2,35 @@
 import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { getUniterzApiBaseUrl } from "../features/games/submitPredictionApi";
 import { loadExpoNotificationsModule } from "./expoNotificationsModuleNative";
 
 let cachedExpoPushToken: string | null = null;
+
+/** 同じアカウント・同じトークンの登録は起動のたびに送らない（サーバーは 1 回で 3 読み 2 書き） */
+const REGISTERED_STORAGE_KEY = "uniterz.pushTokenRegistered.v1";
+const REGISTER_REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
+
+type RegisteredMark = { uid: string; token: string; at: number };
+
+async function readRegisteredMark(): Promise<RegisteredMark | null> {
+  try {
+    const raw = await AsyncStorage.getItem(REGISTERED_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<RegisteredMark>;
+    if (typeof parsed.uid !== "string" || typeof parsed.token !== "string") return null;
+    return { uid: parsed.uid, token: parsed.token, at: Number(parsed.at) || 0 };
+  } catch {
+    return null;
+  }
+}
+
+function clearRegisteredMark(): Promise<void> {
+  return AsyncStorage.removeItem(REGISTERED_STORAGE_KEY).catch(() => undefined);
+}
 
 export function getCachedExpoPushToken(): string | null {
   return cachedExpoPushToken;
@@ -90,6 +114,16 @@ export async function registerPushTokenWithApiNative(
   const user = auth.currentUser;
   if (!user) return;
 
+  const mark = await readRegisteredMark();
+  if (
+    mark &&
+    mark.uid === user.uid &&
+    mark.token === expoPushToken &&
+    Date.now() - mark.at < REGISTER_REFRESH_MS
+  ) {
+    return;
+  }
+
   const idToken = await user.getIdToken();
   const res = await fetch(`${base}/api/me/push-token`, {
     method: "POST",
@@ -114,6 +148,11 @@ export async function registerPushTokenWithApiNative(
     throw new Error(`push-token register failed: ${res.status} ${text}`);
   }
 
+  await AsyncStorage.setItem(
+    REGISTERED_STORAGE_KEY,
+    JSON.stringify({ uid: user.uid, token: expoPushToken, at: Date.now() })
+  ).catch(() => undefined);
+
   const { trackAppEvent } = await import(
     "../../../../lib/observability/trackAppEvent"
   );
@@ -125,6 +164,8 @@ export async function unregisterPushTokenFromApiNative(
 ): Promise<void> {
   const base = getUniterzApiBaseUrl();
   if (!base) return;
+
+  await clearRegisteredMark();
 
   const user = auth.currentUser;
   if (!user) return;
@@ -138,6 +179,22 @@ export async function unregisterPushTokenFromApiNative(
     },
     body: JSON.stringify({ expoPushToken }),
   }).catch(() => undefined);
+}
+
+/**
+ * ログアウト。signOut 後は currentUser が無く DELETE を送れないので、先に端末トークンを外す
+ * （外さないと次の人がログインするまで前のアカウントの通知が届く）
+ */
+export async function signOutWithPushUnregisterNative(): Promise<void> {
+  const token = cachedExpoPushToken;
+  if (token) {
+    await Promise.race([
+      unregisterPushTokenFromApiNative(token).catch(() => undefined),
+      new Promise((resolve) => setTimeout(resolve, 4000)),
+    ]);
+  }
+  await clearRegisteredMark();
+  await signOut(auth);
 }
 
 export async function registerNativePushTokenIfGranted(): Promise<string | null> {

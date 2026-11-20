@@ -34,6 +34,9 @@ const PRO_MESH = (
     : require("../../../assets/bg/pro-league-mesh.png")
 ) as number;
 
+/** 白地ではドット格子が文字の邪魔になるので薄く敷く */
+const LIGHT_MESH_OPACITY = isLightAppTheme() ? 0.35 : 1;
+
 /**
  * Web `MobileStaticPageBackground` 相当。
  * PRO LEAGUE 中は穴あきメタル（ヘッダー下まで同じ柄）。
@@ -85,7 +88,10 @@ export default function GamesPageBackgroundNative(_props: Props) {
       collapsable={false}
     >
       {image ? (
-        <Canvas style={{ width, height }} pointerEvents="none">
+        <Canvas
+          style={{ width, height, opacity: LIGHT_MESH_OPACITY }}
+          pointerEvents="none"
+        >
           <Fill>
             <ImageShader
               image={image}

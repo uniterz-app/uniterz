@@ -208,7 +208,7 @@ export default function ProSubscribePreviewNative({
     restore,
     trialOfferAvailable,
     storePrice,
-  } = useNativeIap();
+  } = useNativeIap(language);
   const priceFor = (id: ProSubscribePreviewPlanId) =>
     storePrice(id) ?? proSubscribePreviewPlanById(id).price;
   const { bottomContentReserveY } = useBottomTabBarInsets();

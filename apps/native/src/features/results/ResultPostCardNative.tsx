@@ -116,22 +116,6 @@ const DISPLAY_FONT_FAMILY = DISPLAY_FONT;
 
 const AnimatedResultCardPressable = Animated.createAnimatedComponent(Pressable);
 
-const LEAGUE_LABEL: Record<string, string> = {
-  nba: "NBA",
-  bj: "B1",
-  pl: "PL",
-  j1: "J1",
-  wc: "WC",
-};
-
-const LEAGUE_PILL_BG: Record<string, string> = {
-  nba: "#1D428A",
-  bj: "#C8102E",
-  pl: "#3A0CA3",
-  j1: "#E10600",
-  wc: "#56042C",
-};
-
 function toNumber(v: unknown, fallback = 0) {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string") {
@@ -209,6 +193,7 @@ function ResultPostCardNativeInner({
   gameRoundMeta = null,
   compactSpacing = false,
   compactFace = false,
+  spotlightPlayId = 0,
   tutorialTargetId,
 }: {
   post: PostWithMillis;
@@ -230,6 +215,8 @@ function ResultPostCardNativeInner({
   compactSpacing?: boolean;
   /** カード面の余白・文字を一段詰める（プロフィール Result Drop） */
   compactFace?: boolean;
+  /** 0 より大きいと、今日の最初へ着地したカードを一度光らせる */
+  spotlightPlayId?: number;
   pkScore?: { home: number; away: number } | null;
   /** games.marketBias / market 補完（marketMeta 未埋め込みの投稿向け） */
   gameMarket?: { homeRate: number; awayRate: number } | null;
@@ -360,8 +347,6 @@ function ResultPostCardNativeInner({
     });
   const isBasketballCard = leagueKey === "nba" || leagueKey === "bj";
   const listScoreDensity = isBasketballCard ? "listBasketball" : "list";
-  const pillText = LEAGUE_LABEL[leagueKey] ?? leagueKey.toUpperCase();
-
   const home = post.home as { name?: string; teamId?: string } | undefined;
   const away = post.away as { name?: string; teamId?: string } | undefined;
   const homeRecordLine = useTeamRecordLineNative(
@@ -713,7 +698,7 @@ function ResultPostCardNativeInner({
   /** 新カード面（WC 以外）。判定前も含む */
   if (!isWcCard) {
     return (
-      <Animated.View
+      <View
         collapsable={false}
         onLayout={
           tutorialTargetId
@@ -723,12 +708,13 @@ function ResultPostCardNativeInner({
         style={[
           styles.listRowOuter,
           compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
-          entrance.cardShellMotionStyle,
         ]}
+      >
+      <Animated.View
+        style={[styles.cardPressBleed, entrance.cardShellMotionStyle]}
       >
         <AnimatedResultCardPressable
           collapsable={false}
-          delayPressIn={0}
           accessibilityRole="button"
           accessibilityLabel={L(loc, {
             ja: "リザルト詳細を開く",
@@ -791,6 +777,7 @@ function ResultPostCardNativeInner({
                   topLabelAlign={sharing ? "start" : "center"}
                   compact={compactFace && !sharing}
                   othersCall={othersCall}
+                  flashPlayId={spotlightPlayId}
                 />
               </ShareBrandFrameSealNative>
             </View>
@@ -798,11 +785,12 @@ function ResultPostCardNativeInner({
           </View>
         </AnimatedResultCardPressable>
       </Animated.View>
+      </View>
     );
   }
 
   return (
-    <Animated.View
+    <View
       collapsable={false}
       onLayout={
         tutorialTargetId
@@ -812,12 +800,11 @@ function ResultPostCardNativeInner({
       style={[
         styles.listRowOuter,
         compactSpacing ? styles.cardOuterCompact : styles.cardOuter,
-        entrance.cardShellMotionStyle,
       ]}
     >
+    <Animated.View style={[styles.cardPressBleed, entrance.cardShellMotionStyle]}>
       <AnimatedResultCardPressable
         collapsable={false}
-        delayPressIn={0}
         style={styles.resultCardPressable}
         onPressIn={() => {
           entrance.pressed.value = reduceMotionList
@@ -856,6 +843,7 @@ function ResultPostCardNativeInner({
         paint={lineFramePaint}
         animateDraw={!reduceMotionList && entranceEnabled && !pauseListFx}
         drawDelayMs={listEnterIndex * RESULT_CARD_STAGGER_MS}
+        flashPlayId={spotlightPlayId}
       >
       <ResultGlassShellNative
         borderColor={shellBorderColor}
@@ -865,20 +853,6 @@ function ResultPostCardNativeInner({
           Boolean(shellOverflowStyle) || shellStrokeWidth > 1
         }
       >
-        {(leagueKey !== "nba" && leagueKey !== "wc") ? (
-        <View style={styles.cardBadgeOverlay} pointerEvents="none">
-          <Animated.View style={[styles.cardBadgeLeague, entrance.subBadgesStyle]}>
-            <View
-              style={[
-                styles.leaguePill,
-                { backgroundColor: LEAGUE_PILL_BG[leagueKey] ?? "#334155" },
-              ]}
-            >
-              <Text style={styles.leaguePillText}>{pillText}</Text>
-            </View>
-          </Animated.View>
-        </View>
-        ) : null}
         <Animated.View
           style={[styles.cardBadgeOutcomeAbsolute, entrance.hitMissBadgeStyle]}
           pointerEvents="none"
@@ -1123,6 +1097,7 @@ function ResultPostCardNativeInner({
       </View>
       </AnimatedResultCardPressable>
     </Animated.View>
+    </View>
   );
 }
 
@@ -1168,6 +1143,7 @@ const ResultPostCardNative = memo(
     if (prev.siblingOverlayOpen !== next.siblingOverlayOpen) return false;
     if (prev.compactSpacing !== next.compactSpacing) return false;
     if (prev.compactFace !== next.compactFace) return false;
+    if ((prev.spotlightPlayId ?? 0) !== (next.spotlightPlayId ?? 0)) return false;
     if (prev.tutorialTargetId !== next.tutorialTargetId) return false;
     if (prev.pkScore !== next.pkScore) return false;
     if (prev.gameMarket !== next.gameMarket) return false;
@@ -1203,6 +1179,15 @@ const styles = StyleSheet.create({
   resultCardPressable: {
     flexShrink: 0,
     position: "relative",
+    overflow: "visible",
+  },
+  /**
+   * 押下の scale はレイアウト枠で子を切る。
+   * 左辺 PICK UP（translateX -8）を枠の中に収めて切らない。
+   */
+  cardPressBleed: {
+    marginLeft: -14,
+    paddingLeft: 14,
     overflow: "visible",
   },
   cardShell: {

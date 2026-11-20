@@ -377,32 +377,32 @@ export function buildPushNotificationCopy(
     case "pro_insight_update":
       return {
         title: L(lang, {
-          ja: "PRO INSIGHT が更新されました",
-          en: "PRO INSIGHT updated",
-          ko: "PRO INSIGHT가 업데이트되었습니다",
-          zh: "PRO INSIGHT 已更新",
-          es: "PRO INSIGHT actualizado",
-          pt: "PRO INSIGHT atualizado",
-          fr: "PRO INSIGHT mis à jour",
+          ja: "PRO PICK が更新されました",
+          en: "PRO PICK updated",
+          ko: "PRO PICK가 업데이트되었습니다",
+          zh: "PRO PICK 已更新",
+          es: "PRO PICK actualizado",
+          pt: "PRO PICK atualizado",
+          fr: "PRO PICK mis à jour",
         }),
         body: matchup
           ? L(lang, {
-              ja: `${matchup} — 重要読みが変わりました`,
-              en: `${matchup} — key takes changed`,
-              ko: `${matchup} — 중요 해석이 바뀌었습니다`,
-              zh: `${matchup} — 重要解读已变化`,
-              es: `${matchup} — cambiaron las lecturas clave`,
-              pt: `${matchup} — leituras-chave mudaram`,
-              fr: `${matchup} — lectures clés modifiées`,
+              ja: `${matchup} — 予想が大きく変わりました`,
+              en: `${matchup} — the prediction shifted`,
+              ko: `${matchup} — 예상이 크게 바뀌었습니다`,
+              zh: `${matchup} — 预测发生了较大变化`,
+              es: `${matchup} — la predicción cambió`,
+              pt: `${matchup} — a previsão mudou`,
+              fr: `${matchup} — la prédiction a changé`,
             })
           : L(lang, {
-              ja: "重要読みが変わりました。試合を開いて確認してください",
-              en: "Key Insight takes changed. Open the match",
-              ko: "중요 해석이 바뀌었습니다. 경기를 열어 확인하세요",
-              zh: "重要解读已变化。请打开比赛查看",
-              es: "Cambiaron las lecturas clave. Abre el partido",
-              pt: "Leituras-chave mudaram. Abra a partida",
-              fr: "Les lectures clés ont changé. Ouvrez le match",
+              ja: "予想が大きく変わりました。試合を開いて確認してください",
+              en: "The prediction shifted. Open the match",
+              ko: "예상이 크게 바뀌었습니다. 경기를 열어 확인하세요",
+              zh: "预测发生了较大变化。请打开比赛查看",
+              es: "La predicción cambió. Abre el partido",
+              pt: "A previsão mudou. Abra a partida",
+              fr: "La prédiction a changé. Ouvrez le match",
             }),
       };
 

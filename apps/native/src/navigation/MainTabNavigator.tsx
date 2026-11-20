@@ -30,6 +30,7 @@ import {
   tabPagerTransitionSpec,
 } from "./tabPagerTransition";
 import NativePushNotificationsHost from "../notifications/NativePushNotificationsHost";
+import NativeIapBackgroundHost from "../features/billing/NativeIapBackgroundHost";
 import UniterzBrandShelfNative from "../features/UniterzBrandShelfNative";
 import { hideNativeBootSplash } from "../bootstrap/nativeBootSplash";
 import { getSplashVideoGateNative } from "../features/splash/video/expoVideoModuleNative";
@@ -67,6 +68,8 @@ import MonthlyBadgeUnlockLaunchHostNative from "../features/profile/MonthlyBadge
 import StoreReviewLaunchHostNative from "../features/games/StoreReviewLaunchHostNative";
 import UnitEarnLaunchHostNative from "../features/units/UnitEarnLaunchHostNative";
 import SeasonPredictCrowdLaunchHostNative from "../features/games/predict/season/SeasonPredictCrowdLaunchHostNative";
+import AskFabNative from "../features/games/ask/AskFabNative";
+import AppAnalyticsUserHostNative from "../analytics/AppAnalyticsUserHostNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -230,7 +233,9 @@ export default function MainTabNavigator() {
   return (
     <>
       <ProfileStatsPrefetchHost />
+      <AppAnalyticsUserHostNative />
       <NativePushNotificationsHost />
+      <NativeIapBackgroundHost />
       <SquadBattleLaunchPromptHostNative />
       <UnitEarnLaunchHostNative />
       <SeasonPredictCrowdLaunchHostNative />
@@ -256,6 +261,8 @@ export default function MainTabNavigator() {
             <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
           </Tab.Navigator>
         </View>
+        {/* ASK はベータ。ストアビルドには入口を出さない */}
+        {__DEV__ ? <AskFabNative /> : null}
         {shelfRendered ? (
           <View
             pointerEvents="none"

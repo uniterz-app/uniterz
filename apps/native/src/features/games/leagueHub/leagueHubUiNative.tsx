@@ -4,7 +4,7 @@ import { TEAM_SHORT } from "../../../../../../lib/team-short";
 import { getTeamAbbrBadgeColor } from "../../../../../../lib/team-colors";
 import type { LeagueHubAxisFormat } from "../../../../../../lib/nba/leagueHub/leagueHubScatterPresets";
 import type { LeagueHubPosition } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 export type HubLang = "ja" | "en";
 
@@ -454,25 +454,27 @@ export function HubEmpty({ text }: { text: string }) {
   return <Text style={styles.empty}>{text}</Text>;
 }
 
-/** 左右 2 列（BEST / WORST・HOT / COLD など） */
+/** 左右 2 列（BEST / WORST・HOT / COLD など）。`stacked` で上下並べ */
 export function HubTwoCol({
   leftTitle,
   rightTitle,
   left,
   right,
+  stacked = false,
 }: {
   leftTitle: string;
   rightTitle: string;
   left: ReactNode;
   right: ReactNode;
+  stacked?: boolean;
 }) {
   return (
-    <View style={styles.twoCol}>
-      <View style={styles.col}>
+    <View style={[styles.twoCol, stacked ? styles.twoColStacked : null]}>
+      <View style={stacked ? styles.colStacked : styles.col}>
         <Text style={[styles.colTitle, { color: HUB_GOOD_COLOR }]}>{leftTitle}</Text>
         {left}
       </View>
-      <View style={styles.col}>
+      <View style={stacked ? styles.colStacked : styles.col}>
         <Text style={[styles.colTitle, { color: HUB_BAD_COLOR }]}>{rightTitle}</Text>
         {right}
       </View>
@@ -852,9 +854,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
+  twoColStacked: {
+    flexDirection: "column",
+    gap: 14,
+  },
   col: {
     flex: 1,
     minWidth: 0,
+  },
+  colStacked: {
+    width: "100%",
   },
   colTitle: {
     fontFamily: METRIC_FONT,

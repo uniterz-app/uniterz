@@ -31,7 +31,6 @@ import {
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import PredictProInsightMatchupTableNative from "./PredictProInsightMatchupTableNative";
-
 type Props = {
   brief: ProInsightNarrativeBrief;
   language: GamesLanguage;

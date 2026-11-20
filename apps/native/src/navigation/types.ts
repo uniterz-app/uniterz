@@ -40,6 +40,8 @@ export type GamesStackParamList = {
   DailyLeaders: undefined;
   /** NBA スタッツを AI に質問するチャット（Games ヘッダー右上） */
   NbaAsk: undefined;
+  /** DEV: 試合シミュレーションの見た目デモ */
+  GameSimDemo: undefined;
   TeamDetail: { teamId: string };
   PlayoffBracket: undefined;
   PlayoffBracketView: undefined;
@@ -172,6 +174,10 @@ export type ProfileStackParamList = {
   ProSubscribe: undefined;
   ProSubscribePreview: undefined;
   SeasonPredictPreview: undefined;
+  /** __DEV__ TDL トレード予想バレット（モック） */
+  TradeBallotPreview: undefined;
+  /** __DEV__ トレード Buzz / 確定（モック） */
+  TradeBuzzPreview: undefined;
   /** __DEV__ SQUAD BATTLE 全画面プレビュー */
   SquadBattlePreview: undefined;
   /** __DEV__ 週間/月間レポート UI プレビュー（mock） */
@@ -211,6 +217,8 @@ export type ProfileStackParamList = {
   /** __DEV__ PRO LEAGUE ひとことの見せ方案 */
   RankingCommentDesignPreview: undefined;
   MonthlyBadgePreview: undefined;
+  /** __DEV__ スタッツの 3D デモ */
+  Lab3dPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

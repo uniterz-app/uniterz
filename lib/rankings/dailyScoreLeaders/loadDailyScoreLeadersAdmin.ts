@@ -128,10 +128,8 @@ export async function loadDailyScoreLeadersAdmin(
     }
   });
 
-  const standard = aggregateDailyScores(posts, "standard").slice(
-    0,
-    DAILY_SCORE_TOP_N
-  );
+  /** 上位 N で切らない全員（自分の順位 `/api/uniterz/daily-leaders/me` 用）。表示は `selectDailyScoreBoardRows` で上位 N */
+  const standard = aggregateDailyScores(posts, "standard");
   /**
    * plan で絞らない全員。Pro は全体の上位に居ないことが多いので上位 N で切らない。
    * Pro 判定は確定日の無期限キャッシュの外（`selectDailyScoreBoardRows`）で行う
@@ -168,16 +166,11 @@ export async function selectDailyScoreBoardRows(
   db: Firestore
 ): Promise<DailyScoreLeaderRow[]> {
   if (division === "standard") {
-    return mergeUserPlansIntoLeaderboardRows(candidates, {
+    return mergeUserPlansIntoLeaderboardRows(candidates.slice(0, DAILY_SCORE_TOP_N), {
       includeRankingComment: true,
     });
   }
-  const proSnap = await db
-    .collection("users")
-    .where("plan", "==", "pro")
-    .select()
-    .get();
-  const proUids = new Set(proSnap.docs.map((d) => d.id));
+  const proUids = await loadProUids(db);
   const merged = await mergeUserPlansIntoLeaderboardRows(
     candidates.filter((r) => proUids.has(r.uid)),
     { includeRankingComment: true }
@@ -186,4 +179,30 @@ export async function selectDailyScoreBoardRows(
     0,
     DAILY_SCORE_TOP_N
   );
+}
+
+async function loadProUids(db: Firestore): Promise<Set<string>> {
+  const proSnap = await db
+    .collection("users")
+    .where("plan", "==", "pro")
+    .select()
+    .get();
+  return new Set(proSnap.docs.map((d) => d.id));
+}
+
+/** 自分の順位用: division の全員の順位（uid → 順位）と人数。PRO LEAGUE は今の Pro だけで振り直す */
+export async function rankDailyScoreCandidates(
+  candidates: DailyScoreLeaderRow[],
+  division: DailyScoreDivision,
+  db: Firestore
+): Promise<{ total: number; ranks: Record<string, number> }> {
+  let ranked = candidates;
+  if (division === "open") {
+    const pro = await loadProUids(db);
+    ranked = withRanks(candidates.filter((r) => pro.has(r.uid)));
+  }
+  return {
+    total: ranked.length,
+    ranks: Object.fromEntries(ranked.map((r) => [r.uid, r.rank])),
+  };
 }

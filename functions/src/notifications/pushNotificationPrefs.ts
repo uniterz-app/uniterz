@@ -3,6 +3,7 @@ import type { PushNotificationType } from "./pushNotificationCopy";
 export const PUSH_NOTIFICATION_PREF_KEYS = [
   "gameFinal",
   "predictionDeadline",
+  "rankingUpdated",
   "unitReward",
   "injuryStatus",
   "proInsightUpdate",
@@ -15,7 +16,6 @@ export type PushNotificationPrefKey = (typeof PUSH_NOTIFICATION_PREF_KEYS)[numbe
 
 export const RETIRED_PUSH_TYPES = [
   "game_start",
-  "ranking_updated",
   "starter_change",
   "pregame_digest",
 ] as const satisfies readonly PushNotificationType[];
@@ -39,6 +39,8 @@ export type PushNotificationPrefs = Record<PushNotificationPrefKey, boolean> & {
 export const DEFAULT_PUSH_NOTIFICATION_PREFS: PushNotificationPrefs = {
   gameFinal: true,
   predictionDeadline: true,
+  /** 試合日 16:00 JST の累積ランキング更新 */
+  rankingUpdated: true,
   unitReward: true,
   injuryStatus: false,
   proInsightUpdate: false,
@@ -71,8 +73,9 @@ export function prefKeyForPushType(
       return "monthlyReport";
     case "discipline_alert":
       return "disciplineAlert";
-    case "game_start":
     case "ranking_updated":
+      return "rankingUpdated";
+    case "game_start":
     case "starter_change":
     case "pregame_digest":
       return "gameFinal";
@@ -129,6 +132,10 @@ export function parsePushNotificationPrefs(raw: unknown): PushNotificationPrefs 
       DEFAULT_PUSH_NOTIFICATION_PREFS.predictionDeadline
     ),
     unitReward: unitRewardFallback,
+    rankingUpdated: boolOr(
+      "rankingUpdated",
+      DEFAULT_PUSH_NOTIFICATION_PREFS.rankingUpdated
+    ),
     injuryStatus: boolOr(
       "injuryStatus",
       DEFAULT_PUSH_NOTIFICATION_PREFS.injuryStatus

@@ -15,7 +15,7 @@ import { markPushPermissionPrimerDismissedNative } from "../../notifications/pus
 import { registerNativePushTokenFlow } from "../../notifications/registerPushTokenNative";
 import {
   InteractionManager,
-  Platform, Pressable, FlatList, RefreshControl, StyleSheet, Text, View,
+  AppState, Platform, Pressable, FlatList, RefreshControl, StyleSheet, Text, View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ListRenderItemInfo,
@@ -50,6 +50,10 @@ import {
   firstGameDayKeyInMonth,
 } from "../../../../../lib/games/gameDayIndex";
 import { useGameDayIndex } from "../../../../../lib/games/useGameDayIndex";
+import { useTeamGameDayKeys } from "../../../../../lib/games/useTeamGameDayKeys";
+import { favoriteTeamGamesFirst } from "../../../../../lib/games/favoriteTeamGamesFirst";
+import { getTeamPrimaryColor } from "../../../../../lib/team-colors";
+import { useMyNbaFavoritesNative } from "../profile/useMyNbaFavoritesNative";
 import { useGameDayCounts } from "../../../../../lib/games/useGameDayCounts";
 import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
 import {
@@ -117,7 +121,6 @@ import {
   keepSingleBatchGameDay,
 } from "../../../../../lib/predict/batchPredict";
 import { batchPredictCopy } from "../../../../../lib/predict/batchPredictCopy";
-import { nbaAskCopy } from "../../../../../lib/nba/ask/nbaAskCopy";
 
 /** 1.0.4 ストア版はまとめて入力を出さない（入口ボタンだけ止める） */
 const BATCH_PREDICT_ENTRY_ENABLED = false;
@@ -142,6 +145,8 @@ import {
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
 import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
+import { useTrackViewNative } from "../../analytics/useTrackViewNative";
+import { predictAnalyticsPath } from "../../analytics/appAnalyticsNative";
 import { requestPushPermissionPrimerAfterPredict } from "../../notifications/requestPushPermissionPrimerNative";
 import {
   GameCardListEmpty,
@@ -178,6 +183,11 @@ import {
   writeTutorialLivePhaseNative,
   type TutorialLivePhase,
 } from "../tutorial/tutorialLivePhaseNative";
+import FirstPostUnitModalNative from "../tutorial/FirstPostUnitModalNative";
+import {
+  markFirstPostUnitPendingNative,
+  takeFirstPostUnitPendingNative,
+} from "../tutorial/firstPostUnitNative";
 import { subscribeTutorialRestartNative, consumeTutorialRestartTokenNative, subscribeTutorialClearedNative, requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsNative";
 import { setTutorialHorizonSubstepNative } from "../tutorial/tutorialHorizonSubstepNative";
 import {
@@ -793,6 +803,8 @@ export default function GamesHomeScreen({
     null
   );
   const [postPromptOpen, setPostPromptOpen] = useState<PostPrompt | null>(null);
+  /** 新規登録後の最初の予想の直後に出す UNIT 案内 */
+  const [firstPostUnitOpen, setFirstPostUnitOpen] = useState(false);
   /** 起動時モーダル（Unit 獲得・スクワッド等）と重ねないための枠の空き通知 */
   const [launchSlotTick, setLaunchSlotTick] = useState(0);
   useEffect(() => {
@@ -844,7 +856,6 @@ export default function GamesHomeScreen({
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchMessage, setBatchMessage] = useState<string | null>(null);
   const batchModeRef = useRef(false);
-  const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
   const [userDisplayName, setUserDisplayName] = useState("");
   const { language, timeZone: dayTimeZone } = useNativeUserLanguageFromAuth();
   const gamesLanguage = useMemo(() => toNativeGamesLanguage(language), [language]);
@@ -853,7 +864,7 @@ export default function GamesHomeScreen({
   const {
     loading,
     error,
-    games,
+    games: dayGames,
     windowGameIds,
     peerGamesForSeries,
     dateKeysWithGames,
@@ -866,6 +877,23 @@ export default function GamesHomeScreen({
     goNextDay,
     pullRefresh,
   } = useTodayGames({ enabled: true, timeZone: dayTimeZone });
+  const { favorites: nbaFavorites } = useMyNbaFavoritesNative();
+  const favoriteTeamId =
+    selectedLeague === "nba" ? nbaFavorites.favoriteNbaTeamId : null;
+  const games = useMemo(
+    () => favoriteTeamGamesFirst(dayGames, favoriteTeamId),
+    [dayGames, favoriteTeamId]
+  );
+  const favoriteTeamDayKeys = useTeamGameDayKeys({
+    league: selectedLeague,
+    season: GAME_SCHEDULE_SEASON,
+    teamId: favoriteTeamId,
+    timeZone: dayTimeZone,
+    apiBaseUrl: getUniterzApiBaseUrl(),
+  });
+  const favoriteTeamColor = favoriteTeamId
+    ? getTeamPrimaryColor("nba", favoriteTeamId)
+    : null;
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const onPullRefresh = useCallback(async () => {
     setPullRefreshing(true);
@@ -1099,6 +1127,8 @@ export default function GamesHomeScreen({
       const uid = fUser?.uid;
       if (uid) {
         void clearFirstRunSetupPendingNative(uid);
+        // 新規登録の初期設定を終えた人。最初の予想で UNIT の案内を出す
+        void markFirstPostUnitPendingNative(uid);
         // ここで聞いたので初回予想後のプリマーは出さない
         void markPushPermissionPrimerDismissedNative(uid);
       }
@@ -1378,8 +1408,12 @@ export default function GamesHomeScreen({
     const awayName = resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
     const homeCompact = toCompactTeamName(g.league, homeName);
     const awayCompact = toCompactTeamName(g.league, awayName);
-    const homeRecord = formatSideRecord(g.home, g.league, g.seasonPhase);
-    const awayRecord = formatSideRecord(g.away, g.league, g.seasonPhase);
+    const homeRecord = scorePrefs.showTeamRecord
+      ? formatSideRecord(g.home, g.league, g.seasonPhase)
+      : null;
+    const awayRecord = scorePrefs.showTeamRecord
+      ? formatSideRecord(g.away, g.league, g.seasonPhase)
+      : null;
     const centerBlock = getGameCardCenterBlock(g, language, dayTimeZone, scorePrefs);
     const seriesLabel = resolveNativeSeriesLabel(g, peerGamesForSeries);
     const seriesPair = resolveNativeSeriesPair(g, peerGamesForSeries);
@@ -1442,7 +1476,27 @@ export default function GamesHomeScreen({
       isSoccerLeague: isSoccerLeague(selectedLeague),
     };
   }, [selectedGame, selectedLeague, gamesLanguage, peerGamesForSeries, formatGameDateMs]);
-  const today = useMemo(() => startOfLocalDay(new Date()), []);
+  /**
+   * 「今日」は起動時に固定せず、フォアグラウンドに戻ったときと、ローカル 0 時を過ぎたときに取り直す
+   * （開いたまま日付をまたいでも、今日の試合・日付ストリップが古いままにならない）
+   */
+  const [todayStartMs, setTodayStartMs] = useState(() => startOfLocalDay(new Date()).getTime());
+  useEffect(() => {
+    const refresh = () => {
+      const next = startOfLocalDay(new Date()).getTime();
+      setTodayStartMs((prev) => (prev === next ? prev : next));
+    };
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") refresh();
+    });
+    const nextMidnight = startOfLocalDay(new Date()).getTime() + 24 * 60 * 60 * 1000;
+    const timer = setTimeout(refresh, Math.max(1000, nextMidnight - Date.now() + 1000));
+    return () => {
+      sub.remove();
+      clearTimeout(timer);
+    };
+  }, [todayStartMs]);
+  const today = useMemo(() => new Date(todayStartMs), [todayStartMs]);
   const mainScrollContentStyle = useMemo(
     () => [
       styles.mainScrollContent,
@@ -1610,6 +1664,15 @@ export default function GamesHomeScreen({
     return toCompactTeamName(selectedGame.league, awayName);
   }, [selectedGame]);
 
+  useTrackViewNative(
+    isPredictModalOpen ? "Predict" : null,
+    predictAnalyticsPath(
+      selectedGame?.id,
+      predictModalAwayLabel,
+      predictModalHomeLabel
+    )
+  );
+
   const nextGameAfterPostDisplay = useMemo(() => {
     if (!nextGameAfterPost) return null;
     const g = nextGameAfterPost;
@@ -1638,13 +1701,17 @@ export default function GamesHomeScreen({
       kickoff: formatKickoffTime(resolveGameStartAt(g), dayTimeZone),
       homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
       awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
-      homeRecordLine: formatSideRecord(g.home, g.league, g.seasonPhase),
-      awayRecordLine: formatSideRecord(g.away, g.league, g.seasonPhase),
+      homeRecordLine: scorePrefs.showTeamRecord
+        ? formatSideRecord(g.home, g.league, g.seasonPhase)
+        : null,
+      awayRecordLine: scorePrefs.showTeamRecord
+        ? formatSideRecord(g.away, g.league, g.seasonPhase)
+        : null,
       showSeriesRow,
       seriesHomeWins: showSeriesRow && seriesStanding ? seriesStanding.homeWins : null,
       seriesAwayWins: showSeriesRow && seriesStanding ? seriesStanding.awayWins : null,
     };
-  }, [nextGameAfterPost, language, formatSideRecord]);
+  }, [nextGameAfterPost, language, formatSideRecord, scorePrefs.showTeamRecord]);
 
   useEffect(() => {
     if (!isPredictModalOpen) return;
@@ -1714,17 +1781,6 @@ export default function GamesHomeScreen({
     scoreAway,
     myPostIdByGameId,
   ]);
-
-  useEffect(() => {
-    if (!selectedGame) return;
-    if (resolveGameStatus(selectedGame) !== "scheduled") return;
-    const startAt = resolveGameStartAt(selectedGame);
-    if (!startAt) return;
-    const timer = setInterval(() => {
-      setCountdownNowMs(Date.now());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [selectedGame]);
 
   const predictedGameIdsForList = useMemo(
     () => predictedIdsForVisibleGames(fUser?.uid, gameIdSet, predictedGameIds),
@@ -2823,8 +2879,20 @@ export default function GamesHomeScreen({
       setIsPredictModalOpen(false);
       setSelectedGame(null);
 
+      /** 新規登録の初期設定を終えた人の最初の投稿だけ、UNIT の案内を 1 回出す */
+      const showFirstPostUnit =
+        !isEditing &&
+        !tutorialActive &&
+        gameId !== TUTORIAL_NBA_GAME_ID &&
+        fUser?.uid != null &&
+        (await takeFirstPostUnitPendingNative(fUser.uid));
+
       scheduleAfterPredictModalDismissed(() => {
         const continueAfterPostUi = () => {
+          if (showFirstPostUnit) {
+            setFirstPostUnitOpen(true);
+            return;
+          }
           if (isEditing) {
             cyberAlert(t.updateDone, t.updateDoneOnly);
           } else if (nextGame && !skipNextModal) {
@@ -3017,6 +3085,7 @@ export default function GamesHomeScreen({
       resolveSeriesLabel: resolveSeriesLabelForList,
       resolveSeriesPair: resolveSeriesPairForList,
       getTeamRecordLabel: formatSideRecord,
+      hideTeamRecord: !scorePrefs.showTeamRecord,
       teamRecordById,
       resolveTeamJerseyPalette,
       tutorialRegisterMatchCard: tutorialPhase === "games",
@@ -3052,6 +3121,7 @@ export default function GamesHomeScreen({
       resolveSeriesLabelForList,
       resolveSeriesPairForList,
       formatSideRecord,
+      scorePrefs.showTeamRecord,
       teamRecordById,
       tutorialPhase,
       tutorialRegisterPickupLabel,
@@ -3196,19 +3266,6 @@ export default function GamesHomeScreen({
                 accessibilityLabel="calendar"
               />
             </Animated.View>
-            {/* ASK はベータ。ストアビルドには入口を出さない */}
-            {__DEV__ ? (
-              <Animated.View
-                key={`ask-${headerMotionKey}`}
-                entering={webGamesMotion ? gamesTopBarFilterEntering : undefined}
-              >
-                <GamesHeaderFilterButtonNative
-                  icon="chat-processing-outline"
-                  onPress={() => navigation.navigate("NbaAsk")}
-                  accessibilityLabel={nbaAskCopy(gamesLanguage).open}
-                />
-              </Animated.View>
-            ) : null}
           </View>
         </View>
       {showInitialSkeleton ? (
@@ -3242,6 +3299,8 @@ export default function GamesHomeScreen({
           entranceEnabled={dayStripEntranceEnabled}
           reduceMotion={reduceMotion}
           motionKey={headerMotionKey}
+          markedKeys={favoriteTeamDayKeys}
+          markColor={favoriteTeamColor}
         />
       )}
       </View>
@@ -3398,7 +3457,6 @@ export default function GamesHomeScreen({
         resolveGameStatus={resolveGameStatus}
         formatCountdownLabel={formatCountdownLabel}
         isGameStarted={isGameStarted}
-        countdownNowMs={countdownNowMs}
         language={language === "ja" ? "ja" : "en"}
         t={t}
         openPredictModal={() => void openPredictModal()}
@@ -3581,6 +3639,15 @@ export default function GamesHomeScreen({
         }}
         onLater={closeSeasonInvite}
       />
+      <FirstPostUnitModalNative
+        visible={firstPostUnitOpen}
+        language={language}
+        onClose={() => setFirstPostUnitOpen(false)}
+        onRankings={() => {
+          setFirstPostUnitOpen(false);
+          tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });
+        }}
+      />
       <DayCompleteInviteModalNative
         visible={postPromptOpen === "invite"}
         language={language}
@@ -3668,6 +3735,8 @@ export default function GamesHomeScreen({
           const d = parseDateKeyInTimeZone(key, dayTimeZone);
           if (d) selectDateManually(d);
         }}
+        markedKeys={favoriteTeamDayKeys}
+        markColor={favoriteTeamColor}
       />
       <GamesRightEdgeTabsNative
         onOpenStanding={() => navigation.navigate("Standings")}

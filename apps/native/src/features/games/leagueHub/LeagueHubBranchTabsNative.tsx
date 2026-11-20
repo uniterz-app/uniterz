@@ -4,7 +4,8 @@
  */
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { CyberSlantedTabNative, CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CyberSlantedTabNative } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 
 /** 上の段（シアン）と並んでも段の違いが分かる、少し青寄りの色 */
 export const SUB_TAB_ACCENT = "#5CC8FF";

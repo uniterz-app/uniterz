@@ -1,11 +1,14 @@
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
-/** tip の 1h 前〜 tip — lib `PRO_BRIEF_PATCH_BEFORE_TIP_MS` と同値 */
-const PATCH_BEFORE_TIP_MS = 60 * 60 * 1000;
+/**
+ * lib `refreshPredictKits` の hourly と同じ範囲（`PREDICT_KIT_CREATE_HORIZON_HOURS`）。
+ * 欠場が変わった予想の作り直しも、20:00 に作れなかった試合の拾い直しも開始 24h 以内が対象
+ */
+const PATCH_HORIZON_MS = 24 * 60 * 60 * 1000;
 
 /**
  * narrative_patch を Vercel に投げる前のゲート（Firestore のみ）。
- * tip 1h 以内の未終了 NBA 試合が無いときは Next を起こさない。
+ * 24h 以内に始まる未終了の NBA 試合が無いときは Next を起こさない。
  */
 export async function shouldRunNbaProBriefPatch(
   now = new Date()
@@ -16,11 +19,7 @@ export async function shouldRunNbaProBriefPatch(
     .collection("games")
     .where("league", "==", "nba")
     .where("startAtJst", ">", Timestamp.fromMillis(nowMs))
-    .where(
-      "startAtJst",
-      "<=",
-      Timestamp.fromMillis(nowMs + PATCH_BEFORE_TIP_MS)
-    )
+    .where("startAtJst", "<=", Timestamp.fromMillis(nowMs + PATCH_HORIZON_MS))
     .limit(20)
     .select("status", "final", "seasonPhase")
     .get();

@@ -5,6 +5,7 @@ import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNativ
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   TEAM_HOW_THEY_PLAY_TABS,
+  TEAM_TRACK_GROUPS,
   getTeamHowTheyPlay,
   type TeamHowTheyPlayTab,
 } from "../../../../../../lib/predict/nbaTeamDetailHowTheyPlay";
@@ -101,6 +102,9 @@ type Props = {
   /** @deprecated use language */
   isJa?: boolean;
   bundle?: NbaLeagueTeamStatsBundle;
+  /** 最初に開くタブ（ASK がジャンルを聞かれたとき） */
+  initialTab?: TeamHowTheyPlayTab;
+  initialTrackGroup?: (typeof TEAM_TRACK_GROUPS)[number]["id"];
 };
 
 export default function NbaTeamHowTheyPlayNative({
@@ -109,6 +113,8 @@ export default function NbaTeamHowTheyPlayNative({
   language,
   isJa,
   bundle,
+  initialTab = "fourFactors",
+  initialTrackGroup = "drive",
 }: Props) {
   const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
   const { lang } = chrome;
@@ -116,10 +122,13 @@ export default function NbaTeamHowTheyPlayNative({
     () => (bundle ? getTeamHowTheyPlay(teamId, bundle) : null),
     [teamId, bundle]
   );
-  const [tab, setTab] = useState<TeamHowTheyPlayTab>("fourFactors");
+  const [tab, setTab] = useState<TeamHowTheyPlayTab>(initialTab);
   const [factorId, setFactorId] = useState("efg");
   const [hustleId, setHustleId] = useState("deflections");
-  const [trackId, setTrackId] = useState("drives");
+  const [trackGroup, setTrackGroup] = useState(initialTrackGroup);
+  const [trackId, setTrackId] = useState(
+    () => TEAM_TRACK_GROUPS.find((g) => g.id === initialTrackGroup)?.ids[0] ?? "drives"
+  );
   const [rebId, setRebId] = useState("boxOuts");
   if (!board) return null;
 
@@ -128,8 +137,9 @@ export default function NbaTeamHowTheyPlayNative({
     board.fourFactors.find((r) => r.id === factorId) ?? board.fourFactors[0]!;
   const hustle =
     board.hustle.find((r) => r.id === hustleId) ?? board.hustle[0]!;
-  const tracking =
-    board.tracking.find((r) => r.id === trackId) ?? board.tracking[0]!;
+  const trackIds = TEAM_TRACK_GROUPS.find((g) => g.id === trackGroup)?.ids ?? [];
+  const trackRows = board.tracking.filter((r) => trackIds.includes(r.id));
+  const tracking = trackRows.find((r) => r.id === trackId) ?? trackRows[0]!;
   const rebound =
     board.rebounding.find((r) => r.id === rebId) ?? board.rebounding[0]!;
   const list =
@@ -138,7 +148,7 @@ export default function NbaTeamHowTheyPlayNative({
       : tab === "rebounding"
         ? { rows: board.rebounding, selected: rebound, select: setRebId }
         : tab === "tracking"
-          ? { rows: board.tracking, selected: tracking, select: setTrackId }
+          ? { rows: trackRows, selected: tracking, select: setTrackId }
           : null;
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
@@ -322,6 +332,28 @@ export default function NbaTeamHowTheyPlayNative({
         </View>
       ) : null}
 
+      {tab === "tracking" ? (
+        <View style={styles.chipRow}>
+          {TEAM_TRACK_GROUPS.map((g) => {
+            const active = trackGroup === g.id;
+            return (
+              <Pressable
+                key={g.id}
+                onPress={() => {
+                  setTrackGroup(g.id);
+                  const first = board.tracking.find((r) => g.ids.includes(r.id));
+                  if (first) setTrackId(first.id);
+                }}
+                style={[styles.chip, styles.trackChip, active && styles.chipActive]}
+              >
+                {active ? <ChipScan /> : null}
+                <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{g.short}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+
       {list ? (
         <>
           <View style={[styles.card, { borderColor: frame }]}>
@@ -371,6 +403,7 @@ const styles = StyleSheet.create({
   },
   titleLine: { flex: 1, height: StyleSheet.hairlineWidth },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  trackChip: { width: "23.5%", maxWidth: "23.5%" },
   chip: {
     width: "32%",
     maxWidth: "32%",

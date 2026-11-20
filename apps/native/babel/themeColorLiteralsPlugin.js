@@ -201,8 +201,11 @@ module.exports = function themeColorLiteralsPlugin({ types: t }) {
                 return;
               }
               if (insideWorklet(p)) return;
+              const slot = colorSlotName(p);
+              /** `#${rank}` のような順位・背番号の文字を色として写さない */
+              if (head.trim().startsWith("#") && !(slot != null && COLOR_KEY.test(slot))) return;
               const args = [p.node];
-              const role = roleFor(colorSlotName(p));
+              const role = roleFor(slot);
               if (role) args.push(t.stringLiteral(role));
               p.replaceWith(t.callExpression(t.cloneNode(fn()), args));
               p.skip();

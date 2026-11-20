@@ -1,5 +1,5 @@
 /**
- * JST 毎日 18:00 — NBA スタッツ日次 ingest を Next admin API 経由で起動。
+ * JST 毎日 18:00 — ラインナップ（nba-lineups-ingest）→ NBA スタッツ日次 ingest を Next admin API 経由で起動。
  * US 試合が概ね終わったあと（西海岸深夜〜）を狙う。
  *
  * env:
@@ -16,7 +16,7 @@ export const runNbaStatsDailyIngestCron = onSchedule(
     schedule: "0 18 * * *",
     timeZone: "Asia/Tokyo",
     region: "asia-northeast1",
-    timeoutSeconds: 540,
+    timeoutSeconds: 900,
     memory: "512MiB",
     secrets: [INTERNAL_JOB_SECRET],
   },
@@ -30,14 +30,34 @@ export const runNbaStatsDailyIngestCron = onSchedule(
       return;
     }
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-internal-job-secret": secret,
-      },
-      body: JSON.stringify({ mode: "daily" }),
-    });
+    const post = (target: string, body: Record<string, unknown>) =>
+      fetch(target, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-internal-job-secret": secret,
+        },
+        body: JSON.stringify(body),
+      });
+
+    // lineup_stats は今季分を全ページ読むので別リクエスト（Next の 300 秒枠を分ける）。
+    // 日次の league-hub がこの結果を読むので先に回す。失敗しても日次は止めない。
+    const lineupsUrl = url.replace("nba-stats-daily-ingest", "nba-lineups-ingest");
+    try {
+      const lineupsRes = await post(lineupsUrl, {});
+      const lineupsText = await lineupsRes.text().catch(() => "");
+      if (!lineupsRes.ok) {
+        console.error(
+          `[runNbaStatsDailyIngestCron] lineups failed: ${lineupsRes.status} ${lineupsText.slice(0, 800)}`
+        );
+      } else {
+        console.log(`[runNbaStatsDailyIngestCron] lineups ok: ${lineupsText.slice(0, 400)}`);
+      }
+    } catch (e) {
+      console.error("[runNbaStatsDailyIngestCron] lineups failed", e);
+    }
+
+    const res = await post(url, { mode: "daily" });
     const text = await res.text().catch(() => "");
     if (!res.ok) {
       console.error(

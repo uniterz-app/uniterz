@@ -75,13 +75,13 @@ export default function MobileProSubscribeScreen({
     () =>
       Ls(lang, [
         {
-          ja: "PRO INSIGHT（試合の重要結論 3〜5）",
-          en: "PRO INSIGHT (3–5 key takeaways)",
-          ko: "PRO INSIGHT(경기 핵심 결론 3–5)",
-          zh: "PRO INSIGHT（比赛关键结论 3–5）",
-          es: "PRO INSIGHT (3–5 conclusiones clave)",
-          pt: "PRO INSIGHT (3–5 conclusões-chave)",
-          fr: "PRO INSIGHT (3–5 conclusions clés)",
+          ja: "PRO PICK（試合の重要結論 3〜5）",
+          en: "PRO PICK (3–5 key takeaways)",
+          ko: "PRO PICK(경기 핵심 결론 3–5)",
+          zh: "PRO PICK（比赛关键结论 3–5）",
+          es: "PRO PICK (3–5 conclusiones clave)",
+          pt: "PRO PICK (3–5 conclusões-chave)",
+          fr: "PRO PICK (3–5 conclusions clés)",
         },
         {
           ja: "試合直前アラート",

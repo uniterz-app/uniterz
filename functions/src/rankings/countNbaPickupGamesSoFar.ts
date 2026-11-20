@@ -36,6 +36,7 @@ export async function countNbaPickupGamesSoFar(opts: {
     .where("league", "==", "nba")
     .where("startAtJst", ">=", etDayStart(opts.startKey))
     .where("startAtJst", "<=", etDayEndInclusive(opts.asOfKey))
+    .select("isPickup", "pickupWeekKey", "startAtJst")
     .get();
 
   let n = 0;

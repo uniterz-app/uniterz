@@ -4,11 +4,10 @@
  * （CyberSlantedTab 本体は変更しない）
  */
 
-export type TutorialPredictToolsTab =
-  | "insight"
-  | "injuries"
-  | "stats"
-  | "roster";
+export type TutorialPredictToolsTab = "insight" | "info" | "trend";
+
+/** 旧 INJURY / STATS / ROSTER タブは INFORMATION で開く（詳細からの戻り先の既定が "roster"） */
+type LegacyPredictToolsTab = TutorialPredictToolsTab | "injuries" | "stats" | "roster";
 
 type Listener = (tab: TutorialPredictToolsTab) => void;
 
@@ -24,24 +23,24 @@ export function registerTutorialPredictToolsListener(
 }
 
 export function tutorialSelectPredictToolsTab(
-  tab: TutorialPredictToolsTab
+  tab: LegacyPredictToolsTab
 ): void {
-  for (const fn of listeners) fn(tab);
+  const next: TutorialPredictToolsTab =
+    tab === "injuries" || tab === "stats" || tab === "roster" ? "info" : tab;
+  for (const fn of listeners) fn(next);
 }
 
 export const TUTORIAL_PREDICT_TOOLS_TABS: TutorialPredictToolsTab[] = [
   "insight",
-  "injuries",
-  "stats",
-  "roster",
+  "info",
+  "trend",
 ];
 
 export const TUTORIAL_PREDICT_TOOLS_TAB_LABELS: Record<
   TutorialPredictToolsTab,
   string
 > = {
-  insight: "INSIGHT",
-  injuries: "INJURY",
-  stats: "STATS",
-  roster: "ROSTER",
+  insight: "PRO PICK",
+  info: "INFORMATION",
+  trend: "TREND",
 };

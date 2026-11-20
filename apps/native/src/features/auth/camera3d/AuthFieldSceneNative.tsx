@@ -13,19 +13,6 @@ const COURT_W = 7.2;
 const COURT_D = 13.4;
 const LINE = SPLASH_CAMERA3D_ACCENT;
 
-function lineMat(opacity: number) {
-  return (
-    <lineBasicMaterial
-      color={LINE}
-      transparent
-      opacity={opacity}
-      toneMapped={false}
-      blending={THREE.AdditiveBlending}
-      depthWrite={false}
-    />
-  );
-}
-
 function CourtFloor() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
@@ -69,12 +56,38 @@ function CourtMarkings() {
     return { rect, mid, center, spot };
   }, []);
 
+  // JSX の <line> は SVG の line 型と衝突するので THREE.Line を primitive で置く
+  const lines = useMemo(
+    () =>
+      (
+        [
+          [geos.rect, 0.42],
+          [geos.mid, 0.28],
+          [geos.center, 0.38],
+          [geos.spot, 0.55],
+        ] as const
+      ).map(
+        ([geometry, opacity]) =>
+          new THREE.Line(
+            geometry,
+            new THREE.LineBasicMaterial({
+              color: LINE,
+              transparent: true,
+              opacity,
+              toneMapped: false,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false,
+            })
+          )
+      ),
+    [geos]
+  );
+
   return (
     <group>
-      <line geometry={geos.rect}>{lineMat(0.42)}</line>
-      <line geometry={geos.mid}>{lineMat(0.28)}</line>
-      <line geometry={geos.center}>{lineMat(0.38)}</line>
-      <line geometry={geos.spot}>{lineMat(0.55)}</line>
+      {lines.map((obj, i) => (
+        <primitive key={i} object={obj} />
+      ))}
     </group>
   );
 }

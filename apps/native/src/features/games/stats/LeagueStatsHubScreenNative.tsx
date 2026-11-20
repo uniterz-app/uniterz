@@ -14,6 +14,7 @@ import {
   LeagueStatsCollapsibleNative,
   useLeagueStatsCollapseState,
 } from "./LeagueStatsCollapseNative";
+import { useTrackViewNative } from "../../../analytics/useTrackViewNative";
 
 type TabId = "team" | "player";
 
@@ -36,6 +37,10 @@ export default function LeagueStatsHubScreenNative({
   const [tab, setTab] = useState<TabId>(initialTab);
   const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
   const collapse = useLeagueStatsCollapseState(tab);
+  useTrackViewNative(
+    tab === "team" ? "Stats: Team" : "Stats: Player",
+    tab === "team" ? "games/stats/team" : "games/stats/player"
+  );
 
   return (
     <GamesNbaSubpageShellNative

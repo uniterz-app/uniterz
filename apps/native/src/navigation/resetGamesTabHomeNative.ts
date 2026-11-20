@@ -38,32 +38,32 @@ export function resetGamesStackInBackgroundNative(
   const gamesTab = state.routes.find((route) => route.name === "GamesTab");
   if (gamesStackIsHomeOnly(gamesTab?.state)) return;
 
-  navigation.dispatch(
-    CommonActions.reset({
-      index: state.index,
-      routes: state.routes.map((route) =>
-        route.name === "GamesTab"
-          ? {
-              ...route,
-              state: {
-                routes: [{ name: "GamesHome", params: {} }],
-                index: 0,
-              },
-            }
-          : route
-      ),
-    })
-  );
+  // 他タブの route は完全な state を持ったまま渡す（PartialRoute 型には stale:false が入らない）
+  const nextState = {
+    index: state.index,
+    routes: state.routes.map((route) =>
+      route.name === "GamesTab"
+        ? {
+            ...route,
+            state: {
+              routes: [{ name: "GamesHome", params: {} }],
+              index: 0,
+            },
+          }
+        : route
+    ),
+  } as unknown as PartialState<NavigationState>;
+  navigation.dispatch(CommonActions.reset(nextState));
 }
 
 /** Games タブを開き、試合一覧へ（Games タブボタン向け）。 */
 export function openGamesTabHomeNative(navigation: ResetNavigation): void {
   /** v7 の navigate は既存画面へ戻らず push する。詳細を重ねた上に GamesHome を積まないよう戻す */
-  navigation.navigate("GamesTab", {
-    screen: "GamesHome",
-    params: {},
-    pop: true,
-  } as never);
+  (navigation.navigate as unknown as (name: string, params: object) => void).call(
+    navigation,
+    "GamesTab",
+    { screen: "GamesHome", params: {}, pop: true }
+  );
 }
 
 /** @deprecated 背景 reset とタブ遷移を区別するため非推奨 */

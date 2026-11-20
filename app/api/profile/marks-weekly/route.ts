@@ -2,6 +2,7 @@
  * MARK LIST 用。週次スナップショット 1 本 + users getAll で
  * 人数分の user-stats を避ける。
  */
+import { FieldPath } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 
 import { getAdminDb } from "@/lib/firebaseAdmin";
@@ -61,9 +62,13 @@ export async function GET(req: Request) {
         })
       );
     const userRefs = uids.map((uid) => db.collection("users").doc(uid));
-    const [snap, userSnaps] = await Promise.all([
-      snapRef.get(),
-      db.getAll(...userRefs),
+    // 使う項目だけ読む: スナップショットは rows と対象 uid の ranks のみ（ranks は全参加者ぶんの map）、
+    // users は Pro 判定に要る plan / proUntil のみ
+    const [[snap], userSnaps] = await Promise.all([
+      db.getAll(snapRef, {
+        fieldMask: ["rows", ...uids.map((uid) => new FieldPath("ranks", uid))],
+      }),
+      db.getAll(...userRefs, { fieldMask: ["plan", "proUntil"] }),
     ]);
 
     const data = snap.exists ? snap.data() : null;

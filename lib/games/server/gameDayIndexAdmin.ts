@@ -1,11 +1,12 @@
 /**
  * 日付ストリップ用「シーズン全試合の開始時刻」インデックス（Admin SDK）。
  * `gameDayIndex/{league}__{season}` に distinct な開始 ms を昇順で保持する。
+ * `teamStartMs.{teamId}` はチームごとの開始 ms（お気に入りチームの試合日の印用）。
  * 日付キーは閲覧者 TZ で変わるため、ここでは時刻のまま持つ。
  */
 
 import type { Firestore } from "firebase-admin/firestore";
-import { Timestamp } from "firebase-admin/firestore";
+import { FieldPath, Timestamp } from "firebase-admin/firestore";
 import { normalizeLeague, type League } from "@/lib/leagues";
 import type { GameDayIndexPayload } from "@/lib/games/gameDayIndex";
 
@@ -28,20 +29,35 @@ async function collectStartMsFromGames(
   db: Firestore,
   league: League,
   season: string
-): Promise<{ startMs: number[]; gameStartMs: number[] }> {
+): Promise<{
+  startMs: number[];
+  gameStartMs: number[];
+  teamStartMs: Record<string, number[]>;
+}> {
   const snap = await db
     .collection("games")
     .where("league", "==", league)
     .where("season", "==", season)
-    .select("startAtJst")
+    .select("startAtJst", "homeTeamId", "awayTeamId")
     .get();
   const all: number[] = [];
+  const byTeam = new Map<string, Set<number>>();
   for (const doc of snap.docs) {
     const ms = toStartMs(doc.get("startAtJst"));
-    if (ms != null && Number.isFinite(ms)) all.push(ms);
+    if (ms == null || !Number.isFinite(ms)) continue;
+    all.push(ms);
+    for (const raw of [doc.get("homeTeamId"), doc.get("awayTeamId")]) {
+      const teamId = typeof raw === "string" ? raw.trim() : "";
+      if (!teamId) continue;
+      (byTeam.get(teamId) ?? byTeam.set(teamId, new Set()).get(teamId)!).add(ms);
+    }
   }
   all.sort((a, b) => a - b);
-  return { startMs: [...new Set(all)], gameStartMs: all };
+  const teamStartMs: Record<string, number[]> = {};
+  for (const [teamId, set] of byTeam) {
+    teamStartMs[teamId] = [...set].sort((a, b) => a - b);
+  }
+  return { startMs: [...new Set(all)], gameStartMs: all, teamStartMs };
 }
 
 function numberArray(raw: unknown): number[] | null {
@@ -56,7 +72,7 @@ export async function writeGameDayIndexFromGames(
   input: { league: League; season: string }
 ): Promise<{ docId: string; startCount: number }> {
   const league = normalizeLeague(input.league);
-  const { startMs, gameStartMs } = await collectStartMsFromGames(
+  const { startMs, gameStartMs, teamStartMs } = await collectStartMsFromGames(
     db,
     league,
     input.season
@@ -67,6 +83,7 @@ export async function writeGameDayIndexFromGames(
     season: input.season,
     startMs,
     gameStartMs,
+    teamStartMs,
     updatedAt: Timestamp.now(),
   });
   return { docId, startCount: startMs.length };
@@ -78,12 +95,13 @@ export async function loadGameDayIndex(
   input: { league: League; season: string }
 ): Promise<GameDayIndexPayload> {
   const league = normalizeLeague(input.league);
-  const snap = await db
-    .collection(GAME_DAY_INDEX_COLLECTION)
-    .doc(gameDayIndexDocId(league, input.season))
-    .get();
-  const storedStart = snap.exists ? numberArray(snap.get("startMs")) : null;
-  const storedGames = snap.exists ? numberArray(snap.get("gameStartMs")) : null;
+  /** `teamStartMs`（全チーム分）は読まない */
+  const [snap] = await db.getAll(
+    db.collection(GAME_DAY_INDEX_COLLECTION).doc(gameDayIndexDocId(league, input.season)),
+    { fieldMask: ["startMs", "gameStartMs"] }
+  );
+  const storedStart = snap?.exists ? numberArray(snap.get("startMs")) : null;
+  const storedGames = snap?.exists ? numberArray(snap.get("gameStartMs")) : null;
   if (storedStart) {
     return {
       ok: true,
@@ -93,6 +111,20 @@ export async function loadGameDayIndex(
       ...(storedGames ? { gameStartMs: storedGames } : {}),
     };
   }
-  const built = await collectStartMsFromGames(db, league, input.season);
-  return { ok: true, league, season: input.season, ...built };
+  const { startMs, gameStartMs } = await collectStartMsFromGames(db, league, input.season);
+  return { ok: true, league, season: input.season, startMs, gameStartMs };
+}
+
+/** 1 チームの試合開始 ms（昇順）。インデックスにまだ無ければ空 */
+export async function loadTeamGameStartMs(
+  db: Firestore,
+  input: { league: League; season: string; teamId: string }
+): Promise<number[]> {
+  const league = normalizeLeague(input.league);
+  const [snap] = await db.getAll(
+    db.collection(GAME_DAY_INDEX_COLLECTION).doc(gameDayIndexDocId(league, input.season)),
+    { fieldMask: [new FieldPath("teamStartMs", input.teamId)] }
+  );
+  if (!snap?.exists) return [];
+  return numberArray(snap.get(new FieldPath("teamStartMs", input.teamId))) ?? [];
 }

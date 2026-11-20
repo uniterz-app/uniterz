@@ -59,6 +59,18 @@ export function isPlayerDetailSalaryRankShown(rank: number): boolean {
   return Number.isFinite(rank) && rank >= 1;
 }
 
+/** TRACK の中身。シュートの型、ドライブ、パス、ボール保持で分ける */
+export const PLAYER_TRACK_GROUPS: readonly {
+  id: "shot" | "drive" | "pass" | "ball";
+  short: string;
+  ids: readonly string[];
+}[] = [
+  { id: "shot", short: "SHOT", ids: ["cns_fg_pct", "pullup_fg_pct", "pct_assisted_2pt", "pct_assisted_3pt"] },
+  { id: "drive", short: "DRIVE", ids: ["drives", "drive_fg_pct", "drive_passes", "drive_tov"] },
+  { id: "pass", short: "PASS", ids: ["passes", "potential_ast", "ast_pts_created", "secondary_ast", "ft_ast"] },
+  { id: "ball", short: "BALL", ids: ["touches", "sec_per_touch", "paint_touches", "dist_miles", "speed"] },
+];
+
 export type PlayerHowTheyPlayTab =
   | "ratings"
   | "fourFactors"
@@ -661,6 +673,8 @@ export function getPlayerHowTheyPlay(
         ptsFromShare(ppg, freq.iso!.value * 0.75 + freq.pnrB!.value * 0.2)
       ),
     },
+    m("pct_assisted_2pt"),
+    m("pct_assisted_3pt"),
     { ...m("passes"), hint: HOW_THEY_PLAY_TRACKING_HINTS.passes },
     m("potential_ast"),
     m("ast_pts_created"),
@@ -669,7 +683,10 @@ export function getPlayerHowTheyPlay(
     m("drive_fg_pct"),
     m("drive_passes"),
     m("drive_tov"),
+    m("touches"),
+    m("sec_per_touch"),
     { ...m("speed"), hint: HOW_THEY_PLAY_TRACKING_HINTS.speed },
+    m("dist_miles"),
     {
       ...m("paint_touches"),
       hint: HOW_THEY_PLAY_TRACKING_HINTS.paintTouches,

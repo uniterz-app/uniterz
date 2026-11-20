@@ -37,6 +37,7 @@ import {
   nbaSubpageTitleEntering,
 } from "../features/games/gamesNbaSubpageMotion";
 import ProfileBackEdgeHandleNative from "../features/profile/ProfileBackEdgeHandleNative";
+import { notifyBackEdgeScroll } from "../features/profile/backEdgeScrollNative";
 import CyberHelpMarkNative from "./CyberHelpMarkNative";
 
 /** Web `CyberHelpPanel` 相当 — オーバーレイ内カード */
@@ -360,6 +361,8 @@ export default function CyberSubpageShellNative({
       contentContainerStyle={[styles.content, contentStyle]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
+      onScroll={notifyBackEdgeScroll}
+      scrollEventThrottle={16}
       stickyHeaderIndices={stickyHeaderIndices}
     >
       {children}

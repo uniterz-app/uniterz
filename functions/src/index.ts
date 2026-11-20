@@ -16,6 +16,7 @@ import { hasRankingAggregationScheduledJstToday } from "./schedule/hasRankingAgg
 import { runNotifyPredictionDeadlineCron } from "./notifications/notifyPredictionDeadlineCron";
 import { runNotifyEveningPredictNudgesCron } from "./notifications/notifyEveningPredictNudgesCron";
 import { runNotifyPregameAlertCron } from "./notifications/notifyPregameAlertCron";
+import { notifyDailyRankingUpdatedPush } from "./notifications/notifyPushEvents";
 
 // ===============================
 // V2 Core
@@ -23,7 +24,7 @@ import { runNotifyPregameAlertCron } from "./notifications/notifyPregameAlertCro
 export { onGameFinalV2 } from "./onGameFinalV2";
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { onPlayoffBracketRescoreTaskCreated } from "./playoff-bracket/onPlayoffBracketRescoreTaskCreated";
-export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
+// getCumulativeRanking（HTTP）は呼び出し元が無いので export しない（ランキングは Next の API）
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
@@ -57,10 +58,9 @@ export {
 } from "./nba/runNbaInjuryIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）
 export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
-// Pro Insight 前日 19:00 ナラティブ Batch 投入
+// Pro Insight 前日 20:00 予想の材料（翌日 24h 分）
 export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
-// Pro Insight OpenAI Batch 完了ポーリング（15 分）
-export { runNbaProInsightBatchPollCron } from "./nba/runNbaProInsightBatchPollCron";
+// Pro Insight の OpenAI Batch（ナラティブ）は停止済み。完了ポーリング cron は export しない
 // Pro Insight tip 1h 前パッチ（injury は専用 cron が更新済みスナップショットを読む）
 export { runNbaProBriefPatchCron } from "./nba/runNbaProBriefPatchCron";
 // お気に入り選手のテクニカル / フレグラント / 退場（試合中 = ライブ alert、取りこぼしは日次）
@@ -121,6 +121,7 @@ export const buildCumulativeStatsCron = onSchedule(
 /* ============================================================================
  * Cumulative Ranking Snapshot (16:00) — JST 当日に NBA 試合がある日
  * 連勝はこの時点の「今日確定投稿者 × 連勝>0」でスナップショット化
+ * 更新後、今季順位が付いたユーザーへ ranking_updated を 1 日 1 回送る
  * ==========================================================================*/
 
 export const buildCumulativeRankingSnapshotCron = onSchedule(
@@ -135,7 +136,17 @@ export const buildCumulativeRankingSnapshotCron = onSchedule(
 
     if (hasGamesToday) {
       const snapshotResult = await buildCumulativeRankingSnapshot();
-      void snapshotResult;
+      try {
+        await notifyDailyRankingUpdatedPush({
+          uids: snapshotResult.rankedUids,
+          dateKey: snapshotResult.historyDateKey,
+        });
+      } catch (err) {
+        console.error(
+          "[buildCumulativeRankingSnapshotCron] ranking push failed",
+          err
+        );
+      }
     } else {
       console.log(
         "[buildCumulativeRankingSnapshotCron] skip cumulative: no NBA games scheduled this JST date"
@@ -286,17 +297,6 @@ export const rebuildGroupBattleSnapshotsEveningCron = onSchedule(
         err
       );
     }
-  }
-);
-
-/* ============================================================================
- * Game start push — 廃止（スケジュール枠は no-op で残し、デプロイ差分で消えるのを避ける）
- * ==========================================================================*/
-
-export const notifyGameStartPushCron = onSchedule(
-  { schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    console.log("[notifyGameStartPushCron] retired — skip");
   }
 );
 

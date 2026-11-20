@@ -341,11 +341,6 @@ export const onGameFinalV2 = onDocumentWritten(
         updatedAtMillis: Date.now(),
       },
       ...(topScorerMarket ? { topScorerMarket } : {}),
-      "game.status": "final",
-      "game.finalScore": {
-        home: game.homeScore,
-        away: game.awayScore,
-      },
       resultComputedAtV2: FieldValue.serverTimestamp(),
     };
 

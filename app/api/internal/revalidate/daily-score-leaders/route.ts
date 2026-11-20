@@ -20,8 +20,18 @@ export async function POST(req: Request) {
   }
 
   revalidateTag("uniterz-daily-score-leaders", {});
+  /** 週間・月間の「表示期間」は初試合日の settle で切り替わる */
+  revalidateTag("period-ranking", {});
+  revalidateTag("games-window:nba", {});
   return NextResponse.json(
-    { ok: true, tags: ["uniterz-daily-score-leaders"] },
+    {
+      ok: true,
+      tags: [
+        "uniterz-daily-score-leaders",
+        "period-ranking",
+        "games-window:nba",
+      ],
+    },
     { status: 200 }
   );
 }

@@ -591,14 +591,14 @@ export async function buildCumulativeRankingSnapshot(
   const streakAllEligible = options.streakAllEligible === true;
   const seasonKey = CURRENT_NBA_SEASON_KEY;
 
-  const snap = await loadCumulativeStatsForRankingSnapshot(db());
-  const statsByUid = cumulativeStatsDocsToMap(snap);
+  const participantDocs = await loadCumulativeStatsForRankingSnapshot(db());
+  const statsByUid = cumulativeStatsDocsToMap(participantDocs);
 
   const nbaSettledTodayUids =
     METRICS.includes("activeWinStreak") && !streakAllEligible
       ? await loadAuthorUidsSettledToday("nba")
       : undefined;
-  const livePlans = await loadActiveUserPlans(snap.docs.map((d) => d.id));
+  const livePlans = await loadActiveUserPlans(participantDocs.map((d) => d.id));
 
   /** uid → 現行シーズンの指標別順位 */
   const rankByUidSeason = new Map<string, PhaseRankMap>();
@@ -618,7 +618,7 @@ export async function buildCumulativeRankingSnapshot(
   const seasonTop20Jobs: Top20Job[] = [];
   const topUidSet = new Set<string>();
 
-  const baseRows: BaseRow[] = snap.docs
+  const baseRows: BaseRow[] = participantDocs
     .map((doc) => {
       const d = doc.data();
       const r = nbaSeasonRankingSlice(d, seasonKey);
@@ -644,7 +644,7 @@ export async function buildCumulativeRankingSnapshot(
     })
     .filter((row) => (row.totalPosts ?? 0) > 0);
 
-  const openSeasonBaseRows: BaseRow[] = snap.docs
+  const openSeasonBaseRows: BaseRow[] = participantDocs
     .map((doc) => {
       const d = doc.data();
       const r = nbaOpenSeasonRankingSlice(d, seasonKey);
@@ -842,11 +842,16 @@ export async function buildCumulativeRankingSnapshot(
     const seasonRanks = rankByUidSeason.get(uid) ?? {};
     const totalPointsRank = Number(seasonRanks.totalPoints ?? 0);
     const cumData = statsByUid.get(uid) as Record<string, unknown> | undefined;
+    /** set(merge) はキーをドットで分割しない。旧形式のリテラル名フィールドは同時に消す */
     batch.set(
       firestore.doc(`cumulative_stats/${uid}`),
       {
-        "snapshotRanks.updatedAt": FieldValue.serverTimestamp(),
-        [`snapshotRanks.seasons.${seasonKey}`]: seasonRanks,
+        snapshotRanks: {
+          updatedAt: FieldValue.serverTimestamp(),
+          seasons: { [seasonKey]: seasonRanks },
+        },
+        "snapshotRanks.updatedAt": FieldValue.delete(),
+        [`snapshotRanks.seasons.${seasonKey}`]: FieldValue.delete(),
       },
       { merge: true }
     );
@@ -870,7 +875,13 @@ export async function buildCumulativeRankingSnapshot(
       ops += 1;
     }
     if (cumData) {
-      const hero = buildProfileHeroSnapshotFromCumulative(cumData, seasonKey);
+      const hero = buildProfileHeroSnapshotFromCumulative(
+        {
+          ...cumData,
+          snapshotRanks: { seasons: { [seasonKey]: seasonRanks } },
+        },
+        seasonKey
+      );
       batch.set(
         firestore.doc(`users/${uid}`),
         { profileHeroSnapshot: hero },
@@ -932,7 +943,8 @@ export async function buildCumulativeRankingSnapshot(
     batch.set(
       cumRef,
       {
-        [`snapshotRanks.openSeasons.${seasonKey}`]: openRanks,
+        snapshotRanks: { openSeasons: { [seasonKey]: openRanks } },
+        [`snapshotRanks.openSeasons.${seasonKey}`]: FieldValue.delete(),
       },
       { merge: true }
     );
@@ -942,6 +954,9 @@ export async function buildCumulativeRankingSnapshot(
     }
   }
   await flush();
+
+  const rankedUidSet = new Set<string>(rankByUidSeason.keys());
+  for (const uid of openRankByUid.keys()) rankedUidSet.add(uid);
 
   const generationMs = Date.now();
   await db()
@@ -963,6 +978,7 @@ export async function buildCumulativeRankingSnapshot(
     seasonKey,
     metrics: METRICS.length,
     ranksWritten: rankByUidSeason.size,
+    rankedUids: [...rankedUidSet],
     historyDateKey: dateKey,
     rankDeltaBasisDateKey: yesterdayKey,
     snapshotGenerationMs: generationMs,

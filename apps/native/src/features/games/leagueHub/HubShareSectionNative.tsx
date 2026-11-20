@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { UNITERZ_LOGO_FLAT_ASSET } from "../../../../../../lib/units/uniterzLogoFlat";
 import { cyberAlert } from "../../../components/cyberAlert";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   SHARE_CAPTURE_BG,

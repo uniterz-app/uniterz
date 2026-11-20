@@ -221,6 +221,7 @@ function RectShell({
   motion,
   detailSpineStyle,
   children,
+  flashPlayId = 0,
 }: {
   badge: OutcomeBadge;
   paint?: { color: string; glow: string };
@@ -241,6 +242,8 @@ function RectShell({
   /** 親 Pressable の押下と連動させる › ヒント見た目 */
   detailSpineStyle?: object;
   children: ReactNode;
+  /** 今日の最初へ着地したとき、線枠を一度光らせる */
+  flashPlayId?: number;
 }) {
   const paint = paintProp ?? RESULT_LINE_FRAME_PAINT[badge];
   const showHint = Boolean(showDetailTab);
@@ -272,6 +275,7 @@ function RectShell({
       strokeEnd={strokeEnd}
       animateDraw={animateDraw}
       drawDelayMs={drawDelayMs}
+      flashPlayId={flashPlayId}
     >
       {inner}
     </MatchListLineFrameNative>
@@ -283,7 +287,6 @@ function RectShell({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Open result detail"
-      delayPressIn={0}
       onPress={onOpenDetail}
       style={({ pressed }) => [
         styles.rectShellWrap,
@@ -831,6 +834,7 @@ function Plan1Card({
   topLabelAlign = "center",
   compact = false,
   wrapMatch,
+  flashPlayId = 0,
 }: {
   sample: Sample;
   badge: OutcomeBadge | null;
@@ -854,6 +858,8 @@ function Plan1Card({
   compact?: boolean;
   /** チーム・スコアの段だけを包む（予想オーバーレイの横スライド） */
   wrapMatch?: (node: ReactNode) => ReactNode;
+  /** 今日の最初へ着地したとき、線枠を一度光らせる */
+  flashPlayId?: number;
 }) {
   const settled = sample.settled !== false;
   const paint = settled && badge
@@ -918,6 +924,7 @@ function Plan1Card({
         strokeEnd={strokeEnd}
         animateDraw={animateDraw}
         drawDelayMs={drawDelayMs}
+        flashPlayId={flashPlayId}
       >
         <View style={styles.bareFace}>{body}</View>
       </MatchListLineFrameNative>
@@ -940,6 +947,7 @@ function Plan1Card({
       drawDelayMs={drawDelayMs}
       motion={motion}
       detailSpineStyle={detailSpineStyle}
+      flashPlayId={flashPlayId}
     >
       {body}
     </RectShell>
@@ -974,6 +982,7 @@ export function ResultCardDesignFaceNative({
   compact = false,
   othersCall = false,
   wrapMatch,
+  flashPlayId = 0,
 }: {
   language: import("../../../../../lib/i18n/language").Language;
   badge?: OutcomeBadge | null;
@@ -1030,6 +1039,8 @@ export function ResultCardDesignFaceNative({
   othersCall?: boolean;
   /** チーム・スコアの段だけを包む（予想オーバーレイの横スライド） */
   wrapMatch?: (node: ReactNode) => ReactNode;
+  /** 今日の最初へ着地したとき、線枠を一度光らせる */
+  flashPlayId?: number;
 }) {
   const settledFromFace =
     face != null
@@ -1120,6 +1131,7 @@ export function ResultCardDesignFaceNative({
       topLabelAlign={topLabelAlign}
       compact={compact}
       wrapMatch={wrapMatch}
+      flashPlayId={flashPlayId}
     />
   );
 }

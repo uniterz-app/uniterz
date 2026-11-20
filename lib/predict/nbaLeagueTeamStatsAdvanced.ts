@@ -10,6 +10,13 @@ import { formatDisciplineFineUsd } from "@/lib/nba/discipline/formatDisciplineFi
 type TeamStatWindow = "season" | "last10";
 
 export type NbaLeagueTeamAdvancedMetric =
+  | "cleanNet"
+  | "cleanOrtg"
+  | "cleanDrtg"
+  | "cleanAdjNet"
+  | "cleanAdjOrtg"
+  | "cleanAdjDrtg"
+  | "cleanNetL10"
   | "fgPct"
   | "ftPct"
   | "tsPct"
@@ -150,6 +157,69 @@ function def(
 
 export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvancedMetricDef[] =
   [
+    def("cleanNet", "CLN NET", "Net Rating (garbage time out)", "ratings", true, "signed", {
+      ja: "ガベージタイム抜きの NET。",
+      en: "Net rating, garbage time out.",
+      ko: "가비지 타임 제외 넷 레이팅.",
+      zh: "剔除垃圾时间的净效率值。",
+      es: "Net rating sin tiempo basura.",
+      pt: "Net rating sem garbage time.",
+      fr: "Net rating hors garbage time.",
+    }),
+    def("cleanOrtg", "CLN ORTG", "Off Rating (garbage time out)", "ratings", true, "one", {
+      ja: "ガベージタイム抜きの ORTG。",
+      en: "Off rating, garbage time out.",
+      ko: "가비지 타임 제외 ORTG.",
+      zh: "剔除垃圾时间的进攻效率。",
+      es: "Off rating sin tiempo basura.",
+      pt: "Off rating sem garbage time.",
+      fr: "Off rating hors garbage time.",
+    }),
+    def("cleanDrtg", "CLN DRTG", "Def Rating (garbage time out)", "ratings", false, "one", {
+      ja: "ガベージタイム抜きの DRTG。",
+      en: "Def rating, garbage time out.",
+      ko: "가비지 타임 제외 DRTG.",
+      zh: "剔除垃圾时间的防守效率。",
+      es: "Def rating sin tiempo basura.",
+      pt: "Def rating sem garbage time.",
+      fr: "Def rating hors garbage time.",
+    }),
+    def("cleanAdjNet", "ADJ NET", "Net Rating (opponent-adjusted, garbage out)", "ratings", true, "signed", {
+      ja: "相手の強さで補正した NET。",
+      en: "Net rating, adjusted for opponents.",
+      ko: "상대 전력으로 보정한 넷 레이팅.",
+      zh: "按对手强弱修正的净效率值。",
+      es: "Net rating ajustado por rivales.",
+      pt: "Net rating ajustado por adversários.",
+      fr: "Net rating ajusté selon les adversaires.",
+    }),
+    def("cleanAdjOrtg", "ADJ ORTG", "Off Rating (opponent-adjusted, garbage out)", "ratings", true, "one", {
+      ja: "相手の強さで補正した ORTG。",
+      en: "Off rating, adjusted for opponents.",
+      ko: "상대 전력으로 보정한 ORTG.",
+      zh: "按对手强弱修正的进攻效率。",
+      es: "Off rating ajustado por rivales.",
+      pt: "Off rating ajustado por adversários.",
+      fr: "Off rating ajusté selon les adversaires.",
+    }, false),
+    def("cleanAdjDrtg", "ADJ DRTG", "Def Rating (opponent-adjusted, garbage out)", "ratings", false, "one", {
+      ja: "相手の強さで補正した DRTG。",
+      en: "Def rating, adjusted for opponents.",
+      ko: "상대 전력으로 보정한 DRTG.",
+      zh: "按对手强弱修正的防守效率。",
+      es: "Def rating ajustado por rivales.",
+      pt: "Def rating ajustado por adversários.",
+      fr: "Def rating ajusté selon les adversaires.",
+    }, false),
+    def("cleanNetL10", "L10 NET", "Net Rating, last 10 games (garbage out)", "ratings", true, "signed", {
+      ja: "直近 10 試合の NET。",
+      en: "Net rating, last 10 games.",
+      ko: "최근 10경기 넷 레이팅.",
+      zh: "近 10 场的净效率值。",
+      es: "Net rating, últimos 10 partidos.",
+      pt: "Net rating, últimos 10 jogos.",
+      fr: "Net rating, 10 derniers matchs.",
+    }),
     def("fgPct", "FG%", "Field Goal %", "basic", true, "pct", {
       ja: "フィールドゴール成功率。",
       en: "Field goal percentage.",
@@ -1456,6 +1526,13 @@ export function buildLeagueTeamAdvancedFields(
   const paintTouchPts = round1(paintTouches * (0.26 + rimFgPct * 0.22));
 
   return {
+    cleanNet: 0,
+    cleanOrtg: 0,
+    cleanDrtg: 0,
+    cleanAdjNet: 0,
+    cleanAdjOrtg: 0,
+    cleanAdjDrtg: 0,
+    cleanNetL10: 0,
     fgPct,
     ftPct,
     tsPct,

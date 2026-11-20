@@ -34,13 +34,16 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaLeaguePlayerStats: DEFAULT_TTL_SEC,
   nbaLeagueTeamStats: DEFAULT_TTL_SEC,
   nbaDiscipline: DEFAULT_TTL_SEC,
+  nbaTeamCleanRatings: DEFAULT_TTL_SEC,
   nbaTeamOffseasonMoves: DEFAULT_TTL_SEC,
   nbaTeamShapeRecords: DEFAULT_TTL_SEC,
   nbaTeamSeasonRecords: DEFAULT_TTL_SEC,
   nbaStandings: DEFAULT_TTL_SEC,
   nbaTeamAceOutRecords: DEFAULT_TTL_SEC,
   nbaLeagueHub: DEFAULT_TTL_SEC,
-  nbaTeamGameLogs: DEFAULT_TTL_SEC,
+  nbaLeagueHubDetail: DEFAULT_TTL_SEC,
+  /** 試合後すぐ休み / FORM がずれるので 24h より短く（ingest の tag 破棄が正） */
+  nbaTeamGameLogs: 3600,
   nbaTeamInsightExtras: DEFAULT_TTL_SEC,
   nbaPlayerShotAreas: DEFAULT_TTL_SEC,
   nbaPlayerContracts: DEFAULT_TTL_SEC,
@@ -49,6 +52,7 @@ const NBA_PUBLIC_DOC_CACHE_TTL: Readonly<Record<string, number>> = {
   nbaPlayerShotZones: DEFAULT_TTL_SEC,
   nbaPlayerSeasonMetrics: DEFAULT_TTL_SEC,
   nbaPlayerOutImpact: DEFAULT_TTL_SEC,
+  nbaPlayerKanaNames: DEFAULT_TTL_SEC,
 };
 
 export type NbaPublicDocCollection = keyof typeof NBA_PUBLIC_DOC_CACHE_TTL;

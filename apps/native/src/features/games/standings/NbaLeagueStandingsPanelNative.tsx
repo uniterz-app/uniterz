@@ -14,6 +14,7 @@ import { getTeamJerseyPrimaryColor } from "../../../../../../lib/team-colors";
 import { formatStreakLabel } from "../../../../../../lib/predict/nbaTeamDetailPreviewMocks";
 import { teamStreakBadgeTheme } from "../../../../../../lib/predict/nbaTeamDetailForm";
 import { useNbaConferenceStandings } from "../../../../../../lib/nba/useNbaConferenceStandings";
+import { notifyBackEdgeScroll } from "../../profile/backEdgeScrollNative";
 import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
 import {
   formatStandingsWl,
@@ -28,7 +29,7 @@ import {
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import NbaLeagueStatsSeasonNavNative from "../NbaLeagueStatsSeasonNavNative";
 import { nbaLeagueStatsChrome } from "../stats/nbaStatsUiCopy";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
@@ -141,6 +142,8 @@ export default function NbaLeagueStandingsPanelNative({
         style={styles.tableScroll}
         contentContainerStyle={{ paddingBottom: bottomContentReserveY }}
         showsVerticalScrollIndicator={false}
+        onScroll={notifyBackEdgeScroll}
+        scrollEventThrottle={16}
       >
         {CONFERENCE_SECTIONS.map(({ id, label }, sectionIndex) => (
           <View
@@ -160,6 +163,40 @@ export default function NbaLeagueStandingsPanelNative({
           </View>
         ))}
       </ScrollView>
+    </View>
+  );
+}
+
+/** 今季の順位表だけ（季節の切り替え・縦スクロールなし） */
+export function NbaStandingsTablesNative({
+  conferences,
+  language,
+  onSelectTeam,
+}: {
+  conferences: readonly NbaConferenceId[];
+  language: string;
+  onSelectTeam: (teamId: string) => void;
+}) {
+  const chrome = nbaLeagueStatsChrome(language);
+  const { board, loading } = useNbaConferenceStandings({
+    apiBaseUrl: getUniterzApiBaseUrl(),
+    season: CURRENT_NBA_SEASON_KEY,
+  });
+  if (loading && board.east.length === 0 && board.west.length === 0) {
+    return <ActivityIndicator color={CYBER_TAB_CYAN} style={styles.inlineLoading} />;
+  }
+  return (
+    <View>
+      {CONFERENCE_SECTIONS.filter(({ id }) => conferences.includes(id)).map(({ id, label }, sectionIndex) => (
+        <View key={id} style={sectionIndex > 0 ? styles.sectionSpaced : undefined}>
+          <View style={styles.sectionHead}>
+            <CyberLine side="left" />
+            <Text style={styles.sectionLabel}>{label}</Text>
+            <CyberLine side="right" />
+          </View>
+          <ConferenceTable rows={id === "east" ? board.east : board.west} chrome={chrome} onSelectTeam={onSelectTeam} />
+        </View>
+      ))}
     </View>
   );
 }
@@ -331,6 +368,7 @@ function ConferenceTable({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  inlineLoading: { paddingVertical: 24 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 2,

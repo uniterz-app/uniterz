@@ -23,8 +23,12 @@ type CompactPlayer = {
   c: NbaConferenceId;
 };
 
-/** Firestore はネスト配列不可のため map で保存。レガシー tuple も読む */
-type CompactEntry = { p: string; g: number; v: number };
+/** Firestore はネスト配列不可のため map で保存。レガシー tuple も読む。m / a = 成功率の行の成功数 / 試投数 */
+type CompactEntry = { p: string; g: number; v: number; m?: number; a?: number };
+
+function finiteOrUndef(v: unknown): number | undefined {
+  return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
 
 function isConference(v: unknown): v is NbaConferenceId {
   return v === "east" || v === "west";
@@ -66,7 +70,9 @@ function parseEntry(raw: unknown): CompactEntry | null {
   const g = typeof o.g === "number" && Number.isFinite(o.g) ? o.g : NaN;
   const v = typeof o.v === "number" && Number.isFinite(o.v) ? o.v : NaN;
   if (!p || !Number.isFinite(g) || !Number.isFinite(v)) return null;
-  return { p, g, v };
+  const m = finiteOrUndef(o.m);
+  const a = finiteOrUndef(o.a);
+  return { p, g, v, ...(m != null ? { m } : {}), ...(a != null ? { a } : {}) };
 }
 
 function parseBoard(
@@ -90,6 +96,8 @@ function parseBoard(
         conference: meta.c,
         gamesPlayed: entry.g,
         value: entry.v,
+        ...(entry.m != null ? { made: entry.m } : {}),
+        ...(entry.a != null ? { att: entry.a } : {}),
       });
     }
     out[metric as NbaPlayerLeaderMetricId] = rows;
@@ -137,6 +145,8 @@ function compactBoard(
       p: r.playerId,
       g: r.gamesPlayed,
       v: r.value,
+      ...(finiteOrUndef(r.made) != null ? { m: r.made } : {}),
+      ...(finiteOrUndef(r.att) != null ? { a: r.att } : {}),
     }));
   }
   return out;

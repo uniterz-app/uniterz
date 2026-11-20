@@ -22,13 +22,16 @@ import {
 import { Canvas, Path, Skia } from "@shopify/react-native-skia";
 import Animated, {
   cancelAnimation,
+  Easing,
   Extrapolation,
   interpolate,
   runOnJS,
   type SharedValue,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withDelay,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { MATCH_CARD_METRIC_FONT } from "./matchCardTypography";
@@ -101,6 +104,8 @@ type Props = {
   closedTop?: boolean;
   /** Web 相当。枠パスのあと中身をフェードイン */
   fadeContent?: boolean;
+  /** 0 より大きいと、線枠を一度白く光らせる。増えるたびに再生 */
+  flashPlayId?: number;
 };
 
 function makeHalves(
@@ -127,6 +132,62 @@ function makeHalves(
   const right = Skia.Path.MakeFromSVGString(halves.right);
   if (!left || !right) return null;
   return { left, right };
+}
+
+function LineFrameFlash({
+  playId,
+  width,
+  height,
+  topGap,
+  bottomGap,
+  leftGap,
+  topGapAlign,
+}: {
+  playId: number;
+  width: number;
+  height: number;
+  topGap: number;
+  bottomGap: number;
+  leftGap: number;
+  topGapAlign: "center" | "start";
+}) {
+  const reduceMotion = useReducedMotion() ?? false;
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (playId <= 0) return;
+    opacity.value = 0;
+    opacity.value = withSequence(
+      withTiming(1, {
+        duration: reduceMotion ? 80 : 140,
+        easing: Easing.out(Easing.cubic),
+      }),
+      withTiming(0, {
+        duration: reduceMotion ? 160 : 520,
+        easing: Easing.in(Easing.cubic),
+      })
+    );
+  }, [opacity, playId, reduceMotion]);
+
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  if (playId <= 0 || width <= 0 || height <= 0) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.canvas, { width, height }, style]}
+    >
+      <StaticLineFrameStroke
+        width={width}
+        height={height}
+        topGap={topGap}
+        bottomGap={bottomGap}
+        leftGap={leftGap}
+        topGapAlign={topGapAlign}
+        color="rgba(255,255,255,0.98)"
+        glow="rgba(255,255,255,0.72)"
+      />
+    </Animated.View>
+  );
 }
 
 function StaticLineFrameStroke({
@@ -231,6 +292,7 @@ export default function MatchListLineFrameNative({
   flush = false,
   closedTop = false,
   fadeContent = false,
+  flashPlayId = 0,
 }: Props) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [topLabelW, setTopLabelW] = useState(0);
@@ -547,6 +609,15 @@ export default function MatchListLineFrameNative({
       </Animated.View>
 
       {strokePaths}
+      <LineFrameFlash
+        playId={flashPlayId}
+        width={size.w}
+        height={size.h}
+        topGap={topGap}
+        bottomGap={bottomGap}
+        leftGap={leftGap}
+        topGapAlign={topLabelAlign}
+      />
 
       {leftLabel ? (
         <Animated.View

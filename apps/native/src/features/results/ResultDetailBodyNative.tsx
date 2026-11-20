@@ -434,6 +434,9 @@ function ScoreBreakdownPanel({
             label: ja ? "Upsetボーナス" : "Upset bonus",
             value: b.upsetBonus,
             color: SCORE_BREAKDOWN_COLORS.upset,
+            sub: ja
+              ? `定額 · アップセット得点 ${Math.round(b.upsetPoints)}`
+              : `Flat · Upset pts ${Math.round(b.upsetPoints)}`,
           },
         ]
       : []),
@@ -704,7 +707,7 @@ export default function ResultDetailBodyNative({
             }
             tutorialMetricsTargetId="result-detail-metrics"
             wrapMatch={
-              /** 試合カードから開いたときだけ横スライド（リザルト一覧からは出さない） */
+              /** 試合カードから開いたときだけ LAST 5 / H2H（リザルト一覧からは出さない） */
               cardAndLiveStats && nbaGameId && cardFace.homeTeamId && cardFace.awayTeamId
                 ? (match) => (
                     <PredictMatchLast5PagerNative
@@ -715,6 +718,7 @@ export default function ResultDetailBodyNative({
                       apiBaseUrl={getUniterzApiBaseUrl()}
                       homeName={cardFace.homeName}
                       awayName={cardFace.awayName}
+                      jerseyAnchor={{ top: 26, size: 42, sideWidth: 92, inset: 14 }}
                     >
                       {match}
                     </PredictMatchLast5PagerNative>
@@ -763,6 +767,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: 0,
     overflow: "visible",
+    /** 角丸マスクだと左にはみ出す PICK UP が切れる */
+    borderRadius: 0,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

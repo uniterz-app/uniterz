@@ -79,9 +79,11 @@ function resolveRecentGames(
       typeof row.gameId === "string" && row.gameId.trim()
         ? row.gameId.trim()
         : undefined;
+    const startMs = isFiniteNumber(row.startMs) ? row.startMs : undefined;
     out.push({
       dateLabel,
       ...(gameId ? { gameId } : null),
+      ...(startMs != null ? { startMs } : null),
       oppTeamId,
       oppAbbr,
       home: row.home === true,

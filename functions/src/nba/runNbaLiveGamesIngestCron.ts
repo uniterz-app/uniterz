@@ -1,8 +1,8 @@
 /**
  * NBA ライブ試合スコア / liveStats を Next admin API 経由で同期。
  *
- * オフシーズン: `functions/src/index.ts` から export しない（現在停止中）。
- * シーズン中: export を戻してデプロイ。スケジュールは毎分だが、
+ * オフシーズン: `functions/src/index.ts` から export を外してデプロイする。
+ * シーズン中: export してデプロイ。スケジュールは毎分だが、
  * Firestore にライブ枠の試合があるときだけ Next（→ BDL）を叩く。
  *
  * 10 分ごとに試合後スタッツ監視も相乗り（終了試合の BDL シーズン集計待ちがあるときだけ

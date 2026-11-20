@@ -13,6 +13,7 @@ import type {
 import { metricDelta } from "../../../../../../lib/predict/nbaTeamStatsForm";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
+import { matchupTeamUiAccent, teamColorRgba } from "../../../../../../lib/team-colors";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -32,9 +33,29 @@ type Props = {
   isPro?: boolean;
   language: GamesLanguage;
   onOpenTeamDetail?: (teamId: string) => void;
+  /** 親が枠を持つとき、このパネル自身の枠は出さない */
+  bare?: boolean;
+  /** 勝敗の行（SEASON は今季の勝敗 + 順位、LAST 10 は直近 10 試合の勝敗）。無ければ行を出さない */
+  records?: { home: NbaTeamStatsRecord | null; away: NbaTeamStatsRecord | null } | null;
 };
 
-const STAT_WIN = "#5cf0b5";
+export type NbaTeamStatsRecord = {
+  wins: number;
+  losses: number;
+  rank: number;
+  conference: "east" | "west";
+  last10: { wins: number; losses: number } | null;
+};
+
+/** 勝っている側の値は、そのチームカラーで少し大きく光らせる */
+function winMark(color: string) {
+  return {
+    color,
+    textShadowColor: teamColorRgba(color, 0.55),
+    textShadowOffset: { width: 0, height: 0 } as const,
+    textShadowRadius: 6,
+  };
+}
 
 function fmtDiff(d: number): string {
   return `${d > 0 ? "+" : ""}${d.toFixed(1)}`;
@@ -83,17 +104,19 @@ function SideMetricBlock({
   side,
   align,
   win,
+  accent,
 }: {
   side: SideSpec;
   align: "left" | "right";
   win: boolean;
+  accent: string;
 }) {
   const end = align === "right";
   const rankEl = side.rankBelow ? (
     <Text
       style={[
         styles.rankBeside,
-        styles.rankIdle,
+        win ? { color: accent } : styles.rankIdle,
       ]}
     >
       {side.rankBelow}
@@ -106,7 +129,7 @@ function SideMetricBlock({
         <Text
           style={[
             styles.metricValue,
-            win ? styles.metricValueWin : styles.metricValueIdle,
+            win ? [styles.metricValueWin, winMark(accent)] : styles.metricValueIdle,
           ]}
         >
           {side.primary}
@@ -125,7 +148,13 @@ function SideMetricBlock({
         </Text>
       ) : null}
       {side.recordBelow ? (
-        <Text style={[styles.recordBelow, styles.textCenter]}>
+        <Text
+          style={[
+            styles.recordBelow,
+            styles.textCenter,
+            win ? { color: accent } : null,
+          ]}
+        >
           {side.recordBelow}
         </Text>
       ) : null}
@@ -134,12 +163,25 @@ function SideMetricBlock({
 }
 
 /** Web `SymmetricalCompareRow` compactHud 相当 */
-function MetricRow({ row }: { row: RowSpec }) {
+function MetricRow({
+  row,
+  leftColor,
+  rightColor,
+}: {
+  row: RowSpec;
+  leftColor: string;
+  rightColor: string;
+}) {
   return (
     <View style={styles.metricRow}>
       <View style={styles.metricInner}>
         <View style={styles.metricHalfLeft}>
-          <SideMetricBlock side={row.left} align="right" win={row.leftWin} />
+          <SideMetricBlock
+            side={row.left}
+            align="right"
+            win={row.leftWin}
+            accent={leftColor}
+          />
         </View>
 
         <View style={styles.labelCol}>
@@ -147,7 +189,12 @@ function MetricRow({ row }: { row: RowSpec }) {
         </View>
 
         <View style={styles.metricHalfRight}>
-          <SideMetricBlock side={row.right} align="left" win={row.rightWin} />
+          <SideMetricBlock
+            side={row.right}
+            align="left"
+            win={row.rightWin}
+            accent={rightColor}
+          />
         </View>
       </View>
     </View>
@@ -350,6 +397,43 @@ function fmtPct(n: number): string {
   return `${(n <= 1 ? n * 100 : n).toFixed(1)}`;
 }
 
+function buildRecordRow(
+  records: NonNullable<Props["records"]>,
+  windowId: WindowId,
+  ja: boolean
+): RowSpec[] {
+  const pick = (r: NbaTeamStatsRecord | null) =>
+    windowId === "last10" ? (r?.last10 ?? null) : r;
+  const h = pick(records.home);
+  const a = pick(records.away);
+  if (!h && !a) return [];
+  const seed = (r: NbaTeamStatsRecord | null) => {
+    if (windowId === "last10" || !r || !(r.rank > 0)) return null;
+    const conf = r.conference === "east" ? (ja ? "東" : "EAST") : ja ? "西" : "WEST";
+    return ja ? `${conf} ${r.rank}位` : `${conf} #${r.rank}`;
+  };
+  const hPct = h ? winPct(h.wins, h.losses) : -1;
+  const aPct = a ? winPct(a.wins, a.losses) : -1;
+  const side = (w: { wins: number; losses: number } | null, below: string | null): SideSpec => ({
+    primary: w ? `${w.wins}-${w.losses}` : "—",
+    leagueRank: null,
+    rankBelow: null,
+    recordBelow: below,
+    proMeta: null,
+    proMetaTone: "flat",
+  });
+  return [
+    {
+      key: "record",
+      label: ja ? "勝敗" : "W-L",
+      leftWin: hPct > aPct,
+      rightWin: aPct > hPct,
+      left: side(h, seed(records.home)),
+      right: side(a, seed(records.away)),
+    },
+  ];
+}
+
 /** 今試合の条件: ホームの HOME 成績 vs アウェイの ROAD 成績 */
 function buildSiteRow(home: NbaTeamStatSide, away: NbaTeamStatSide): RowSpec[] {
   const hSite = winPct(home.homeW, home.homeL);
@@ -386,11 +470,26 @@ export default function NbaTeamStatsPanelNative({
   isPro = false,
   language,
   onOpenTeamDetail,
+  bare = false,
+  records = null,
 }: Props) {
   const t = getGamesTexts(language);
   const [windowId, setWindowId] = useState<WindowId>("season");
+  const [open, setOpen] = useState(false);
   const active = windowId === "season" ? data.season : data.last10;
   const { home, away } = active;
+  const homeColor = matchupTeamUiAccent(
+    "nba",
+    home.teamId,
+    home.teamId,
+    away.teamId
+  );
+  const awayColor = matchupTeamUiAccent(
+    "nba",
+    away.teamId,
+    home.teamId,
+    away.teamId
+  );
 
   const coreRows = buildCoreRows(
     home,
@@ -401,17 +500,26 @@ export default function NbaTeamStatsPanelNative({
     isPro
   );
   const splitRows = windowId === "season" ? buildSiteRow(home, away) : [];
-  const rows = [...coreRows, ...splitRows];
+  const recordRows = records ? buildRecordRow(records, windowId, language === "ja") : [];
+  const rows = [...recordRows, ...coreRows, ...splitRows];
+  /** 勝敗の行があっても NETRTG / ORTG / DRTG までは畳まずに見せる */
+  const previewCount = 3 + recordRows.length;
+  const visibleRows = open ? rows : rows.slice(0, previewCount);
+  const canExpand = rows.length > previewCount;
+  const hidden = Math.max(0, rows.length - previewCount);
+  const moreLabel = language === "ja" ? `ほか ${hidden}` : `+${hidden}`;
+  const lessLabel = language === "ja" ? "閉じる" : "CLOSE";
 
 
   return (
-    <View style={styles.shell}>
+    <View style={[styles.shell, bare ? styles.shellBare : null]}>
       <CyberSlantedTabBarNative fill>
         <CyberSlantedTabNative
           label="SEASON"
           active={windowId === "season"}
           onPress={() => setWindowId("season")}
           compact
+          bodyHeight={24}
           fontWeight="700"
         />
         <CyberSlantedTabNative
@@ -419,13 +527,10 @@ export default function NbaTeamStatsPanelNative({
           active={windowId === "last10"}
           onPress={() => setWindowId("last10")}
           compact
+          bodyHeight={24}
           fontWeight="700"
         />
       </CyberSlantedTabBarNative>
-
-      {onOpenTeamDetail ? (
-        <Text style={styles.moreHint}>{t.teamStatsMoreHint}</Text>
-      ) : null}
 
       <View style={styles.teamHeaderRow}>
         {onOpenTeamDetail && home.teamId ? (
@@ -433,37 +538,64 @@ export default function NbaTeamStatsPanelNative({
             onPress={() => onOpenTeamDetail(home.teamId)}
             style={styles.teamHeaderHit}
           >
-            <Text style={[styles.teamHeader, styles.teamHeaderHome]} numberOfLines={1}>
-              {teamLabel(home.teamId, home.teamName)} →
+            <Text
+              style={[styles.teamHeader, { color: homeColor }]}
+              numberOfLines={1}
+            >
+              ← {teamLabel(home.teamId, home.teamName)}
             </Text>
           </Pressable>
         ) : (
-          <Text style={styles.teamHeader} numberOfLines={1}>
+          <Text style={[styles.teamHeader, { color: homeColor }]} numberOfLines={1}>
             {teamLabel(home.teamId, home.teamName)}
           </Text>
         )}
-        <View style={styles.labelCol} />
+        <View style={styles.labelCol}>
+          {onOpenTeamDetail ? (
+            <Text style={styles.tapHint}>{t.teamStatsTapHint}</Text>
+          ) : null}
+        </View>
         {onOpenTeamDetail && away.teamId ? (
           <Pressable
             onPress={() => onOpenTeamDetail(away.teamId)}
             style={styles.teamHeaderHit}
           >
-            <Text style={[styles.teamHeader, styles.teamHeaderAway]} numberOfLines={1}>
+            <Text
+              style={[styles.teamHeader, { color: awayColor }]}
+              numberOfLines={1}
+            >
               {teamLabel(away.teamId, away.teamName)} →
             </Text>
           </Pressable>
         ) : (
-          <Text style={styles.teamHeader} numberOfLines={1}>
+          <Text style={[styles.teamHeader, { color: awayColor }]} numberOfLines={1}>
             {teamLabel(away.teamId, away.teamName)}
           </Text>
         )}
       </View>
 
       <View style={styles.body}>
-        {rows.map((row) => (
-          <MetricRow key={`${windowId}-${row.key}`} row={row} />
+        {visibleRows.map((row) => (
+          <MetricRow
+            key={`${windowId}-${row.key}`}
+            row={row}
+            leftColor={homeColor}
+            rightColor={awayColor}
+          />
         ))}
       </View>
+      {canExpand ? (
+        <Pressable
+          onPress={() => setOpen((value) => !value)}
+          accessibilityRole="button"
+          accessibilityLabel={open ? lessLabel : moreLabel}
+          hitSlop={8}
+          style={styles.expandBtn}
+        >
+          <Text style={styles.expandText}>{open ? lessLabel : moreLabel}</Text>
+          <View style={[styles.tri, open ? styles.triUp : styles.triDown]} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -480,31 +612,58 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,245,255,0.32)",
     borderRadius: 0,
   },
+  shellBare: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
   body: { gap: 0 },
+  expandBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 2,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.14)",
+  },
+  expandText: {
+    fontFamily: OXANIUM,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "#00f5ff",
+  },
+  /** 試合カードの切替矢印と同じ塗り三角 */
+  tri: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    shadowColor: "#00f5ff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.75,
+    shadowRadius: 6,
+  },
+  triDown: {
+    borderTopWidth: 8,
+    borderTopColor: "#00f5ff",
+  },
+  triUp: {
+    borderBottomWidth: 8,
+    borderBottomColor: "#00f5ff",
+  },
   teamHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 2,
   },
-  moreHint: {
-    marginTop: 4,
-    marginBottom: 4,
-    paddingHorizontal: 2,
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textAlign: "center",
-    fontFamily: MATCH_CARD_DISPLAY_FONT,
-  },
   teamHeaderHit: {
     flex: 1,
-  },
-  teamHeaderHome: {
-    color: "rgba(165,243,252,0.95)",
-  },
-  teamHeaderAway: {
-    color: "rgba(221,214,254,0.95)",
   },
   teamHeader: {
     flex: 1,
@@ -522,7 +681,7 @@ const styles = StyleSheet.create({
   metricRow: {
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
-    paddingVertical: 7,
+    paddingVertical: 6,
   },
   metricInner: {
     flexDirection: "row",
@@ -545,6 +704,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 2,
   },
+  tapHint: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "center",
+  },
   labelCol: {
     width: 64,
     alignItems: "center",
@@ -553,7 +719,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontFamily: OXANIUM,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1,
     color: "rgba(255,255,255,0.72)",
@@ -574,16 +740,16 @@ const styles = StyleSheet.create({
   textCenter: { textAlign: "center" },
   metricValue: {
     fontFamily: OXANIUM,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],
   },
   metricValueIdle: { color: "#ffffff" },
-  metricValueWin: { color: STAT_WIN },
+  metricValueWin: {},
   metaText: {
     fontFamily: OXANIUM,
-    fontSize: 13,
+    fontSize: 10,
     fontWeight: "700",
   },
   metaUp: { color: "rgba(45,255,110,0.9)" },
@@ -592,7 +758,7 @@ const styles = StyleSheet.create({
   rankBeside: {
     // Web `nameBebas` — スタッツ数値（Oxanium）と差別化
     fontFamily: RANK_DISPLAY_FONT,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "400",
     letterSpacing: 0.4,
     fontVariant: ["tabular-nums"],
@@ -601,7 +767,7 @@ const styles = StyleSheet.create({
   rankIdle: { color: "rgba(255,255,255,0.55)" },
   recordBelow: {
     fontFamily: OXANIUM,
-    fontSize: 12,
+    fontSize: 9,
     color: "rgba(255,255,255,0.45)",
     fontVariant: ["tabular-nums"],
     transform: [{ skewX: "-6deg" }],

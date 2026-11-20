@@ -15,6 +15,7 @@ import {
   invalidateGroupBattleBootstrapCache,
   loadGroupBattleBootstrapCache,
 } from "../../../../../lib/groupBattles/bootstrapFetchCache";
+import { auth } from "../../lib/firebase";
 
 export { invalidateGroupBattleBootstrapCache };
 
@@ -92,6 +93,7 @@ export async function fetchGroupBattleBootstrapNative(
     period: opts?.period,
     label: opts?.label,
     weekIndex: opts?.weekIndex,
+    viewerUid: auth.currentUser?.uid ?? null,
   });
 
   return loadGroupBattleBootstrapCache(cacheKey, async () => {

@@ -1,7 +1,7 @@
 /** Web `NbaLeagueStatsTableEmpty` 相当 */
 import { StyleSheet, Text, View } from "react-native";
 import type { LeagueStatsEmptyStateCopy } from "../../../../../../lib/nba/leagueStatsEmptyState";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 
 type Props = {
   copy: LeagueStatsEmptyStateCopy;

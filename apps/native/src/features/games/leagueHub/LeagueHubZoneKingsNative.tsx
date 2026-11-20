@@ -25,7 +25,7 @@ import type {
   LeagueHubZoneBoard,
   LeagueHubZoneId,
 } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
   HubChips,

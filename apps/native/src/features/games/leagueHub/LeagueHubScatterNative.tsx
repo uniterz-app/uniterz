@@ -19,7 +19,7 @@ import {
   JERSEY_FRAME_WHITE,
   isBlackBodyPrimary,
 } from "../../../../../../lib/jersey/jerseyThinTripleStripes";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { formatHubValue, playerNameStyle, type HubLang } from "./leagueHubUiNative";
 

@@ -20,7 +20,7 @@ import type {
   LeagueHubTopGame,
   NbaLeagueHubDoc,
 } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
-import { CYBER_TAB_CYAN } from "../../rankings/CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { useMyNbaFavoritesNative } from "../../profile/useMyNbaFavoritesNative";
 import LeagueHubScatterNative, { type HubScatterPoint } from "./LeagueHubScatterNative";
@@ -47,14 +47,16 @@ import {
   type HubLang,
 } from "./leagueHubUiNative";
 import { HubScrollSlantedTabs } from "./LeagueHubSlantedTabsNative";
+import { LeagueHubOnOffBestNative } from "./LeagueHubBestNative";
 
-export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend";
+export type LeagueHubPlayerSection = "style" | "zone" | "ladder" | "trend" | "onoff";
 
 export const LEAGUE_HUB_PLAYER_SECTIONS: readonly { id: LeagueHubPlayerSection; label: string }[] = [
   { id: "style", label: "STYLE" },
   { id: "zone", label: "ZONE" },
   { id: "ladder", label: "LADDER" },
   { id: "trend", label: "TREND" },
+  { id: "onoff", label: "ON/OFF" },
 ];
 
 type Props = {
@@ -136,6 +138,11 @@ function StyleMap({
   const [selected, setSelected] = useState<string | null>(null);
   const [added, setAdded] = useState<string[]>([]);
   const [query, setQuery] = useState("");
+  const [listSort, setListSort] = useState<{
+    id: string;
+    key: "x" | "y";
+    dir: "asc" | "desc";
+  }>({ id: "", key: "y", dir: "desc" });
   /** 比較の 2 人目。1 人目（selected）を選んだ状態で別の選手を選ぶと入る */
   const [compareB, setCompareB] = useState<string | null>(null);
   const preset: LeagueHubPlayerScatterPreset =
@@ -173,6 +180,21 @@ function StyleMap({
     );
     return { top, pinned };
   }, [players, preset, topN, pos, favIds, selected, added, compareB]);
+  const sort =
+    listSort.id === presetId ? listSort : { id: presetId, key: "y" as const, dir: "desc" as const };
+  const toggleSort = (key: "x" | "y") => {
+    setListSort({
+      id: presetId,
+      key,
+      dir: sort.key === key && sort.dir === "desc" ? "asc" : "desc",
+    });
+  };
+  const listed = [...pool.top].sort((a, b) => {
+    const metric = preset[sort.key].metric;
+    const av = a.m[metric] ?? 0;
+    const bv = b.m[metric] ?? 0;
+    return sort.dir === "desc" ? bv - av : av - bv;
+  });
   const hits = useMemo(() => searchHubPlayers(players, query), [players, query]);
   const clearSel = () => {
     setSelected(null);
@@ -456,6 +478,68 @@ function StyleMap({
               ))}
             </View>
           ) : null}
+          {pool.top.length > 0 ? (
+            <View style={styles.mapListBlock}>
+              <Text style={styles.mapListExplain}>
+                {lang === "ja"
+                  ? `マップに出ている ${pool.top.length} 人です。${preset[sort.key].label.ja.replace(/（.*）/, "").trim()} の${sort.dir === "desc" ? "降順" : "昇順"}。見出しをタップすると、その列の降順と昇順が切り替わります。`
+                  : `The ${pool.top.length} players on the map, by ${preset[sort.key].label.en.replace(/\(.*\)/, "").trim()} ${sort.dir === "desc" ? "descending" : "ascending"}. Tap a heading to switch that column.`}
+              </Text>
+              <View style={styles.mapList}>
+              <View style={styles.mapListHead}>
+                <Text style={styles.mapListRank}>#</Text>
+                <Text style={styles.mapListHeadName}>
+                  {lang === "ja" ? "選手" : "PLAYER"}
+                </Text>
+                {(["x", "y"] as const).map((key) => {
+                  const axis = preset[key];
+                  const on = sort.key === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      style={styles.mapListStatHit}
+                      onPress={() => toggleSort(key)}
+                    >
+                      <Text style={styles.mapListStatHead} numberOfLines={2}>
+                        {axis.label[lang].replace(/（.*）|\(.*\)/, "").trim()}
+                        {on ? (sort.dir === "desc" ? " ▼" : " ▲") : ""}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {listed.map((p, i) => {
+                const on = p.playerId === selected || p.playerId === compareB;
+                return (
+                  <Pressable
+                    key={p.playerId}
+                    style={({ pressed }) => [
+                      styles.mapListRow,
+                      on ? styles.mapListRowOn : null,
+                      pressed ? { opacity: 0.7 } : null,
+                    ]}
+                    onPress={() => tapMap(p.playerId)}
+                  >
+                    <Text style={styles.mapListRank}>{i + 1}</Text>
+                    <View style={styles.mapListNameCol}>
+                      <Text style={[styles.mapListName, playerNameStyle]} numberOfLines={1}>
+                        {favIds.has(p.playerId) ? "★ " : ""}
+                        {p.name}
+                      </Text>
+                      <HubTeamTag teamId={p.teamId} />
+                    </View>
+                    <Text style={styles.mapListStat}>
+                      {formatHubValue(p.m[preset.x.metric], preset.x.format)}
+                    </Text>
+                    <Text style={styles.mapListStat}>
+                      {formatHubValue(p.m[preset.y.metric], preset.y.format)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              </View>
+            </View>
+          ) : null}
         </>
       )}
     </View>
@@ -496,7 +580,7 @@ function draftLabel(r: LeagueHubLadderRow, ja: boolean): string {
   return ja ? `${r.draftRound} 巡 ${r.draftNumber} 位` : `R${r.draftRound} #${r.draftNumber}`;
 }
 
-type AwardId = "mvp" | "rookies" | "dpoy" | "sixth" | "mip";
+export type AwardId = "mvp" | "rookies" | "dpoy" | "sixth" | "mip";
 
 /** LADDER タブに上から並べる順 */
 const AWARD_SECTIONS: readonly { id: AwardId; title: string }[] = [
@@ -605,8 +689,217 @@ function awardRowText(
   }
 }
 
+export function LeagueHubAwardLadderNative({
+  hub,
+  lang,
+  award,
+  limit,
+  onSelectPlayer,
+}: {
+  hub: NbaLeagueHubDoc;
+  lang: HubLang;
+  award: AwardId;
+  limit?: number;
+  onSelectPlayer: (playerId: string) => void;
+}) {
+  const ja = lang === "ja";
+  const all = (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
+  const rows = limit ? all.slice(0, limit) : all;
+  const hasPrev = hub.ladderPrev?.[award] != null;
+  const built = new Date(hub.builtAtMs);
+  const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
+  const title = AWARD_SECTIONS.find((s) => s.id === award)?.title ?? "";
+  return (
+    <HubShareSectionNative title={title} hint={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} stamp={stamp} lang={lang}>
+      {rows.length > 0 ? (
+        <HubCellHeader labels={awardCellLabels(award, ja)} caption={awardCellCaption(award, ja)} framed />
+      ) : null}
+      {rows.length === 0
+        ? noData(lang)
+        : rows.map((r, i) => (
+            <HubRow
+              key={r.playerId}
+              rank={i + 1}
+              rankMove={ladderMove(r, i, hasPrev)}
+              teamId={r.teamId}
+              name={r.name}
+              {...awardRowText(award, r, ja)}
+              onPress={() => onSelectPlayer(r.playerId)}
+              framed
+            />
+          ))}
+      <CaptureFootnote text={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} />
+    </HubShareSectionNative>
+  );
+}
+
+type HubSectionProps = {
+  hub: NbaLeagueHubDoc;
+  lang: HubLang;
+  onSelectPlayer: (playerId: string) => void;
+};
+
+export function HubTopGamesSection({ hub, lang, onSelectPlayer }: HubSectionProps) {
+  const ja = lang === "ja";
+  const built = new Date(hub.builtAtMs);
+  const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
+  return (
+    <HubShareSectionNative
+      title="TOP PERFORMANCES"
+      stamp={stamp}
+      lang={lang}
+      hint={
+        hub.topGames
+          ? `${hub.topGames.startLabel} – ${hub.topGames.endLabel} · ${
+              ja ? "1 試合の Game Score 順" : "single games by Game Score"
+            }`
+          : undefined
+      }
+    >
+      {hub.topGames && hub.topGames.games.length > 0 ? (
+        <View>
+          <HubCellHeader labels={["PTS", "REB", "AST"]} framed />
+          {hub.topGames.games.map((g, i) => (
+            <HubRow
+              key={`${g.playerId}-${g.gameId}`}
+              rank={i + 1}
+              teamId={g.teamId}
+              name={g.name}
+              sub={topGameSub(g)}
+              cells={[String(g.pts), String(g.reb), String(g.ast)]}
+              valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
+              onPress={() => onSelectPlayer(g.playerId)}
+              framed
+            />
+          ))}
+        </View>
+      ) : (
+        noData(lang)
+      )}
+    </HubShareSectionNative>
+  );
+}
+
+export function HubHotColdSection({ hub, lang, onSelectPlayer }: HubSectionProps) {
+  const ja = lang === "ja";
+  return (
+    <HubSection
+      title="HOT / COLD"
+      hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
+    >
+      <HubTwoCol
+        leftTitle="HOT"
+        rightTitle="COLD"
+        left={
+          hub.hot.length === 0
+            ? noData(lang)
+            : hub.hot.map((r) => (
+                <HubRow
+                  key={r.playerId}
+                  teamId={r.teamId}
+                  name={r.name}
+                  value={r.recent.toFixed(1)}
+                  valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                  framed
+                />
+              ))
+        }
+        right={
+          hub.cold.length === 0
+            ? noData(lang)
+            : hub.cold.map((r) => (
+                <HubRow
+                  key={r.playerId}
+                  teamId={r.teamId}
+                  name={r.name}
+                  value={r.recent.toFixed(1)}
+                  valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
+                  onPress={() => onSelectPlayer(r.playerId)}
+                  framed
+                />
+              ))
+        }
+      />
+    </HubSection>
+  );
+}
+
+export function HubPtsDeltaSection({ hub, lang, onSelectPlayer }: HubSectionProps) {
+  const ja = lang === "ja";
+  const delta = hub.ptsDelta;
+  if (!delta) return null;
+  const rows = (list: NonNullable<typeof delta>["up"]) =>
+    list.length === 0
+      ? noData(lang)
+      : list.map((r) => (
+          <HubRow
+            key={r.playerId}
+            teamId={r.teamId}
+            name={r.name}
+            value={`${r.diff > 0 ? "+" : ""}${r.diff.toFixed(1)}`}
+            valueSub={`${r.prevPts.toFixed(1)} → ${r.pts.toFixed(1)}`}
+            onPress={() => onSelectPlayer(r.playerId)}
+            framed
+          />
+        ));
+  return (
+    <HubSection
+      title="VS LAST SEASON"
+      hint={
+        ja
+          ? "前季と今季の平均得点の差。前季 20 試合以上、今季はリーグ最多試合数の 4 割以上・平均 15 分以上出場。上位 10 人。"
+          : "Change in points per game from last season. 20+ games last season; this season 40% of the league-high games and 15+ minutes. Top 10."
+      }
+    >
+      <HubTwoCol
+        stacked
+        leftTitle="UP"
+        rightTitle="DOWN"
+        left={rows(delta.up)}
+        right={rows(delta.down)}
+      />
+    </HubSection>
+  );
+}
+
+export function HubSeasonHighsSection({
+  hub,
+  lang,
+  onSelectPlayer,
+  initialStat = "pts",
+}: HubSectionProps & { initialStat?: LeagueHubHighStat }) {
+  const [high, setHigh] = useState<LeagueHubHighStat>(initialStat);
+  return (
+    <HubSection title="SEASON HIGHS">
+      <HubChips
+        items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
+          id,
+          label: HIGH_LABEL[id],
+        }))}
+        value={high}
+        onChange={setHigh}
+      />
+      {(hub.highs[high] ?? []).length === 0
+        ? noData(lang)
+        : hub.highs[high].map((r, i) => (
+            <HubRow
+              key={`${r.playerId}-${r.gameId}`}
+              rank={i + 1}
+              teamId={r.teamId}
+              name={r.name}
+              sub={`vs ${r.oppAbbr} · ${r.dateLabel}`}
+              value={String(r.value)}
+              valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
+              onPress={() => onSelectPlayer(r.playerId)}
+              framed
+            />
+          ))}
+    </HubSection>
+  );
+}
+
 export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelectPlayer }: Props) {
-  const [high, setHigh] = useState<LeagueHubHighStat>("pts");
   const [countId, setCountId] = useState<CountId>("pts20");
   const ja = lang === "ja";
 
@@ -621,8 +914,6 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
             ? hub.counts.doubleDouble
             : hub.counts.tripleDouble;
   const isStreak = countId === "pts20" || countId === "ddStreak";
-  const ladderRows = (award: AwardId) =>
-    (award === "rookies" ? hub.rookies : award === "mvp" ? hub.mvp : hub[award]) ?? [];
   const built = new Date(hub.builtAtMs);
   const stamp = `NBA ${hub.seasonKey} · ${built.getMonth() + 1}/${built.getDate()}`;
   /** 切り替えてもマップの追加選手などを残すため、隠すだけでアンマウントしない */
@@ -659,146 +950,34 @@ export default function LeagueHubPlayerPanelNative({ hub, lang, section, onSelec
       </View>
 
       <View style={shown("ladder")}>
-        {AWARD_SECTIONS.map(({ id: award, title }) => {
-          const rows = ladderRows(award);
-          const hasPrev = hub.ladderPrev?.[award] != null;
-          return (
-            <HubShareSectionNative
-              key={award}
-              title={title}
-              hint={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]}
-              stamp={stamp}
-              lang={lang}
-            >
-              {rows.length > 0 ? (
-                <HubCellHeader
-                  labels={awardCellLabels(award, ja)}
-                  caption={awardCellCaption(award, ja)}
-                  framed
-                />
-              ) : null}
-              {rows.length === 0
-                ? noData(lang)
-                : rows.map((r, i) => (
-                    <HubRow
-                      key={r.playerId}
-                      rank={i + 1}
-                      rankMove={ladderMove(r, i, hasPrev)}
-                      teamId={r.teamId}
-                      name={r.name}
-                      {...awardRowText(award, r, ja)}
-                      onPress={() => onSelectPlayer(r.playerId)}
-                      framed
-                    />
-                  ))}
-              <CaptureFootnote text={AWARD_FOOTNOTE[award][ja ? "ja" : "en"]} />
-            </HubShareSectionNative>
-          );
-        })}
+        {AWARD_SECTIONS.map(({ id: award }) => (
+          <LeagueHubAwardLadderNative key={award} hub={hub} lang={lang} award={award} onSelectPlayer={onSelectPlayer} />
+        ))}
+      </View>
+
+      <View style={shown("onoff")}>
+        <HubSection
+          title="ON / OFF"
+          hint={
+            ja
+              ? "コートにいるときといないときの得失点の差。オン 100 分、オフ 50 分以上。上位 10 人。"
+              : "Biggest gap between on-court and off-court net rating. At least 100 on minutes and 50 off. Top 10."
+          }
+        >
+          <LeagueHubOnOffBestNative hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
+        </HubSection>
       </View>
 
       <View style={shown("trend")}>
-        <HubShareSectionNative
-          title="TOP PERFORMANCES"
-          stamp={stamp}
-          lang={lang}
-          hint={
-            hub.topGames
-              ? `${hub.topGames.startLabel} – ${hub.topGames.endLabel} · ${
-                  ja ? "1 試合の Game Score 順" : "single games by Game Score"
-                }`
-              : undefined
-          }
-        >
-          {hub.topGames && hub.topGames.games.length > 0 ? (
-            <View>
-              <HubCellHeader labels={["PTS", "REB", "AST"]} framed />
-              {hub.topGames.games.map((g, i) => (
-                <HubRow
-                  key={`${g.playerId}-${g.gameId}`}
-                  rank={i + 1}
-                  teamId={g.teamId}
-                  name={g.name}
-                  sub={topGameSub(g)}
-                  cells={[String(g.pts), String(g.reb), String(g.ast)]}
-                  valueSub={`Game Score ${g.gameScore.toFixed(1)}`}
-                  onPress={() => onSelectPlayer(g.playerId)}
-                  framed
-                />
-              ))}
-            </View>
-          ) : (
-            noData(lang)
-          )}
-        </HubShareSectionNative>
+        <HubTopGamesSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
-        <HubSection
-          title="HOT / COLD"
-          hint={ja ? "直近 5 試合の平均得点とそれより前の比較。" : "Last 5 games vs earlier, points per game."}
-        >
-          <HubTwoCol
-            leftTitle="HOT"
-            rightTitle="COLD"
-            left={
-              hub.hot.length === 0
-                ? noData(lang)
-                : hub.hot.map((r) => (
-                    <HubRow
-                      key={r.playerId}
-                      teamId={r.teamId}
-                      name={r.name}
-                      value={r.recent.toFixed(1)}
-                      valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
-                      onPress={() => onSelectPlayer(r.playerId)}
-                      framed
-                    />
-                  ))
-            }
-            right={
-              hub.cold.length === 0
-                ? noData(lang)
-                : hub.cold.map((r) => (
-                    <HubRow
-                      key={r.playerId}
-                      teamId={r.teamId}
-                      name={r.name}
-                      value={r.recent.toFixed(1)}
-                      valueSub={`${ja ? "前" : "was"} ${r.before.toFixed(1)}`}
-                      onPress={() => onSelectPlayer(r.playerId)}
-                      framed
-                    />
-                  ))
-            }
-          />
-        </HubSection>
+        <HubHotColdSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
+
+        <HubPtsDeltaSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <PlayerSplitsSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
-        <HubSection title="SEASON HIGHS">
-          <HubChips
-            items={(Object.keys(HIGH_LABEL) as LeagueHubHighStat[]).map((id) => ({
-              id,
-              label: HIGH_LABEL[id],
-            }))}
-            value={high}
-            onChange={setHigh}
-          />
-          {(hub.highs[high] ?? []).length === 0
-            ? noData(lang)
-            : hub.highs[high].map((r, i) => (
-                <HubRow
-                  key={`${r.playerId}-${r.gameId}`}
-                  rank={i + 1}
-                  teamId={r.teamId}
-                  name={r.name}
-                  sub={`vs ${r.oppAbbr} · ${r.dateLabel}`}
-                  value={String(r.value)}
-                  valueSub={`${r.pts} / ${r.reb} / ${r.ast}`}
-                  onPress={() => onSelectPlayer(r.playerId)}
-                  framed
-                />
-              ))}
-        </HubSection>
+        <HubSeasonHighsSection hub={hub} lang={lang} onSelectPlayer={onSelectPlayer} />
 
         <HubSection
           title="STREAKS & COUNTS"
@@ -944,6 +1123,82 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 11,
     fontWeight: "700",
+  },
+  mapListBlock: {
+    marginTop: 8,
+  },
+  mapListExplain: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  mapList: {
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.35)",
+  },
+  mapListHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: "rgba(0,245,255,0.08)",
+  },
+  mapListHeadName: {
+    flex: 1,
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 9,
+  },
+  mapListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  mapListRowOn: {
+    backgroundColor: "rgba(0,245,255,0.12)",
+  },
+  mapListRank: {
+    width: 18,
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 10,
+  },
+  mapListNameCol: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minWidth: 0,
+  },
+  mapListName: {
+    flexShrink: 1,
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  mapListStatHit: {
+    width: 72,
+  },
+  mapListStatHead: {
+    width: 72,
+    textAlign: "right",
+    fontFamily: METRIC_FONT,
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 9,
+    lineHeight: 12,
+  },
+  mapListStat: {
+    width: 72,
+    textAlign: "right",
+    fontFamily: METRIC_FONT,
+    color: "#fff",
+    fontSize: 11,
   },
   addedRemove: {
     color: "rgba(255,255,255,0.6)",

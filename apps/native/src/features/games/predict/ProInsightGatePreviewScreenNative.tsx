@@ -26,13 +26,13 @@ export default function ProInsightGatePreviewScreenNative({
   return (
     <MobilePageShell
       title={L(lang, {
-        ja: "PRO INSIGHT ゲート",
-        en: "PRO INSIGHT Gate",
-        ko: "PRO INSIGHT 게이트",
-        zh: "PRO INSIGHT 入口",
-        es: "Puerta PRO INSIGHT",
-        pt: "Portão PRO INSIGHT",
-        fr: "Portail PRO INSIGHT",
+        ja: "PRO PICK ゲート",
+        en: "PRO PICK Gate",
+        ko: "PRO PICK 게이트",
+        zh: "PRO PICK 入口",
+        es: "Puerta PRO PICK",
+        pt: "Portão PRO PICK",
+        fr: "Portail PRO PICK",
       })}
       eyebrow="DEV"
       subtitle={L(lang, {

@@ -9,8 +9,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
-import { signOut } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { signOutWithPushUnregisterNative } from "../../notifications/registerPushTokenNative";
 import type { AdminInboxCounts } from "../../../../../lib/admin/subscribeAdminInboxUnread";
 import { EMPTY_ADMIN_INBOX } from "../../../../../lib/admin/subscribeAdminInboxUnread";
 import type { ProfileMobileOverlayKind } from "./mobileScreens/profileMobileOverlayTypes";
@@ -24,6 +23,11 @@ import LogoutConfirmModalNative from "../../ui/LogoutConfirmModalNative";
 import { sideMenuLabelStyle } from "../../ui/cyberSideMenuNative";
 import ProCyberBadgeNative from "./kinetik/ProCyberBadgeNative";
 import { profileSideMenuLabels } from "./profileSideMenuCopy";
+import {
+  adsPrivacyOptionsRequiredNative,
+  ensureAdsReadyNative,
+  showAdsPrivacyOptionsNative,
+} from "../ads/adsConsentNative";
 import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import {
   LANGUAGE_CHOICE_NATIVE_NAMES,
@@ -96,6 +100,8 @@ type Props = {
     | "notificationDev"
     | "restartTutorial"
     | "seasonPreview"
+    | "tradeBallotPreview"
+    | "tradeBuzzPreview"
     | "weeklyReportPreview"
     | "monthlyReportPreview"
     | "squadBattlePreview"
@@ -115,6 +121,7 @@ type Props = {
     | "matchupTeamStatsPreview"
     | "rankingCommentDesignPreview"
     | "monthlyBadgePreview"
+    | "lab3dPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -149,6 +156,19 @@ export default function ProfileSideMenuModal({
   const langChoice = languageChoiceOf(lang, chineseScript);
   const labelStyle = sideMenuLabelStyle(lang);
   const labels = profileSideMenuLabels(lang);
+  // EU などで「広告の同意を変更」の入口が必要な地域のユーザーだけ表示する
+  const [adsPrivacyRequired, setAdsPrivacyRequired] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void ensureAdsReadyNative()
+      .then(() => adsPrivacyOptionsRequiredNative())
+      .then((required) => {
+        if (alive) setAdsPrivacyRequired(required);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   const identityName =
     displayName.trim() || labels.userFallback;
 
@@ -281,6 +301,8 @@ export default function ProfileSideMenuModal({
       | "notificationDev"
       | "restartTutorial"
       | "seasonPreview"
+      | "tradeBallotPreview"
+      | "tradeBuzzPreview"
       | "weeklyReportPreview"
       | "monthlyReportPreview"
       | "squadBattlePreview"
@@ -300,6 +322,7 @@ export default function ProfileSideMenuModal({
       | "matchupTeamStatsPreview"
       | "rankingCommentDesignPreview"
       | "monthlyBadgePreview"
+      | "lab3dPreview"
       | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -313,7 +336,7 @@ export default function ProfileSideMenuModal({
     setLogoutOpen(false);
     onClose();
     try {
-      await signOut(auth);
+      await signOutWithPushUnregisterNative();
     } catch {
       cyberAlert("", labels.logoutFailed);
     }
@@ -571,6 +594,16 @@ export default function ProfileSideMenuModal({
                     >
                       {labels.privacy}
                     </SideMenuItemButtonNative>
+                    {adsPrivacyRequired ? (
+                      <SideMenuItemButtonNative
+                        icon="cookie-outline"
+                        dense
+                        labelStyle={labelStyle}
+                        onPress={() => void showAdsPrivacyOptionsNative()}
+                      >
+                        {labels.adsConsent}
+                      </SideMenuItemButtonNative>
+                    ) : null}
                     <SideMenuItemButtonNative
                       icon="scale-balance"
                       dense
@@ -686,6 +719,22 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("seasonPreview")}
                         >
                           シーズン予想プレビュー
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="swap-horizontal"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("tradeBallotPreview")}
+                        >
+                          トレードバレット
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="newspaper-variant-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("tradeBuzzPreview")}
+                        >
+                          トレード Buzz
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="file-chart-outline"
@@ -815,7 +864,7 @@ export default function ProfileSideMenuModal({
                             openUserPage("proInsightNarrativePreview")
                           }
                         >
-                          PRO INSIGHT 新UI
+                          PRO INSIGHT 予想の材料
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="chart-timeline-variant"

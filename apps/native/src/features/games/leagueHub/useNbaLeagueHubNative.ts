@@ -5,6 +5,21 @@ import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 
 const STALE_MS = 5 * 60 * 1000;
 let cached: { hub: NbaLeagueHubDoc | null; at: number } | null = null;
+/** LEAGUE タブの複数パネルが同時にマウントしても 1 回だけ取る */
+let inflight: Promise<NbaLeagueHubDoc | null> | null = null;
+
+function loadHubShared(): Promise<NbaLeagueHubDoc | null> {
+  if (inflight) return inflight;
+  inflight = fetchNbaLeagueHub({ apiBaseUrl: getUniterzApiBaseUrl() })
+    .then((data) => {
+      cached = { hub: data.hub, at: Date.now() };
+      return data.hub;
+    })
+    .finally(() => {
+      inflight = null;
+    });
+  return inflight;
+}
 
 export function useNbaLeagueHubNative() {
   const fresh = cached && Date.now() - cached.at < STALE_MS ? cached : null;
@@ -24,22 +39,22 @@ export function useNbaLeagueHubNative() {
       setLoading(false);
       return;
     }
-    const ac = new AbortController();
+    let alive = true;
     setLoading(true);
     setError(null);
-    fetchNbaLeagueHub({ apiBaseUrl: getUniterzApiBaseUrl(), signal: ac.signal })
-      .then((data) => {
-        cached = { hub: data.hub, at: Date.now() };
-        setHub(data.hub);
+    loadHubShared()
+      .then((next) => {
+        if (alive) setHub(next);
       })
       .catch((e: unknown) => {
-        if (ac.signal.aborted) return;
-        setError(e instanceof Error ? e.message : "load failed");
+        if (alive) setError(e instanceof Error ? e.message : "load failed");
       })
       .finally(() => {
-        if (!ac.signal.aborted) setLoading(false);
+        if (alive) setLoading(false);
       });
-    return () => ac.abort();
+    return () => {
+      alive = false;
+    };
   }, [tick]);
 
   return { hub, loading, error, reload };

@@ -54,7 +54,7 @@ export default function LiveGameTeamStatsPanelNative({
     report.away.teamId
   );
 
-  const homeLabel = `${homeNick} →`;
+  const homeLabel = `← ${homeNick}`;
   const awayLabel = `${awayNick} →`;
 
   return (

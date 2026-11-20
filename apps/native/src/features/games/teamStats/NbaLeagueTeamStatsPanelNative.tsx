@@ -29,6 +29,7 @@ import {
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
 import { isNbaLeagueStatsPreseason } from "../../../../../../lib/nba/leagueStatsPreseason";
+import { leagueTeamRowsHaveCleanRatings } from "../../../../../../lib/nba/cleanRatings/leagueTeamCleanRatings";
 import {
   leagueStatsTableEmptyCopy,
 } from "../../../../../../lib/nba/leagueStatsEmptyState";
@@ -61,13 +62,12 @@ import {
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
-  CYBER_TAB_CYAN,
 } from "../../rankings/CyberSlantedTabNative";
 import {
   METRIC_FONT,
   RANK_DISPLAY_FONT,
 } from "../../rankings/rankingsUiTheme";
-import { CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
+import { CYBER_TAB_CYAN, CYBER_SIDE_MENU_PANEL } from "../../../ui/cyberSideMenuNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 
 type Props = {
@@ -137,11 +137,27 @@ export default function NbaLeagueTeamStatsPanelNative({
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
-  const groups = useMemo(() => leagueTeamRailGroupsForMode(mode), [mode]);
-  const [metric, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
+  const hasCleanRatings = leagueTeamRowsHaveCleanRatings(
+    phase === "playoffs" ? bundle.playoffs : bundle.season
+  );
+  const railGroupsFor = (nextMode: NbaLeagueStatsMode) =>
+    leagueTeamRailGroupsForMode(nextMode).filter(
+      (g) => g.id !== "ratings" || hasCleanRatings
+    );
+  const groups = useMemo(
+    () => railGroupsFor(mode),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, hasCleanRatings]
+  );
+  const [metricState, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
     defaultLeagueTeamStatSortDir(leagueMetricDef("winPct").higherIsBetter)
   );
+  const metric: NbaLeagueTeamStatMetric = groups.some((g) =>
+    g.metrics.some((m) => m.id === metricState)
+  )
+    ? metricState
+    : "winPct";
 
   const metricMeta = leagueMetricDef(metric);
   const activeGroupId =
@@ -155,7 +171,7 @@ export default function NbaLeagueTeamStatsPanelNative({
 
   function applyMode(next: NbaLeagueStatsMode) {
     setMode(next);
-    const nextGroups = leagueTeamRailGroupsForMode(next);
+    const nextGroups = railGroupsFor(next);
     const allowed = new Set(
       nextGroups.flatMap((g) => g.metrics.map((m) => m.id))
     );
@@ -213,6 +229,14 @@ export default function NbaLeagueTeamStatsPanelNative({
                 onPress={() => {
                   setPhase(p);
                   setMode(coerceTeamModeForPhase(p, mode));
+                  if (
+                    !leagueTeamRowsHaveCleanRatings(
+                      p === "playoffs" ? bundle.playoffs : bundle.season
+                    ) &&
+                    metric.startsWith("clean")
+                  ) {
+                    applyMetric("winPct");
+                  }
                 }}
                 compact
                 fontWeight="700"

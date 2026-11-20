@@ -92,6 +92,7 @@ export function ResultCardMarketBiasNative({
   revealDelayMs = 0,
   predictionCount = null,
   predictionCountLabel,
+  compact = false,
 }: {
   homePct: number;
   awayPct: number;
@@ -104,6 +105,8 @@ export function ResultCardMarketBiasNative({
   predictionCount?: number | null;
   /** 例: 「総予想数：」 / "Total predictions: " */
   predictionCountLabel?: string;
+  /** 予想カード用。割合行とバーの下余白を詰める */
+  compact?: boolean;
 }) {
   const copy = resultCardFaceCopy(language ?? (ja === false ? "en" : "ja"));
   const homeSegs = Math.max(
@@ -133,8 +136,8 @@ export function ResultCardMarketBiasNative({
   }, [animate, revealDelayMs, progress]);
 
   return (
-    <View style={styles.biasRoot}>
-      <View style={styles.biasPctHeader}>
+    <View style={[styles.biasRoot, compact && styles.biasRootCompact]}>
+      <View style={[styles.biasPctHeader, compact && styles.biasPctHeaderCompact]}>
         <Text style={[styles.biasPctHeaderNum, { color: homeAccent }]}>
           {homePct.toFixed(1)}%
         </Text>
@@ -231,6 +234,7 @@ export function ResultCardUpsetScoreSplitNative({
   upsetPoints = null,
   totalPoints = null,
   scoreRel = null,
+  compact = false,
 }: {
   ja?: boolean;
   language?: Language;
@@ -238,6 +242,8 @@ export function ResultCardUpsetScoreSplitNative({
   upsetPoints?: number | null;
   totalPoints?: number | null;
   scoreRel?: "max" | "top5" | "top10" | null;
+  /** 予想カード用。順位ラベル用の空き行を出さない */
+  compact?: boolean;
 }) {
   const copy = resultCardFaceCopy(language ?? (ja === false ? "en" : "ja"));
   const hasUpset = settled && upsetPoints != null;
@@ -253,8 +259,8 @@ export function ResultCardUpsetScoreSplitNative({
   const relHot = scoreRel === "max" || scoreRel === "top5";
 
   return (
-    <View style={styles.splitRow}>
-      <View style={[styles.splitSide, !hasUpset && styles.splitSideMuted]}>
+    <View style={[styles.splitRow, compact && styles.splitRowCompact]}>
+      <View style={[styles.splitSide, compact && styles.splitSideCompact, !hasUpset && styles.splitSideMuted]}>
         <Text style={styles.splitLabel}>{copy.upset}</Text>
         <View style={styles.skewWrap}>
           <Text
@@ -266,10 +272,10 @@ export function ResultCardUpsetScoreSplitNative({
             {upsetValue}
           </Text>
         </View>
-        <Text style={styles.splitRelSpacer}> </Text>
+        {compact ? null : <Text style={styles.splitRelSpacer}> </Text>}
       </View>
       <View style={styles.splitRule} />
-      <View style={styles.splitSide}>
+      <View style={[styles.splitSide, compact && styles.splitSideCompact]}>
         <Text style={styles.splitLabel}>{copy.score}</Text>
         <View style={styles.skewWrap}>
           <Text style={[styles.splitValue, styles.splitValueScore]}>
@@ -280,7 +286,7 @@ export function ResultCardUpsetScoreSplitNative({
           <Text style={[styles.splitRel, relHot && styles.splitRelHot]}>
             {rel}
           </Text>
-        ) : (
+        ) : compact ? null : (
           <Text style={styles.splitRelSpacer}> </Text>
         )}
       </View>
@@ -290,6 +296,7 @@ export function ResultCardUpsetScoreSplitNative({
 
 const styles = StyleSheet.create({
   biasRoot: { width: "100%", marginBottom: 6 },
+  biasRootCompact: { marginBottom: 2 },
   biasPctHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -297,6 +304,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 6,
     paddingHorizontal: 28,
+  },
+  biasPctHeaderCompact: {
+    marginBottom: 2,
   },
   biasPctHeaderNum: {
     fontFamily: MATCH_CARD_METRIC_FONT,
@@ -422,11 +432,18 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     paddingVertical: 2,
   },
+  splitRowCompact: {
+    paddingVertical: 0,
+  },
   splitSide: {
     flex: 1,
     alignItems: "center",
     gap: 4,
     paddingVertical: 2,
+  },
+  splitSideCompact: {
+    gap: 2,
+    paddingVertical: 0,
   },
   splitSideMuted: { opacity: 0.55 },
   splitRule: {

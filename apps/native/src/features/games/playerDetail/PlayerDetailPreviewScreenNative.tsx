@@ -38,6 +38,7 @@ export default function PlayerDetailPreviewScreenNative({
         language={language}
         playerId={playerId}
         useDevMock={useDevMock}
+        trackPageView={!useDevMock}
       />
     </MobilePageShell>
   );

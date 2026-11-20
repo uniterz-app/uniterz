@@ -20,6 +20,8 @@ type Props = {
   selected: boolean;
   isToday: boolean;
   onPress: () => void;
+  /** お気に入りチームが試合する日の点の色（無ければ点なし） */
+  markColor?: string | null;
 };
 
 /**
@@ -31,6 +33,7 @@ export default function DayStripChipNative({
   selected,
   isToday,
   onPress,
+  markColor,
 }: Props) {
   const borderColor = selected
     ? DAY_CHIP_BORDER_SELECTED
@@ -88,6 +91,12 @@ export default function DayStripChipNative({
           <View pointerEvents="none" style={s.innerRingToday} />
         ) : null}
         <Text style={s.dayNum}>{dayNum}</Text>
+        {markColor ? (
+          <View
+            pointerEvents="none"
+            style={[s.mark, { backgroundColor: markColor }]}
+          />
+        ) : null}
       </View>
     </Pressable>
   );
@@ -148,6 +157,17 @@ const s = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(250,204,21,0.2)",
+  },
+  mark: {
+    position: "absolute",
+    bottom: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    /** 黒系のチームカラーも暗い丸の上で見えるように */
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+    zIndex: 1,
   },
   dayNum: {
     zIndex: 1,

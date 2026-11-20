@@ -119,6 +119,12 @@ function GamesStackScreen() {
           }
         />
         <GamesStack.Screen
+          name="GameSimDemo"
+          getComponent={() =>
+            require("../features/games/predict/NbaGameSimDemoNative").default
+          }
+        />
+        <GamesStack.Screen
           name="TeamDetail"
           getComponent={() =>
             require("../features/games/screens/TeamDetailScreenNative").default
@@ -506,6 +512,24 @@ function ProfileStackScreen() {
         />
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="TradeBallotPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .TradeBallotPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="TradeBuzzPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .TradeBuzzPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="SquadBattlePreview"
             getComponent={() =>
               require("../features/squads/SquadBattleScreenNative").default
@@ -685,6 +709,14 @@ function ProfileStackScreen() {
             getComponent={() =>
               require("../features/profile/screens/ProfileStackWrappers")
                 .MonthlyBadgePreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="Lab3dPreview"
+            getComponent={() =>
+              require("../features/lab3d/Lab3dPreviewScreenWrapper").default
             }
           />
         ) : null}

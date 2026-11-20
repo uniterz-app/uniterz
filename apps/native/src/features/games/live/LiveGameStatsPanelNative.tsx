@@ -125,20 +125,22 @@ export default function LiveGameStatsPanelNative({
       )}
 
       {uniterzContent != null ? (
-        <CyberSlantedTabBarNative fill>
-          <CyberSlantedTabNative
-            label="STATS"
-            active={tab === "stats"}
-            onPress={() => setTab("stats")}
-            compact
-          />
-          <CyberSlantedTabNative
-            label="UNITERZ"
-            active={tab === "uniterz"}
-            onPress={() => setTab("uniterz")}
-            compact
-          />
-        </CyberSlantedTabBarNative>
+        <View style={styles.tabShell}>
+          <CyberSlantedTabBarNative fill>
+            <CyberSlantedTabNative
+              label="STATS"
+              active={tab === "stats"}
+              onPress={() => setTab("stats")}
+              compact
+            />
+            <CyberSlantedTabNative
+              label="UNITERZ"
+              active={tab === "uniterz"}
+              onPress={() => setTab("uniterz")}
+              compact
+            />
+          </CyberSlantedTabBarNative>
+        </View>
       ) : null}
 
       {showUniterz ? (
@@ -173,6 +175,13 @@ export default function LiveGameStatsPanelNative({
 
 const styles = StyleSheet.create({
   root: { gap: 16 },
+  /** 斜め先端と光がスクロール端で切れないよう、タブ列だけ内側に収める */
+  tabShell: {
+    alignSelf: "stretch",
+    overflow: "visible",
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+  },
   section: { gap: 10 },
   summaryCard: {
     borderWidth: 1,

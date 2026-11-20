@@ -104,9 +104,15 @@ import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaPlayerDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
+import NbaPlayerMatchupsNative from "./NbaPlayerMatchupsNative";
+import NbaPlayerOnOffNative from "./NbaPlayerOnOffNative";
+import { useNbaLeagueHubNative } from "../leagueHub/useNbaLeagueHubNative";
+import type { LeagueHubZoneBoard } from "../../../../../../lib/nba/leagueHub/leagueHubTypes";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { useNbaPlayerDetailLiveOverlay } from "../../../../../../lib/nba/playerDetail/useNbaPlayerDetailLiveOverlay";
+import { useTrackViewNative } from "../../../analytics/useTrackViewNative";
+import { analyticsSlug } from "../../../analytics/appAnalyticsNative";
 import { buildPlayerDetailInsights } from "../../../../../../lib/nba/detailInsights/buildPlayerDetailInsights";
 import { useNbaTeamRosterSlice } from "../../../../../../lib/nba/detailInsights/useNbaTeamRosterSlice";
 import {
@@ -121,6 +127,7 @@ import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
 import { NbaPlayerSplitStatTableNative } from "./NbaPlayerSplitStatTableNative";
 import { NbaPlayerGameLogTableNative } from "./NbaPlayerGameLogTableNative";
+import { NbaPlayerSeasonAveragesNative } from "./NbaPlayerSeasonAveragesNative";
 import {
   NbaPlayerHighsAndHitRatesNative,
   NbaPlayerNextGameNative,
@@ -138,6 +145,8 @@ type Props = {
   playerId?: string;
   /** Profile DEV メニュー用。Firestore 空でもシードで SHOT CHART 等を表示 */
   useDevMock?: boolean;
+  /** 選手詳細の画面として GA4 に記録する（ASK に埋め込むときは付けない） */
+  trackPageView?: boolean;
 };
 
 const OXANIUM = "Oxanium_800ExtraBold";
@@ -254,7 +263,7 @@ function IdMetaCell({
   );
 }
 
-function PlayerIdCard({
+export function PlayerIdCard({
   detail,
   language,
 }: {
@@ -376,15 +385,39 @@ function ZoneGlowDefs({
   );
 }
 
+/** 試投が少ないゾーンは、リーグ平均との差を弱める */
+function zoneVsLeagueColor(fgPct: number, league: number, attempts: number): string {
+  const trust = attempts / (attempts + 8);
+  const gap = (fgPct - league) * trust;
+  const t = Math.max(0, Math.min(1, (gap + 0.12) / 0.24));
+  return zoneEfficiencyColor(t);
+}
+
+function leagueZonePct(
+  boards: LeagueHubZoneBoard[] | undefined,
+  id: NbaPlayerShotZone["id"]
+): number | null {
+  const direct = boards?.find((z) => z.id === id)?.leagueFgPct;
+  if (direct != null) return direct;
+  if (id !== "above_break_3" || !boards) return null;
+  const wings = ["left_wing_3", "top_3", "right_wing_3"]
+    .map((wing) => boards.find((z) => z.id === wing)?.leagueFgPct)
+    .filter((v): v is number => v != null);
+  if (wings.length === 0) return null;
+  return wings.reduce((s, v) => s + v, 0) / wings.length;
+}
+
 function ZoneStatLabel({
   zone,
   id,
   totalGames,
+  leaguePct,
 }: {
   zone?: NbaPlayerShotZone;
   id: NbaPlayerShotZone["id"];
   /** 指定時は合計（平均 × 試合数）で出す */
   totalGames: number | null;
+  leaguePct: number | null;
 }) {
   const pos = SHOT_ZONE_LABEL_POS[id];
   if (!zone) return null;
@@ -420,20 +453,33 @@ function ZoneStatLabel({
       </SvgText>
       <SvgText
         x={pos.x}
-        y={pos.y + 27}
+        y={pos.y + 24}
         fill="rgba(255,255,255,0.55)"
-        fontSize={14}
+        fontSize={13}
         fontWeight="600"
         fontFamily={METRIC_FONT}
         textAnchor="middle"
       >
         {makes}
       </SvgText>
+      {leaguePct != null ? (
+        <SvgText
+          x={pos.x}
+          y={pos.y + 38}
+          fill="rgba(0,245,255,0.78)"
+          fontSize={10}
+          fontWeight="700"
+          fontFamily={METRIC_FONT}
+          textAnchor="middle"
+        >
+          {`LG ${Math.round(leaguePct * 100)}%`}
+        </SvgText>
+      ) : null}
     </>
   );
 }
 
-function ShotZoneHeatmap({
+export function ShotZoneHeatmap({
   zones,
   accent,
   seasonLabel,
@@ -444,6 +490,7 @@ function ShotZoneHeatmap({
   seasonLabel: string;
   gamesPlayed: number;
 }) {
+  const { hub } = useNbaLeagueHubNative();
   const [mode, setMode] = useState<"perGame" | "total">("perGame");
   if (zones.length === 0) {
     return (
@@ -465,8 +512,12 @@ function ShotZoneHeatmap({
   const baselineY = SHOT_ZONE_PAINT.y + SHOT_ZONE_PAINT.h;
   const top = shotCourtTop();
   const line = "rgba(255,255,255,0.28)";
-  const colorOf = (z?: NbaPlayerShotZone) =>
-    zoneFgPctColor(z?.fgPct ?? 0.35);
+  const colorOf = (z?: NbaPlayerShotZone) => {
+    const league = z ? leagueZonePct(hub?.zones, z.id) : null;
+    if (!z || league == null) return zoneFgPctColor(z?.fgPct ?? 0.35);
+    const attempts = z.fga * Math.max(gamesPlayed, 1);
+    return zoneVsLeagueColor(z.fgPct, league, attempts);
+  };
 
   const glowZones = (
     [
@@ -663,12 +714,18 @@ function ShotZoneHeatmap({
           />
 
           {entries.map(([id, z]) => (
-            <ZoneStatLabel key={id} id={id} zone={z} totalGames={totalGames} />
+            <ZoneStatLabel
+              key={id}
+              id={id}
+              zone={z}
+              totalGames={totalGames}
+              leaguePct={leagueZonePct(hub?.zones, id)}
+            />
           ))}
         </Svg>
       </View>
       <View style={styles.heatLegend}>
-        <Text style={styles.heatLegendText}>20%</Text>
+        <Text style={styles.heatLegendText}>{hub?.zones?.length ? "−LG" : "20%"}</Text>
         <View style={styles.magmaBar}>
           {[0, 0.25, 0.5, 0.75, 1].map((t) => (
             <View
@@ -680,7 +737,7 @@ function ShotZoneHeatmap({
             />
           ))}
         </View>
-        <Text style={styles.heatLegendText}>80%</Text>
+        <Text style={styles.heatLegendText}>{hub?.zones?.length ? "+LG" : "80%"}</Text>
       </View>
     </View>
   );
@@ -765,160 +822,6 @@ function PlayerVsOpponentSectionNative({
   );
 }
 
-function SeasonMetricsGrid({
-  metrics,
-  season,
-  logs,
-  accent,
-  language,
-}: {
-  metrics: NbaPlayerSeasonMetric[];
-  season: NbaPlayerDetailPreview["season"];
-  logs: NbaPlayerGameLog[];
-  accent: string;
-  language: string;
-}) {
-  const chrome = nbaPlayerDetailChrome(language);
-  const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
-    (id) => metrics.find((m) => m.id === id)
-  ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
-  const cellLine = hexToRgba(accent, 0.22);
-  const last10Avg = averageRecentGameLogs(logs, 10);
-  const hasSeasonAverages = season.gamesPlayed > 0;
-  const [avgWindow, setAvgWindow] = useState<"season" | "last10">("season");
-  const hot = "#FCD34D";
-  const frame = hexToRgba(accent, 0.35);
-
-  const renderCells = (
-    cells: Array<{
-      id: string;
-      short: string;
-      display: string;
-      leagueRank?: number;
-      highlight?: boolean;
-    }>
-  ) => (
-    <View style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}>
-      {cells.map((m, i) => {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const lastRow = Math.floor((cells.length - 1) / 3);
-        return (
-          <View
-            key={m.id}
-            style={[
-              styles.advCell,
-              col < 2
-                ? {
-                    borderRightWidth: StyleSheet.hairlineWidth,
-                    borderRightColor: cellLine,
-                  }
-                : null,
-              row < lastRow
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: cellLine,
-                  }
-                : null,
-            ]}
-          >
-            <View style={styles.advCellTop}>
-              <Text style={styles.advLabel}>{m.short}</Text>
-              {m.leagueRank != null && isPlayerDetailRankShown(m.leagueRank) ? (
-                <Text
-                  style={[
-                    styles.advRank,
-                    {
-                      color:
-                        m.leagueRank <= 10
-                          ? accent
-                          : "rgba(255,255,255,0.35)",
-                    },
-                  ]}
-                >
-                  #{m.leagueRank}
-                </Text>
-              ) : null}
-            </View>
-            <Text
-              style={[
-                styles.advValue,
-                m.highlight ? { color: hot } : null,
-              ]}
-            >
-              {m.display}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-
-  return (
-    <View style={styles.advWrap}>
-      <View style={styles.careerHeadRow}>
-        <Text style={styles.advTitle}>{chrome.seasonAverages}</Text>
-        <View style={[styles.careerTabs, { borderColor: frame }]}>
-          {(
-            [
-              ["season", "Season"],
-              ["last10", "Last 10"],
-            ] as const
-          ).map(([id, label]) => {
-            const active = avgWindow === id;
-            return (
-              <Pressable
-                key={id}
-                onPress={() => setAvgWindow(id)}
-                style={[
-                  styles.careerTab,
-                  active ? { backgroundColor: accent } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.careerTabText,
-                    { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-      {avgWindow === "season" && hasSeasonAverages
-        ? renderCells(
-            shown.map((m) => ({
-              id: m.id,
-              short: m.short,
-              display: m.display,
-              leagueRank: m.leagueRank,
-            }))
-          )
-        : avgWindow === "last10" && last10Avg
-          ? renderCells(
-              shown.map((m) => {
-                const l10 = playerDetailRecentRawValue(last10Avg, m.id);
-                const seasonV = playerDetailSeasonRawValue(season, m.id);
-                return {
-                  id: m.id,
-                  short: m.short,
-                  display: formatMetricDisplay(m.id, l10),
-                  highlight:
-                    hasSeasonAverages &&
-                    isPlayerDetailLast10AboveSeason(l10, seasonV),
-                };
-              })
-            )
-          : (
-              <PlayerDetailSectionNoDataNative accent={accent} />
-            )}
-    </View>
-  );
-}
-
 function fmtPerGameNative(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
@@ -953,7 +856,7 @@ const CAREER_COLS_NATIVE: Array<{
     align: "center",
     render: () => "",
   },
-  { key: "age", label: "Age", width: 36, align: "left", render: (r) => String(r.age) },
+  { key: "age", label: "Age", width: 36, align: "left", render: (r) => (r.age > 0 ? String(r.age) : "—") },
   {
     key: "team",
     label: "TEAM",
@@ -1010,12 +913,12 @@ const CAREER_COLS_NATIVE: Array<{
 ];
 
 /** Web `SeasonHistoryTable` 相当 — BRef 風シーズン平均 */
-function SeasonHistorySection({
+export function SeasonHistorySection({
   playerId,
   regular,
   playoffs,
   accent,
-  currentSeasonStart = 2025,
+  currentSeasonStart = Number.parseInt(CURRENT_NBA_SEASON_KEY.slice(0, 4), 10),
 }: {
   playerId?: string | null;
   regular: NbaPlayerCareerSeasonRow[];
@@ -1268,7 +1171,7 @@ function SeasonHistorySection({
   );
 }
 
-function PlayerGameSplitsSectionNative({
+export function PlayerGameSplitsSectionNative({
   logs,
   seasonKey,
   accent,
@@ -1427,53 +1330,18 @@ function InfoRow({
   );
 }
 
-export default function NbaPlayerDetailPanelNative({
+export function PlayerContractSection({
+  detail,
+  accent,
   language,
-  playerId,
-  useDevMock = false,
-}: Props) {
+}: {
+  detail: NbaPlayerDetailPreview;
+  accent: string;
+  language: string;
+}) {
   const chrome = nbaPlayerDetailChrome(language);
   const isJa = chrome.catalogJa;
-  const insets = useSafeAreaInsets();
-  const sticky = useDetailStickyTitleNative();
-  const [tab, setTab] = useState<NbaPlayerDetailTab>("overview");
-  const selectTab = (next: NbaPlayerDetailTab) => {
-    sticky.scrollToTabs();
-    setTab(next);
-  };
-  const apiBaseUrl = getUniterzApiBaseUrl();
-  const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
-  const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
-  const base = useMemo(
-    () =>
-      useDevMock
-        ? getNbaPlayerDetailDevMock(playerId)
-        : getNbaPlayerDetailPreview(playerId),
-    [playerId, useDevMock]
-  );
-  const { detail, discipline, hasFetchError } = useNbaPlayerDetailLiveOverlay({
-    playerId,
-    apiBaseUrl,
-    base,
-    leaders,
-    skipLiveFetch: useDevMock,
-  });
-  const { players: teammates } = useNbaTeamRosterSlice({
-    teamId: detail.teamId,
-    apiBaseUrl,
-  });
-  const rosterPlayer =
-    teammates.find((p) => String(p.id) === String(detail.playerId)) ?? null;
-  const playerInsights = useMemo(
-    () =>
-      buildPlayerDetailInsights({
-        detail,
-        rosterPlayer,
-        teammates,
-      }),
-    [detail, rosterPlayer, teammates]
-  );
-  const bottomPad = Math.max(12, insets.bottom);
+  const frameColor = hexToRgba(accent, 0.35);
   const contract = detail.contract;
   const currentSalary = contract?.seasons[0] ?? null;
   const isTwoWay =
@@ -1508,315 +1376,8 @@ export default function NbaPlayerDetailPanelNative({
   const deadStretchYears = deadSalary
     ? deadSalaryStretchSeasonYears(deadSalary)
     : [];
-  const accent = getTeamUiAccentColor("nba", detail.teamId);
-  const dividerColor = hexToRgba(accent, 0.22);
-  const frameColor = hexToRgba(accent, 0.35);
-  const displayAge = resolvePlayerDisplayAge(detail);
-  const isRetired = detail.availability.status === "retired";
-  /** 引退選手はキャリア・アワードだけなのでタブにしない */
-  const tabbed = !isRetired;
-  const showOverview = !tabbed || tab === "overview";
-  const showCareer = !tabbed || tab === "career";
-  const stickyName = [
-    detail.jerseyNumber != null && String(detail.jerseyNumber).trim()
-      ? `#${String(detail.jerseyNumber).trim()}`
-      : null,
-    formatNbaPlayerDisplayName(
-      detail.firstName,
-      detail.lastName,
-      detail.playerId
-    ).toUpperCase(),
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <View style={styles.root}>
-    <Animated.ScrollView
-      ref={sticky.scrollRef}
-      style={styles.root}
-      contentContainerStyle={[styles.pad, { paddingBottom: bottomPad + 120 }]}
-      showsVerticalScrollIndicator={false}
-      onScroll={sticky.onScroll}
-      scrollEventThrottle={16}
-    >
-      <View style={styles.panel} onLayout={sticky.onPanelLayout}>
-
-        {hasFetchError ? (
-          <Text style={styles.fetchError}>
-            {isJa
-              ? "一部データの取得に失敗しました。表示は取得できた範囲のみです。"
-              : "Some live data failed to load. Showing what we could fetch."}
-          </Text>
-        ) : null}
-
-        <View onLayout={sticky.onHeroLayout}>
-          <PlayerIdCard detail={detail} language={isJa ? "ja" : "en"} />
-        </View>
-        {tabbed ? (
-          <View style={styles.detailTabs} onLayout={sticky.onTabsLayout}>
-            <DetailTabBarNative
-              tabs={NBA_PLAYER_DETAIL_TABS}
-              active={tab}
-              onChange={selectTab}
-              accent={accent}
-            />
-          </View>
-        ) : null}
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        {showOverview ? (
-          <>
-        {!isRetired && playerInsights.summary ? (
-          <>
-            <DetailInsightSummaryNative
-              text={
-                isJa
-                  ? playerInsights.summary.linesJa
-                  : playerInsights.summary.linesEn
-              }
-            />
-            <View style={{ height: 10 }} />
-          </>
-        ) : null}
-        {!isRetired && playerInsights.roles.length > 0 ? (
-          <>
-            <DetailIdentityChipRowNative
-              chips={playerInsights.roles}
-              accent={accent}
-              title="ROLE"
-              language={language}
-              layout="wrap"
-            />
-            <View style={{ height: 10 }} />
-          </>
-        ) : null}
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <AvailabilityBanner
-          availability={detail.availability}
-          isJa={isJa}
-        />
-
-        {!isRetired ? (
-          <>
-        <SeasonMetricsGrid
-          metrics={detail.seasonMetrics}
-          season={detail.season}
-          logs={detail.gameLogs}
-          accent={accent}
-          language={language}
-        />
-
-        {detail.teamId ? (
-          <View style={{ marginTop: 16 }}>
-            <NbaPlayerNextGameNative
-              teamId={detail.teamId}
-              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
-              teamStatRows={teamStats?.season ?? []}
-              apiBaseUrl={apiBaseUrl}
-              accent={accent}
-              language={language}
-            />
-          </View>
-        ) : null}
-
-        <View
-          style={[
-            styles.divider,
-            { marginVertical: 12, backgroundColor: dividerColor },
-          ]}
-        />
-
-        <DetailRoleChangeSectionNative
-          signals={playerInsights.roleChanges}
-          detailText={
-            isJa
-              ? playerInsights.roleChangeDetailJa
-              : playerInsights.roleChangeDetailEn
-          }
-          accent={accent}
-          language={language}
-        />
-        {playerInsights.roleChanges.length > 0 ? (
-          <View
-            style={[
-              styles.divider,
-              { marginVertical: 12, backgroundColor: dividerColor },
-            ]}
-          />
-        ) : null}
-
-        <NbaPlayerHowTheyPlayNative
-          playerId={detail.playerId}
-          accent={accent}
-          language={language}
-          leaders={leaders}
-          teamStats={teamStats}
-          detail={detail}
-        />
-
-        {(detail.venueSplits?.length ?? 0) > 0 ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <PlayerVenueSplitsSectionNative
-              splits={detail.venueSplits}
-              accent={accent}
-              language={language}
-            />
-          </>
-        ) : null}
-
-        {(detail.vsOpponentSamples?.length ?? 0) > 0 ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <PlayerVsOpponentSectionNative
-              samples={detail.vsOpponentSamples}
-              accent={accent}
-              language={language}
-            />
-          </>
-        ) : null}
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        <ShotZoneHeatmap
-          zones={detail.shotZones}
-          accent={accent}
-          gamesPlayed={detail.season.gamesPlayed}
-          seasonLabel={
-            detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1]
-              ? `${detail.asOfLabel.match(/(\d{4}-\d{2})/)![1]} SEASON`
-              : nbaSeasonStatsReady()
-                ? `${CURRENT_NBA_SEASON_KEY} SEASON`
-                : "PRESEASON"
-          }
-        />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        {playerInsights.consistency ? (
-          <>
-            <DetailConsistencySectionNative
-              data={playerInsights.consistency}
-              accent={accent}
-              language={language}
-            />
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-          </>
-        ) : null}
-          </>
-        ) : null}
-          </>
-        ) : null}
-
-        {tab === "games" && !isRetired ? (
-          <>
-            <NbaPlayerTrendChartNative
-              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
-              accent={accent}
-              language={language}
-              trailingDivider={[styles.divider, { backgroundColor: dividerColor }]}
-            />
-            <GameLogsSection logs={detail.gameLogs} accent={accent} />
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <PlayerGameSplitsSectionNative
-              logs={detail.seasonGameLogs ?? detail.gameLogs}
-              seasonKey={
-                detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1] ?? CURRENT_NBA_SEASON_KEY
-              }
-              accent={accent}
-              language={language}
-            />
-            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-            <NbaPlayerHighsAndHitRatesNative
-              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
-              accent={accent}
-              language={language}
-            />
-          </>
-        ) : null}
-
-        {showCareer ? (
-          <>
-        {tabbed ? null : (
-          <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-        )}
-        <SeasonHistorySection
-          playerId={detail.playerId}
-          regular={detail.careerSeasons.regular}
-          playoffs={detail.careerSeasons.playoffs}
-          accent={accent}
-        />
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <View style={styles.advTitleRow}>
-          <Text style={styles.advTitle}>AWARDS</Text>
-          <View style={styles.advTitleLine} />
-        </View>
-        <View style={[styles.infoCard, { borderColor: frameColor }]}>
-          {detail.awards.length > 0 ? (
-            detail.awards.map((award) => (
-              <InfoRow
-                key={award.id}
-                label={award.label}
-                value={`× ${award.count}`}
-                accent={accent}
-                valueAccent
-              />
-            ))
-          ) : (
-            <InfoRow label="—" value={chrome.none} accent={accent} />
-          )}
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
-
-        <View style={styles.advTitleRow}>
-          <Text style={styles.advTitle}>MORE</Text>
-          <View style={styles.advTitleLine} />
-        </View>
-        <View style={[styles.infoCard, { borderColor: frameColor }]}>
-          {displayAge != null ? (
-            <InfoRow
-              label={chrome.age}
-              value={String(displayAge)}
-              accent={accent}
-            />
-          ) : null}
-          <InfoRow
-            label="COLLEGE/PRIOR"
-            value={
-              detail.college?.trim()
-                ? detail.college
-                : isJa
-                  ? "大学なし"
-                  : "None"
-            }
-            accent={accent}
-          />
-          <InfoRow
-            label={
-              detail.availability.status === "retired"
-                ? isJa
-                  ? "最終所属"
-                  : "LAST TEAM"
-                : "TEAM"
-            }
-            value={detail.teamName}
-            accent={accent}
-          />
-          <InfoRow
-            label={chrome.history}
-            value={formatTeamHistory(detail.teamHistory)}
-            accent={accent}
-          />
-        </View>
-          </>
-        ) : null}
-
-        {tab === "contract" && !isRetired ? (
-          <>
+    <>
         <View style={styles.advTitleRow}>
           <Text style={styles.advTitle}>
             CONTRACT
@@ -2072,6 +1633,398 @@ export default function NbaPlayerDetailPanelNative({
         ) : (
           <PlayerDetailSectionNoDataNative accent={accent} />
         )}
+    </>
+  );
+}
+
+export function PlayerMoreSection({
+  detail,
+  accent,
+  language,
+}: {
+  detail: NbaPlayerDetailPreview;
+  accent: string;
+  language: string;
+}) {
+  const chrome = nbaPlayerDetailChrome(language);
+  const isJa = chrome.catalogJa;
+  const frameColor = hexToRgba(accent, 0.35);
+  const displayAge = resolvePlayerDisplayAge(detail);
+  return (
+    <>
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>MORE</Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        <View style={[styles.infoCard, { borderColor: frameColor }]}>
+          {displayAge != null ? (
+            <InfoRow
+              label={chrome.age}
+              value={String(displayAge)}
+              accent={accent}
+            />
+          ) : null}
+          <InfoRow
+            label="COLLEGE/PRIOR"
+            value={
+              detail.college?.trim()
+                ? detail.college
+                : isJa
+                  ? "大学なし"
+                  : "None"
+            }
+            accent={accent}
+          />
+          <InfoRow
+            label={
+              detail.availability.status === "retired"
+                ? isJa
+                  ? "最終所属"
+                  : "LAST TEAM"
+                : "TEAM"
+            }
+            value={detail.teamName}
+            accent={accent}
+          />
+          <InfoRow
+            label={chrome.history}
+            value={formatTeamHistory(detail.teamHistory)}
+            accent={accent}
+          />
+        </View>
+    </>
+  );
+}
+
+export default function NbaPlayerDetailPanelNative({
+  language,
+  playerId,
+  useDevMock = false,
+  trackPageView = false,
+}: Props) {
+  const chrome = nbaPlayerDetailChrome(language);
+  const isJa = chrome.catalogJa;
+  const insets = useSafeAreaInsets();
+  const sticky = useDetailStickyTitleNative();
+  const [tab, setTab] = useState<NbaPlayerDetailTab>("overview");
+  const selectTab = (next: NbaPlayerDetailTab) => {
+    sticky.scrollToTabs();
+    setTab(next);
+  };
+  const apiBaseUrl = getUniterzApiBaseUrl();
+  const { bundle: leaders } = usePlayerStatLeadersBundle({ apiBaseUrl });
+  const { bundle: teamStats } = useLeagueTeamStatsBundle({ apiBaseUrl });
+  const base = useMemo(
+    () =>
+      useDevMock
+        ? getNbaPlayerDetailDevMock(playerId)
+        : getNbaPlayerDetailPreview(playerId),
+    [playerId, useDevMock]
+  );
+  const { detail, discipline, hasFetchError, loading: detailLoading } =
+    useNbaPlayerDetailLiveOverlay({
+      playerId,
+      apiBaseUrl,
+      base,
+      leaders,
+      skipLiveFetch: useDevMock,
+    });
+  const analyticsName = analyticsSlug(
+    formatNbaPlayerDisplayName(detail.firstName, detail.lastName, detail.playerId)
+  );
+  useTrackViewNative(
+    trackPageView && playerId && !detailLoading ? "Player Detail" : null,
+    `player/${playerId ?? ""}${analyticsName ? `-${analyticsName}` : ""}`
+  );
+  const { players: teammates } = useNbaTeamRosterSlice({
+    teamId: detail.teamId,
+    apiBaseUrl,
+  });
+  const rosterPlayer =
+    teammates.find((p) => String(p.id) === String(detail.playerId)) ?? null;
+  const playerInsights = useMemo(
+    () =>
+      buildPlayerDetailInsights({
+        detail,
+        rosterPlayer,
+        teammates,
+      }),
+    [detail, rosterPlayer, teammates]
+  );
+  const bottomPad = Math.max(12, insets.bottom);
+  const accent = getTeamUiAccentColor("nba", detail.teamId);
+  const dividerColor = hexToRgba(accent, 0.22);
+  const frameColor = hexToRgba(accent, 0.35);
+  const isRetired = detail.availability.status === "retired";
+  /** 引退選手はキャリア・アワードだけなのでタブにしない */
+  const tabbed = !isRetired;
+  const showOverview = !tabbed || tab === "overview";
+  const showCareer = !tabbed || tab === "career";
+  const stickyName = [
+    detail.jerseyNumber != null && String(detail.jerseyNumber).trim()
+      ? `#${String(detail.jerseyNumber).trim()}`
+      : null,
+    formatNbaPlayerDisplayName(
+      detail.firstName,
+      detail.lastName,
+      detail.playerId
+    ).toUpperCase(),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <View style={styles.root}>
+    <Animated.ScrollView
+      ref={sticky.scrollRef}
+      style={styles.root}
+      contentContainerStyle={[styles.pad, { paddingBottom: bottomPad + 120 }]}
+      showsVerticalScrollIndicator={false}
+      onScroll={sticky.onScroll}
+      scrollEventThrottle={16}
+    >
+      <View style={styles.panel} onLayout={sticky.onPanelLayout}>
+
+        {hasFetchError ? (
+          <Text style={styles.fetchError}>
+            {isJa
+              ? "一部データの取得に失敗しました。表示は取得できた範囲のみです。"
+              : "Some live data failed to load. Showing what we could fetch."}
+          </Text>
+        ) : null}
+
+        <View onLayout={sticky.onHeroLayout}>
+          <PlayerIdCard detail={detail} language={isJa ? "ja" : "en"} />
+        </View>
+        {tabbed ? (
+          <View style={styles.detailTabs} onLayout={sticky.onTabsLayout}>
+            <DetailTabBarNative
+              tabs={NBA_PLAYER_DETAIL_TABS}
+              active={tab}
+              onChange={selectTab}
+              accent={accent}
+            />
+          </View>
+        ) : null}
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        {showOverview ? (
+          <>
+        {!isRetired && playerInsights.summary ? (
+          <>
+            <DetailInsightSummaryNative
+              text={
+                isJa
+                  ? playerInsights.summary.linesJa
+                  : playerInsights.summary.linesEn
+              }
+            />
+            <View style={{ height: 10 }} />
+          </>
+        ) : null}
+        {!isRetired && playerInsights.roles.length > 0 ? (
+          <>
+            <DetailIdentityChipRowNative
+              chips={playerInsights.roles}
+              accent={accent}
+              title="ROLE"
+              language={language}
+              layout="wrap"
+            />
+            <View style={{ height: 10 }} />
+          </>
+        ) : null}
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <AvailabilityBanner
+          availability={detail.availability}
+          isJa={isJa}
+        />
+
+        {!isRetired ? (
+          <>
+        <NbaPlayerSeasonAveragesNative
+          metrics={detail.seasonMetrics}
+          season={detail.season}
+          logs={detail.gameLogs}
+          accent={accent}
+          language={language}
+        />
+
+        {detail.teamId ? (
+          <View style={{ marginTop: 16 }}>
+            <NbaPlayerNextGameNative
+              teamId={detail.teamId}
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              teamStatRows={teamStats?.season ?? []}
+              apiBaseUrl={apiBaseUrl}
+              accent={accent}
+              language={language}
+            />
+          </View>
+        ) : null}
+
+        <View
+          style={[
+            styles.divider,
+            { marginVertical: 12, backgroundColor: dividerColor },
+          ]}
+        />
+
+        <DetailRoleChangeSectionNative
+          signals={playerInsights.roleChanges}
+          detailText={
+            isJa
+              ? playerInsights.roleChangeDetailJa
+              : playerInsights.roleChangeDetailEn
+          }
+          accent={accent}
+          language={language}
+        />
+        {playerInsights.roleChanges.length > 0 ? (
+          <View
+            style={[
+              styles.divider,
+              { marginVertical: 12, backgroundColor: dividerColor },
+            ]}
+          />
+        ) : null}
+
+        <NbaPlayerHowTheyPlayNative
+          playerId={detail.playerId}
+          accent={accent}
+          language={language}
+          leaders={leaders}
+          teamStats={teamStats}
+          detail={detail}
+        />
+
+        <NbaPlayerMatchupsNative playerId={detail.playerId} isJa={isJa} />
+        <NbaPlayerOnOffNative playerId={detail.playerId} isJa={isJa} />
+
+        {(detail.venueSplits?.length ?? 0) > 0 ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <PlayerVenueSplitsSectionNative
+              splits={detail.venueSplits}
+              accent={accent}
+              language={language}
+            />
+          </>
+        ) : null}
+
+        {(detail.vsOpponentSamples?.length ?? 0) > 0 ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <PlayerVsOpponentSectionNative
+              samples={detail.vsOpponentSamples}
+              accent={accent}
+              language={language}
+            />
+          </>
+        ) : null}
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        <ShotZoneHeatmap
+          zones={detail.shotZones}
+          accent={accent}
+          gamesPlayed={detail.season.gamesPlayed}
+          seasonLabel={
+            detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1]
+              ? `${detail.asOfLabel.match(/(\d{4}-\d{2})/)![1]} SEASON`
+              : nbaSeasonStatsReady()
+                ? `${CURRENT_NBA_SEASON_KEY} SEASON`
+                : "PRESEASON"
+          }
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        {playerInsights.consistency ? (
+          <>
+            <DetailConsistencySectionNative
+              data={playerInsights.consistency}
+              accent={accent}
+              language={language}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+          </>
+        ) : null}
+          </>
+        ) : null}
+          </>
+        ) : null}
+
+        {tab === "games" && !isRetired ? (
+          <>
+            <NbaPlayerTrendChartNative
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              accent={accent}
+              language={language}
+              trailingDivider={[styles.divider, { backgroundColor: dividerColor }]}
+            />
+            <GameLogsSection logs={detail.gameLogs} accent={accent} />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <PlayerGameSplitsSectionNative
+              logs={detail.seasonGameLogs ?? detail.gameLogs}
+              seasonKey={
+                detail.asOfLabel.match(/(\d{4}-\d{2})/)?.[1] ?? CURRENT_NBA_SEASON_KEY
+              }
+              accent={accent}
+              language={language}
+            />
+            <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+            <NbaPlayerHighsAndHitRatesNative
+              seasonLogs={detail.seasonGameLogs ?? detail.gameLogs}
+              accent={accent}
+              language={language}
+            />
+          </>
+        ) : null}
+
+        {showCareer ? (
+          <>
+        {tabbed ? null : (
+          <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+        )}
+        <SeasonHistorySection
+          playerId={detail.playerId}
+          regular={detail.careerSeasons.regular}
+          playoffs={detail.careerSeasons.playoffs}
+          accent={accent}
+        />
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>AWARDS</Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        <View style={[styles.infoCard, { borderColor: frameColor }]}>
+          {detail.awards.length > 0 ? (
+            detail.awards.map((award) => (
+              <InfoRow
+                key={award.id}
+                label={award.label}
+                value={`× ${award.count}`}
+                accent={accent}
+                valueAccent
+              />
+            ))
+          ) : (
+            <InfoRow label="—" value={chrome.none} accent={accent} />
+          )}
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: dividerColor }]} />
+
+        <PlayerMoreSection detail={detail} accent={accent} language={language} />
+          </>
+        ) : null}
+
+        {tab === "contract" && !isRetired ? (
+          <>
+        <PlayerContractSection detail={detail} accent={accent} language={language} />
 
         {discipline && playerId ? (
           <>

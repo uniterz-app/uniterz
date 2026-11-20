@@ -30,6 +30,9 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaAskCopy } from "../../../../../../lib/nba/ask/nbaAskCopy";
 import { type NbaAskBoard } from "../../../../../../lib/nba/ask/nbaAskBoard";
 import AskGameCardNative from "./AskGameCardNative";
+import AskDetailViewNative from "./AskDetailViewNative";
+import { NbaTeamOffseasonMovesNative } from "../teamDetail/NbaTeamOffseasonMovesNative";
+import { getTeamUiAccentColor } from "../../../../../../lib/team-colors";
 import {
   nbaAskDestinationLabel,
   type NbaAskDestinationId,
@@ -187,6 +190,8 @@ export default function NbaAskScreenNative() {
           opens: result.opens,
           board: result.board,
           games: result.games,
+          moves: result.moves,
+          view: result.view,
         },
       ]);
       setStatus((prev) =>
@@ -249,16 +254,26 @@ export default function NbaAskScreenNative() {
             <Text style={styles.gateTitle}>{copy.unavailable}</Text>
           ) : turns.length === 0 ? (
             <View>
-              {copy.suggestions.map((s) => (
-                <Pressable
-                  key={s}
-                  disabled={busy}
-                  onPress={() => void send(s)}
-                  accessibilityRole="button"
-                  style={({ pressed }) => [styles.prompt, pressed && styles.chipPressed]}
-                >
-                  <Text style={styles.promptText}>{s}</Text>
-                </Pressable>
+              {(
+                [
+                  [copy.suggestionsNbaLabel, copy.suggestions],
+                  [copy.suggestionsAppLabel, copy.appSuggestions],
+                ] as const
+              ).map(([label, list], gi) => (
+                <View key={label} style={gi > 0 ? styles.promptGroupNext : undefined}>
+                  <Text style={styles.promptGroupLabel}>{label}</Text>
+                  {list.map((s) => (
+                    <Pressable
+                      key={s}
+                      disabled={busy}
+                      onPress={() => void send(s)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.prompt, pressed && styles.chipPressed]}
+                    >
+                      <Text style={styles.promptText}>{s}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               ))}
             </View>
           ) : null}
@@ -284,6 +299,38 @@ export default function NbaAskScreenNative() {
                       }
                     />
                   ))}
+                  {t.opens?.map((id) => (
+                    <Pressable
+                      key={id}
+                      onPress={() => openNbaAskDestination(navigation, id)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
+                    >
+                      <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            }
+            if (t.moves || t.view) {
+              return (
+                <View key={i} style={styles.boardWrap}>
+                  {t.content ? <Text style={styles.boardTitle}>{t.content}</Text> : null}
+                  {t.moves ? (
+                    <NbaTeamOffseasonMovesNative
+                      moves={t.moves.moves}
+                      accent={getTeamUiAccentColor("nba", t.moves.teamId)}
+                      language={lang}
+                      onSelectPlayer={(playerId) => navigation.navigate("PlayerDetailPreview", { playerId })}
+                    />
+                  ) : t.view ? (
+                    <AskDetailViewNative
+                      view={t.view}
+                      language={lang}
+                      onSelectPlayer={(playerId) => navigation.navigate("PlayerDetailPreview", { playerId })}
+                      onSelectTeam={(teamId) => navigation.navigate("TeamDetailPreview", { teamId })}
+                    />
+                  ) : null}
                   {t.opens?.map((id) => (
                     <Pressable
                       key={id}
@@ -442,6 +489,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   chipPressed: { opacity: 0.55 },
+  promptGroupNext: { marginTop: 22 },
+  promptGroupLabel: {
+    fontFamily: "Oxanium_700Bold",
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: "rgba(255,255,255,0.45)",
+    marginBottom: 2,
+  },
   promptText: {
     color: "rgba(255,255,255,0.88)",
     fontSize: 15,
@@ -471,7 +526,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   bubbleUser: {
-    backgroundColor: CYBER_TAB_CYAN,
+    backgroundColor: "#1E1E1E",
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderRadius: 14,
   },
   boardWrap: {
     alignSelf: "stretch",
@@ -546,14 +604,14 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   bubbleTextMine: {
-    color: "#041014",
+    color: "rgba(255,255,255,0.94)",
   },
   link: {
     color: "#00F5FF",
     textDecorationLine: "underline",
   },
   linkMine: {
-    color: "#041014",
+    color: "#00F5FF",
   },
   skeletonWrap: {
     alignSelf: "stretch",

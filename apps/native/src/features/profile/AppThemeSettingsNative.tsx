@@ -4,6 +4,7 @@ import { Alert, DevSettings, Pressable, StyleSheet, Text, View } from "react-nat
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
 import { appThemeCopy } from "../../../../../lib/theme/appThemeCopy";
+import { LIGHT_THEME_BG } from "../../../../../lib/theme/lightThemeColor";
 import {
   APP_THEME_MODE_STORAGE_KEY,
   getAppThemeMode,
@@ -79,7 +80,7 @@ export default function AppThemeSettingsNative() {
               <View
                 style={[
                   styles.swatch,
-                  { backgroundColor: o.mode === "dark" ? rawColor("#070708") : rawColor("#D2DBDB") },
+                  { backgroundColor: o.mode === "dark" ? rawColor("#070708") : rawColor(LIGHT_THEME_BG) },
                 ]}
               >
                 <Text

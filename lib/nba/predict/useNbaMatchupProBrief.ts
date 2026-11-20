@@ -9,12 +9,15 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import type { PredictProBrief } from "@/lib/predict/predictProBrief";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
+import {
+  sanitizeProInsightPredictKit,
+  type ProInsightPredictKit,
+} from "@/lib/nba/insights/predictKit/predictKitTypes";
 import { sanitizeProBriefForDisplay } from "@/lib/predict/validateProBrief";
 import {
   sanitizeProInsightNarrativeForDisplay,
   type ProInsightNarrativeStatus,
 } from "@/lib/predict/validateProInsightNarrative";
-
 export function useNbaMatchupProBrief(opts: {
   gameId?: string | null;
   /** @deprecated 旧 HOME/AWAY。プレビュー用 */
@@ -27,6 +30,8 @@ export function useNbaMatchupProBrief(opts: {
 }): {
   brief: PredictProBrief | null;
   narrative: ProInsightNarrativeBrief | null;
+  /** 予想の材料（あればナラティブの代わりに出す） */
+  predictKit: ProInsightPredictKit | null;
   status: ProInsightNarrativeStatus;
   loading: boolean;
   /** 生成時刻（ISO）。INSIGHT 未読マークの更新番号 */
@@ -55,12 +60,14 @@ export function useNbaMatchupProBrief(opts: {
   const [status, setStatus] = useState<ProInsightNarrativeStatus>(() =>
     hasNarrativeOverride ? "ready" : "empty"
   );
+  const [predictKit, setPredictKit] = useState<ProInsightPredictKit | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [readyScope, setReadyScope] = useState<string | null>(() =>
     hasNarrativeOverride || hasBriefOverride ? fetchScope : null
   );
 
   useEffect(() => {
+    if (hasNarrativeOverride || hasBriefOverride) setPredictKit(null);
     if (hasNarrativeOverride) {
       setNarrative(sanitizeProInsightNarrativeForDisplay(narrativeOverride));
       setStatus("ready");
@@ -87,6 +94,7 @@ export function useNbaMatchupProBrief(opts: {
           if (!cancelled) {
             setBrief(null);
             setNarrative(null);
+            setPredictKit(null);
             setUpdatedAt(null);
             setStatus("empty");
           }
@@ -103,6 +111,7 @@ export function useNbaMatchupProBrief(opts: {
           if (!cancelled) {
             setBrief(null);
             setNarrative(null);
+            setPredictKit(null);
             setUpdatedAt(null);
             setStatus("empty");
           }
@@ -112,6 +121,7 @@ export function useNbaMatchupProBrief(opts: {
           ok?: boolean;
           brief?: PredictProBrief | null;
           narrative?: unknown;
+          predictKit?: unknown;
           status?: ProInsightNarrativeStatus;
           updatedAt?: unknown;
         };
@@ -119,9 +129,11 @@ export function useNbaMatchupProBrief(opts: {
         const nextNarrative = sanitizeProInsightNarrativeForDisplay(
           json.narrative
         );
+        const nextKit = sanitizeProInsightPredictKit(json.predictKit);
         setNarrative(nextNarrative);
+        setPredictKit(nextKit);
         setUpdatedAt(
-          nextNarrative && typeof json.updatedAt === "string"
+          (nextNarrative || nextKit) && typeof json.updatedAt === "string"
             ? json.updatedAt
             : null
         );
@@ -139,6 +151,7 @@ export function useNbaMatchupProBrief(opts: {
         if (!cancelled) {
           setBrief(null);
           setNarrative(null);
+          setPredictKit(null);
           setUpdatedAt(null);
           setStatus("empty");
         }
@@ -175,6 +188,7 @@ export function useNbaMatchupProBrief(opts: {
   return {
     brief: resolvedBrief,
     narrative: resolvedNarrative,
+    predictKit: hasNarrativeOverride || hasBriefOverride ? null : predictKit,
     status: resolvedStatus,
     loading,
     updatedAt: hasNarrativeOverride || hasBriefOverride ? null : updatedAt,

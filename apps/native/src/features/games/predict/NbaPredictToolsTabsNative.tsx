@@ -1,5 +1,5 @@
 /** Web `NbaPredictToolsTabs` 相当 */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import { StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -7,20 +7,37 @@ import type { NavigationProp } from "@react-navigation/native";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
+  type CyberSlantedTabThemeNative,
 } from "../../rankings/CyberSlantedTabNative";
 import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
+import ProPickAdMockModalNative from "./ProPickAdMockModalNative";
+import { requestProPickUnlock } from "../../../../../../lib/nba/predict/proPickUnlockApi";
+import { proPickAdCopy } from "../../../../../../lib/predict/proPickAdCopy";
+import { cyberAlert } from "../../../components/cyberAlert";
+import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
+import { showProPickRewardedAdNative } from "../../ads/proPickRewardedAdNative";
+
+/**
+ * AdMob のリワード広告を使うか（EAS の env で切り替える。既定は使わない）。
+ * 使わないときは開発ビルドだけモック広告を出す。
+ */
+const PRO_PICK_AD_SDK_ENABLED = process.env.EXPO_PUBLIC_PRO_PICK_AD_SDK === "1";
+/** Free の「広告で PRO PICK を見る」ボタンの表示。本番は SDK を有効にしたときだけ出す */
+const PRO_PICK_AD_UI_ENABLED = __DEV__ || PRO_PICK_AD_SDK_ENABLED;
 import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
+import PredictProInsightKitNative from "./PredictProInsightKitNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
 import NbaTeamStatsPanelNative from "./NbaTeamStatsPanelNative";
-import NbaRosterPanelNative from "./NbaRosterPanelNative";
+import NbaMatchupTrendPanelNative from "./NbaMatchupTrendPanelNative";
 import { CandleChartLoaderNative } from "../../../components/CandleChartLoaderNative";
 import type { PredictProBrief } from "../../../../../../lib/predict/predictProBrief";
 import type { NbaInjuryReport } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { NbaTeamStatsBundle } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import type { NbaRosterReport } from "../../../../../../lib/predict/nbaRoster";
 import { useNbaMatchupRoster } from "../../../../../../lib/nba/teamRosters/useNbaMatchupRoster";
+import { useNbaMatchupTrend } from "../../../../../../lib/nba/predict/useNbaMatchupTrend";
 import { useNbaMatchupInjuryReport } from "../../../../../../lib/nba/predict/useNbaMatchupInjuryReport";
 import { useNbaMatchupTeamStats } from "../../../../../../lib/nba/predict/useNbaMatchupTeamStats";
 import { useNbaMatchupProBrief } from "../../../../../../lib/nba/predict/useNbaMatchupProBrief";
@@ -31,7 +48,6 @@ import {
   trackProFunnelNative,
 } from "../../billing/proFunnelNative";
 import type { ProFunnelSource } from "../../../../../../lib/billing/proFunnelEvents";
-import { injuryStatusByPlayerId } from "../../../../../../lib/predict/nbaInjuryReport";
 import type { GamesLanguage } from "../gamesI18n";
 import { getGamesTexts } from "../gamesI18n";
 import type { MainTabParamList } from "../../../navigation/types";
@@ -42,8 +58,12 @@ import { proInsightPreseasonNotice } from "../../../../../../lib/predict/proInsi
 import type { Language } from "../../../../../../lib/i18n/language";
 import { TODAY_UNITERZ_DOT_COLOR } from "../../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
 import { useProInsightUnreadNative } from "./useProInsightUnreadNative";
+import {
+  predictAnalyticsPath,
+  trackPageViewNative,
+} from "../../../analytics/appAnalyticsNative";
 
-export type NbaPredictToolsTab = "insight" | "injuries" | "stats" | "roster";
+export type NbaPredictToolsTab = "insight" | "info" | "trend";
 
 type Props = {
   language: GamesLanguage;
@@ -62,6 +82,8 @@ type Props = {
   teamStats?: NbaTeamStatsBundle | null;
   roster?: NbaRosterReport | null;
   onOpenTeamDetail?: (teamId: string) => void;
+  /** タブを開いたとき、中身の先頭が見えるよう親がスクロールする */
+  onRevealPanel?: (panel: View) => void;
   onOpenPlayerDetail?: (
     playerId: string,
     toolsTab?: "injuries" | "roster"
@@ -70,6 +92,8 @@ type Props = {
   onOpenProSubscribe?: () => void;
   /** プレシーズン: INSIGHT は Free / Pro とも対象外表示（Pro 勧誘なし） */
   preseason?: boolean;
+  /** UNITERZ のみんなの予想（ホームを選んだ割合 % と人数）。予想の材料に並べる */
+  crowd?: { homePct: number; total: number } | null;
 };
 
 function PendingPanel({ text }: { text: string }) {
@@ -90,7 +114,7 @@ function LoadingPanel({ label }: { label: string }) {
 
 /**
  * NBA 予想フォームの情報タブ（本番相当）。
- * Injury / Stats / Roster は対戦チームの公開 API（モックフォールバックなし）。
+ * INFORMATION（怪我 + スタッツ）/ Roster は対戦チームの公開 API。
  */
 export default function NbaPredictToolsTabsNative({
   language,
@@ -106,9 +130,11 @@ export default function NbaPredictToolsTabsNative({
   teamStats = null,
   roster = null,
   onOpenTeamDetail,
+  onRevealPanel,
   onOpenPlayerDetail,
   onOpenProSubscribe,
   preseason = false,
+  crowd = null,
 }: Props) {
   const t = getGamesTexts(language);
   const loadingLabel = t.predictToolLoading;
@@ -119,18 +145,31 @@ export default function NbaPredictToolsTabsNative({
     timeZone,
     tipAtMs,
   });
-  const [tab, setTab] = useState<NbaPredictToolsTab | null>("injuries");
+  const [tab, setTab] = useState<NbaPredictToolsTab | null>("info");
   const navigation = useNavigation<NavigationProp<MainTabParamList>>();
   /**
-   * Injury / Stats / Roster はオーバーレイ表示と同時に取りに行く。
+   * INFORMATION / TREND はオーバーレイ表示と同時に取りに行く。
    * タブ切替の一瞬だけ「データ準備中」と出さない（キャッシュがあれば即表示）。
    */
   const [visited, setVisited] = useState<Set<NbaPredictToolsTab>>(
-    () => new Set<NbaPredictToolsTab>(["injuries", "stats", "roster"])
+    () => new Set<NbaPredictToolsTab>(["info", "trend"])
   );
+  const panelRef = useRef<View>(null);
+
   const selectTab = (next: NbaPredictToolsTab) => {
+    if (next !== tab && onRevealPanel) {
+      requestAnimationFrame(() => {
+        if (panelRef.current) onRevealPanel(panelRef.current);
+      });
+    }
     if (next === "insight" && tab !== "insight" && gameId) {
       trackProFunnelNative("insight_open", { gameId, pro: isPro });
+    }
+    if (next !== tab) {
+      trackPageViewNative(
+        `Predict: ${next.toUpperCase()}`,
+        predictAnalyticsPath(gameId, awayTeamName, homeTeamName, next)
+      );
     }
     setTab((cur) => (cur === next ? null : next));
     setVisited((cur) => (cur.has(next) ? cur : new Set(cur).add(next)));
@@ -142,9 +181,31 @@ export default function NbaPredictToolsTabsNative({
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
   }, [tab]);
 
-  const insightAvailable = isPro && !preseason;
+  const {
+    teaser,
+    hasKit: teaserHasKit,
+    kitRecord,
+    loading: teaserLoading,
+    unlocked: teaserUnlocked,
+    firstFreeAvailable,
+  } = useNbaMatchupInsightTeaser({
+    gameId,
+    apiBaseUrl,
+    enabled: !isPro && !preseason && visited.has("insight"),
+  });
+  const { fUser } = useFirebaseUser();
+  /** Free でも、この試合を解除済み（広告 / 初回の無料）なら Pro と同じ中身を出す */
+  const [proPickUnlockedGameId, setProPickUnlockedGameId] = useState<string | null>(null);
+  const [proPickAdOpen, setProPickAdOpen] = useState(false);
+  const [proPickUnlockBusy, setProPickUnlockBusy] = useState(false);
+  const proPickUnlockedHere =
+    !!gameId && (teaserUnlocked || proPickUnlockedGameId === gameId);
+  const proPickAccess = isPro || proPickUnlockedHere;
+
+  const insightAvailable = proPickAccess && !preseason;
   const {
     narrative: liveNarrative,
+    predictKit,
     loading: briefLoading,
     updatedAt: insightUpdatedAt,
   } = useNbaMatchupProBrief({
@@ -153,11 +214,51 @@ export default function NbaPredictToolsTabsNative({
     apiBaseUrl,
     enabled: insightAvailable,
   });
-  const { teaser, loading: teaserLoading } = useNbaMatchupInsightTeaser({
-    gameId,
-    apiBaseUrl,
-    enabled: !isPro && !preseason && visited.has("insight"),
-  });
+
+  /** AdMob のリワード広告を見て、SSV の確定を待つ（届くまで数回確認する） */
+  const showSdkProPickAd = async () => {
+    const copy = proPickAdCopy(language);
+    const uid = fUser?.uid;
+    if (!gameId || !uid) return;
+    const result = await showProPickRewardedAdNative({ userId: uid, gameId });
+    if (result === "error") {
+      cyberAlert(copy.adModalTitle, copy.adUnavailable);
+      return;
+    }
+    if (result !== "earned") return;
+    for (let i = 0; i < 10; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const again = await requestProPickUnlock({ apiBase: apiBaseUrl, gameId, adWatched: false });
+      if (again?.unlocked) {
+        setProPickUnlockedGameId(gameId);
+        return;
+      }
+    }
+    cyberAlert(copy.adModalTitle, copy.adPending);
+  };
+
+  const runProPickUnlock = async (adWatched: boolean) => {
+    if (!gameId) return;
+    setProPickUnlockBusy(true);
+    try {
+      const r = await requestProPickUnlock({ apiBase: apiBaseUrl, gameId, adWatched });
+      if (r?.unlocked) {
+        setProPickUnlockedGameId(gameId);
+        return;
+      }
+      if (r?.needsAd) {
+        if (PRO_PICK_AD_SDK_ENABLED && !adWatched) {
+          await showSdkProPickAd();
+        } else {
+          setProPickAdOpen(true);
+        }
+        return;
+      }
+      cyberAlert(proPickAdCopy(language).adModalTitle, proPickAdCopy(language).adUnavailable);
+    } finally {
+      setProPickUnlockBusy(false);
+    }
+  };
   const insightUnread = useProInsightUnreadNative({
     gameId,
     version: insightAvailable && !briefLoading ? insightUpdatedAt : null,
@@ -170,7 +271,7 @@ export default function NbaPredictToolsTabsNative({
       awayTeamId,
       override: injuryReport,
       apiBaseUrl,
-      enabled: visited.has("injuries"),
+      enabled: visited.has("info"),
       language: language === "ja" ? "ja" : "en",
       tipAtMs,
     });
@@ -179,22 +280,26 @@ export default function NbaPredictToolsTabsNative({
     awayTeamId,
     override: teamStats,
     apiBaseUrl,
-    enabled: visited.has("stats"),
+    enabled: visited.has("info"),
   });
-  const { roster: liveRoster, loading: rosterLoading } = useNbaMatchupRoster({
+  const { roster: liveRoster } = useNbaMatchupRoster({
     homeTeamId,
     awayTeamId,
     override: roster,
     apiBaseUrl,
-    enabled: visited.has("roster"),
+    enabled: visited.has("info"),
+  });
+  const { trend, loading: trendLoading } = useNbaMatchupTrend({
+    homeTeamId,
+    awayTeamId,
+    apiBaseUrl,
+    tipAtMs,
+    enabled: visited.has("trend"),
   });
 
   const resolvedInjury = liveInjury;
   const resolvedStats = liveStats;
   const resolvedRoster = liveRoster;
-  const injuryById = resolvedInjury
-    ? injuryStatusByPlayerId(resolvedInjury)
-    : {};
 
   /** チュートリアル・オーバーレイからタブ切替（CyberSlantedTab は触らない） */
   useEffect(
@@ -223,44 +328,158 @@ export default function NbaPredictToolsTabsNative({
   return (
     <TutorialTargetNative id="predict-tools">
       <View style={styles.root}>
+        <View ref={panelRef} collapsable={false}>
+        {tab ? (
+          <View style={styles.panel}>
+            {tab === "insight" ? (
+              preseason ? (
+                <PendingPanel text={proInsightPreseasonNotice(language)} />
+              ) : !proPickAccess && teaser && !teaserHasKit ? (
+                <PredictProInsightTeaserPanelNative
+                  teaser={teaser}
+                  language={language}
+                  homeTeamName={homeTeamName}
+                  awayTeamName={awayTeamName}
+                  onPressUpgrade={openProSubscribeFromTeaser}
+                />
+              ) : !proPickAccess && teaserLoading ? (
+                <LoadingPanel label={loadingLabel} />
+              ) : !proPickAccess ? (
+                <PredictProBriefPanelNative
+                  brief={null}
+                  language={language}
+                  homeTeamId={homeTeamId ?? ""}
+                  awayTeamId={awayTeamId ?? ""}
+                  homeTeamName={homeTeamName}
+                  awayTeamName={awayTeamName}
+                  locked
+                  onPressUpgrade={() => openProSubscribe()}
+                  onPressProPickUnlock={
+                    PRO_PICK_AD_UI_ENABLED && gameId
+                      ? () => void runProPickUnlock(false)
+                      : undefined
+                  }
+                  firstFreeAvailable={firstFreeAvailable}
+                  unlockBusy={proPickUnlockBusy}
+                  kitRecord={kitRecord}
+                  crowd={crowd}
+                />
+              ) : predictKit && homeTeamId && awayTeamId ? (
+                <PredictProInsightKitNative
+                  kit={predictKit}
+                  homeTeamId={homeTeamId}
+                  awayTeamId={awayTeamId}
+                  language={language}
+                  crowd={crowd}
+                  showHeader={false}
+                />
+              ) : liveNarrative ? (
+                <PredictProInsightNarrativePanelNative
+                  brief={liveNarrative}
+                  language={language}
+                  homeTeamName={homeTeamName}
+                  awayTeamName={awayTeamName}
+                />
+              ) : briefLoading ? (
+                <LoadingPanel label={loadingLabel} />
+              ) : (
+                <PendingPanel text={insightPendingText} />
+              )
+            ) : tab === "info" ? (
+              <View style={styles.infoFrame}>
+                {resolvedInjury ? null : (
+                  <Text style={styles.infoHeading}>INJURY</Text>
+                )}
+                {resolvedInjury ? (
+                  <NbaInjuryReportPanelNative
+                    report={resolvedInjury}
+                    roster={resolvedRoster}
+                    language={language}
+                    heading="INJURY"
+                    onPlayerPress={
+                      onOpenPlayerDetail
+                        ? (playerId) => onOpenPlayerDetail(playerId, "injuries")
+                        : undefined
+                    }
+                  />
+                ) : injuryLoading ? (
+                  <LoadingPanel label={loadingLabel} />
+                ) : (
+                  <PendingPanel text={t.panelDataPending} />
+                )}
+                {resolvedStats ? (
+                  <NbaTeamStatsPanelNative
+                    data={resolvedStats}
+                    isPro={isPro}
+                    language={language}
+                    onOpenTeamDetail={onOpenTeamDetail}
+                    bare
+                    records={
+                      trend
+                        ? {
+                            home: trend.home.season
+                              ? { ...trend.home.season, last10: trend.home.last10 }
+                              : null,
+                            away: trend.away.season
+                              ? { ...trend.away.season, last10: trend.away.last10 }
+                              : null,
+                          }
+                        : null
+                    }
+                  />
+                ) : statsLoading ? (
+                  <LoadingPanel label={loadingLabel} />
+                ) : (
+                  <PendingPanel text={t.panelDataPending} />
+                )}
+              </View>
+            ) : trend && homeTeamId && awayTeamId ? (
+              <View style={styles.infoFrame}>
+                <NbaMatchupTrendPanelNative
+                  trend={trend}
+                  homeTeamId={homeTeamId}
+                  awayTeamId={awayTeamId}
+                  language={language}
+                />
+              </View>
+            ) : trendLoading ? (
+              <LoadingPanel label={loadingLabel} />
+            ) : (
+              <PendingPanel text={t.panelDataPending} />
+            )}
+          </View>
+        ) : null}
+        </View>
         <TutorialTargetNative id="predict-tools-tabs">
           <View style={styles.tabShell}>
             <CyberSlantedTabBarNative fill>
               <CyberSlantedTabNative
-                label="INSIGHT"
+                label="PRO PICK"
                 active={tab === "insight"}
                 onPress={() => selectTab("insight")}
+                theme={PRO_PICK_TAB_THEME}
                 compact
                 fontWeight="700"
                 accessibilityRole="tab"
                 accessibilityState={{ selected: tab === "insight" }}
               />
               <CyberSlantedTabNative
-                label="INJURY"
-                active={tab === "injuries"}
-                onPress={() => selectTab("injuries")}
+                label="INFORMATION"
+                active={tab === "info"}
+                onPress={() => selectTab("info")}
                 compact
                 fontWeight="700"
                 accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "injuries" }}
+                accessibilityState={{ selected: tab === "info" }}
               />
               <CyberSlantedTabNative
-                label="STATS"
-                active={tab === "stats"}
-                onPress={() => selectTab("stats")}
+                label="TREND"
+                active={tab === "trend"}
+                onPress={() => selectTab("trend")}
                 compact
                 fontWeight="700"
                 accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "stats" }}
-              />
-              <CyberSlantedTabNative
-                label="ROSTER"
-                active={tab === "roster"}
-                onPress={() => selectTab("roster")}
-                compact
-                fontWeight="700"
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === "roster" }}
+                accessibilityState={{ selected: tab === "trend" }}
               />
             </CyberSlantedTabBarNative>
             {insightUnread ? (
@@ -278,105 +497,30 @@ export default function NbaPredictToolsTabsNative({
                 </View>
                 <View style={styles.dotCell} />
                 <View style={styles.dotCell} />
-                <View style={styles.dotCell} />
               </View>
             ) : null}
           </View>
         </TutorialTargetNative>
-
-        {tab ? (
-          <View style={styles.panel}>
-            {tab === "insight" ? (
-              preseason ? (
-                <PendingPanel text={proInsightPreseasonNotice(language)} />
-              ) : !isPro && teaser ? (
-                <PredictProInsightTeaserPanelNative
-                  teaser={teaser}
-                  language={language}
-                  homeTeamName={homeTeamName}
-                  awayTeamName={awayTeamName}
-                  onPressUpgrade={openProSubscribeFromTeaser}
-                />
-              ) : !isPro && teaserLoading ? (
-                <LoadingPanel label={loadingLabel} />
-              ) : !isPro ? (
-                <PredictProBriefPanelNative
-                  brief={null}
-                  language={language}
-                  homeTeamId={homeTeamId ?? ""}
-                  awayTeamId={awayTeamId ?? ""}
-                  homeTeamName={homeTeamName}
-                  awayTeamName={awayTeamName}
-                  locked
-                  onPressUpgrade={() => openProSubscribe()}
-                />
-              ) : liveNarrative ? (
-                <PredictProInsightNarrativePanelNative
-                  brief={liveNarrative}
-                  language={language}
-                  homeTeamName={homeTeamName}
-                  awayTeamName={awayTeamName}
-                />
-              ) : briefLoading ? (
-                <LoadingPanel label={loadingLabel} />
-              ) : (
-                <PendingPanel text={insightPendingText} />
-              )
-            ) : tab === "injuries" ? (
-              resolvedInjury ? (
-                <NbaInjuryReportPanelNative
-                  report={resolvedInjury}
-                  language={language}
-                  onPlayerPress={
-                    onOpenPlayerDetail
-                      ? (playerId) => onOpenPlayerDetail(playerId, "injuries")
-                      : undefined
-                  }
-                />
-              ) : injuryLoading ? (
-                <LoadingPanel label={loadingLabel} />
-              ) : (
-                <PendingPanel text={t.panelDataPending} />
-              )
-            ) : tab === "stats" ? (
-              resolvedStats ? (
-                <NbaTeamStatsPanelNative
-                  data={resolvedStats}
-                  isPro={isPro}
-                  language={language}
-                  onOpenTeamDetail={onOpenTeamDetail}
-                />
-              ) : statsLoading ? (
-                <LoadingPanel label={loadingLabel} />
-              ) : (
-                <PendingPanel text={t.panelDataPending} />
-              )
-            ) : resolvedRoster ? (
-              <NbaRosterPanelNative
-                report={resolvedRoster}
-                injuryById={injuryById}
-                onPlayerPress={
-                  onOpenPlayerDetail
-                    ? (player) => onOpenPlayerDetail(String(player.id), "roster")
-                    : undefined
-                }
-              />
-            ) : rosterLoading ? (
-              <LoadingPanel label={loadingLabel} />
-            ) : (
-              <PendingPanel text={t.panelDataPending} />
-            )}
-          </View>
-        ) : null}
       </View>
+      <ProPickAdMockModalNative
+        visible={proPickAdOpen}
+        language={language}
+        onCancel={() => setProPickAdOpen(false)}
+        onWatched={() => {
+          setProPickAdOpen(false);
+          void runProPickUnlock(true);
+        }}
+      />
     </TutorialTargetNative>
   );
 }
 
+/** 選択時は金の焼き込み素材、非選択は金の枠と文字 */
+const PRO_PICK_TAB_THEME: CyberSlantedTabThemeNative = { accent: "#F6C344" };
+
 const styles = StyleSheet.create({
   root: {
     width: "100%",
-    gap: 6,
   },
   /** Web / ランキング period タブと同様。skew 先端が ScrollView 端で四角く切れないよう余白 */
   tabShell: {
@@ -387,7 +531,24 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 6,
   },
-  /** INSIGHT 未読の点。タブバーと同じ 4 等分（左右 12 · gap 8）で INSIGHT の右上に重ねる */
+  /** INJURY から STATS までを一つの枠にする */
+  infoFrame: {
+    gap: 14,
+    paddingHorizontal: 10,
+    paddingTop: 12,
+    paddingBottom: 10,
+    backgroundColor: "rgba(0,14,20,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(0,245,255,0.32)",
+  },
+  infoHeading: {
+    color: "rgba(0,245,255,0.7)",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.6,
+    textAlign: "center",
+  },
+  /** INSIGHT 未読の点。タブバーと同じ 3 等分（左右 12 · gap 8）で INSIGHT の右上に重ねる */
   dotRow: {
     position: "absolute",
     left: 12,
@@ -416,6 +577,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
     width: "100%",
     paddingHorizontal: 2,
+    marginBottom: 6,
   },
   pending: {
     borderRadius: 0,

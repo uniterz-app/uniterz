@@ -1,7 +1,23 @@
 import type { RefObject } from "react";
-import { type View } from "react-native";
+import { TurboModuleRegistry, type View } from "react-native";
 import * as Sharing from "expo-sharing";
-import { captureRef } from "react-native-view-shot";
+
+type CaptureRef = (
+  view: View,
+  options: {
+    format: "png";
+    quality: number;
+    result: "tmpfile";
+    useRenderInContext: boolean;
+  }
+) => Promise<string>;
+
+/** 開発ビルドに RNViewShot が無いと import 時点で落ちるので、使うときだけ読む */
+function loadCaptureRef(): CaptureRef | null {
+  if (TurboModuleRegistry.get("RNViewShot") == null) return null;
+  const mod = require("react-native-view-shot") as { captureRef: CaptureRef };
+  return mod.captureRef;
+}
 
 export type ShareImageNativeResult =
   | "shared"
@@ -28,7 +44,8 @@ export async function captureViewAsPngNative(
   viewRef: RefObject<View | null>
 ): Promise<string> {
   const node = viewRef.current;
-  if (!node) {
+  const captureRef = loadCaptureRef();
+  if (!node || !captureRef) {
     throw new Error("Capture target missing");
   }
 

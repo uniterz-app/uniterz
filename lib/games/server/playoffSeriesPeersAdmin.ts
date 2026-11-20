@@ -59,7 +59,8 @@ function isSamePlayoffSeriesMatchup(
 
 async function fetchPlayoffSeriesPeerGamesAdmin(
   db: Firestore,
-  subject: Record<string, unknown> & { id?: string }
+  subject: Record<string, unknown> & { id?: string },
+  selectFields?: readonly string[]
 ): Promise<Array<Record<string, unknown>>> {
   const sid = String(subject.id ?? "");
   const onlySubject = (): Array<Record<string, unknown>> =>
@@ -89,7 +90,11 @@ async function fetchPlayoffSeriesPeerGamesAdmin(
       .where("season", "==", seasonEq)
       .where("home.teamId", "==", a)
       .where("away.teamId", "==", h);
-    const [s1, s2] = await Promise.all([q1.get(), q2.get()]);
+    const [s1, s2] = await Promise.all(
+      [q1, q2].map((q) =>
+        (selectFields?.length ? q.select(...selectFields) : q).get()
+      )
+    );
     const byId = new Map<string, Record<string, unknown>>();
     for (const d of s1.docs) {
       byId.set(d.id, { id: d.id, ...d.data() } as Record<string, unknown>);
@@ -112,7 +117,8 @@ async function fetchPlayoffSeriesPeerGamesAdmin(
 /** 日付窓一覧用: プレーオフ試合のシリーズ peer をまとめて付与 */
 export async function mergePlayoffSeriesPeersForWindowGamesAdmin(
   db: Firestore,
-  windowRows: ReadonlyArray<Record<string, unknown> & { id?: string }>
+  windowRows: ReadonlyArray<Record<string, unknown> & { id?: string }>,
+  selectFields?: readonly string[]
 ): Promise<Record<string, unknown>[]> {
   const byId = new Map<string, Record<string, unknown>>();
   for (const row of windowRows) {
@@ -145,7 +151,7 @@ export async function mergePlayoffSeriesPeersForWindowGamesAdmin(
   }
 
   const peerLists = await Promise.all(
-    subjects.map((s) => fetchPlayoffSeriesPeerGamesAdmin(db, s))
+    subjects.map((s) => fetchPlayoffSeriesPeerGamesAdmin(db, s, selectFields))
   );
 
   for (const peers of peerLists) {

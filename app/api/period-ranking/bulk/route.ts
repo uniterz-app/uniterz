@@ -4,9 +4,9 @@ import { unstable_cache } from "next/cache";
 import { NextResponse } from "next/server";
 import { CUMULATIVE_RANKING_REVALIDATE_SEC } from "@/lib/rankings/cumulativeRankingCache";
 import {
-  currentRankingPeriodLabel,
   isRankingPeriod,
   isValidPeriodLabel,
+  previousRankingPeriodLabel,
   type RankingPeriod,
 } from "@/lib/rankings/rankingPeriod";
 import {
@@ -17,11 +17,21 @@ import {
   listNbaPeriodLabels,
   readNbaPeriodRankingSnapshots,
 } from "@/lib/rankings/server/readNbaPeriodRankingSnapshots";
+import { resolveDisplayedRankingPeriodLabel } from "@/lib/rankings/server/resolveDisplayedRankingPeriodLabel";
 import { assertProUser } from "@/lib/rankings/server/fetchRankGapAnalysis";
 import { getAdminAuth } from "@/lib/firebaseAdmin";
 import { mergeUserPlansIntoBulkByMetric } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
 import { RANKING_COMMENT_CDN_TAG_HEADER } from "@/lib/rankings/rankingCommentCache";
 import { loadRankingSnapshotGenerationKey } from "@/lib/rankings/server/loadRankingSnapshotGeneration";
+
+function periodPayloadHasRows(
+  payload: Awaited<ReturnType<typeof loadSharedPayload>>
+): boolean {
+  if (!payload?.byMetric) return false;
+  return Object.values(payload.byMetric).some(
+    (m) => Array.isArray(m?.rows) && m.rows.length > 0
+  );
+}
 
 async function optionalUid(req: Request): Promise<string | null> {
   const authz =
@@ -94,9 +104,17 @@ export async function GET(req: Request) {
       }
     }
 
-    const currentLabel = currentRankingPeriodLabel(period);
+    /** 新期間の初試合日が全部終わるまで前期間を「いま」にする（Unit 付与はカレンダーのまま） */
+    const currentLabel = await unstable_cache(
+      () => resolveDisplayedRankingPeriodLabel(period),
+      [`nba-period-ranking-display-label-${period}`],
+      {
+        revalidate: 60,
+        tags: ["period-ranking", "games-window:nba"],
+      }
+    )();
     const labelRaw = url.searchParams.get("label");
-    const label =
+    let label =
       labelRaw && isValidPeriodLabel(period, labelRaw) && labelRaw <= currentLabel
         ? labelRaw
         : currentLabel;
@@ -112,18 +130,39 @@ export async function GET(req: Request) {
           { status: 401 }
         );
       }
-      const snapshot = await readNbaPeriodRankingSnapshots({
+      /** 一覧と同じ label 解決（空なら前期間）。MY RANK だけ新期間で -- にならないようにする */
+      let personalLabel = label;
+      let snapshot = await readNbaPeriodRankingSnapshots({
         period,
-        label,
+        label: personalLabel,
         uid,
         division,
       });
+      /** 新週・新月のスナップ未作成のあいだは前期間（一覧と同じ）。表示ラベル解決後の空だけ対象 */
+      if (
+        (!snapshot || !periodPayloadHasRows(snapshot)) &&
+        personalLabel === currentLabel
+      ) {
+        const prev = previousRankingPeriodLabel(period, personalLabel);
+        if (prev && prev < personalLabel) {
+          const prevSnapshot = await readNbaPeriodRankingSnapshots({
+            period,
+            label: prev,
+            uid,
+            division,
+          });
+          if (prevSnapshot && periodPayloadHasRows(prevSnapshot)) {
+            snapshot = prevSnapshot;
+            personalLabel = prev;
+          }
+        }
+      }
       if (!snapshot) {
         return NextResponse.json(
           {
             ok: true,
             period,
-            label,
+            label: personalLabel,
             division,
             personalOnly: true,
             range: null,
@@ -155,7 +194,7 @@ export async function GET(req: Request) {
         {
           ok: true,
           period: snapshot.period,
-          label,
+          label: personalLabel,
           division,
           personalOnly: true,
           range: snapshot.range,
@@ -181,27 +220,52 @@ export async function GET(req: Request) {
 
     const snapshotGeneration = await loadRankingSnapshotGenerationKey();
 
-    const payload = await unstable_cache(
-      async () => loadSharedPayload(period, label, division),
-      [
-        `nba-period-ranking-shared-v3-${period}-${label}-${division}`,
-        snapshotGeneration,
-      ],
-      {
-        revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
-        tags: ["period-ranking", "cumulative-ranking"],
-      }
-    )();
+    const loadCachedPayload = (periodLabel: string) =>
+      unstable_cache(
+        async () => loadSharedPayload(period, periodLabel, division),
+        [
+          `nba-period-ranking-shared-v3-${period}-${periodLabel}-${division}`,
+          snapshotGeneration,
+        ],
+        {
+          revalidate: CUMULATIVE_RANKING_REVALIDATE_SEC,
+          tags: ["period-ranking", "cumulative-ranking"],
+        }
+      )();
 
-    const availableLabels = await labelsPromise;
+    let payload = await loadCachedPayload(label);
+    /**
+     * 表示中ラベルのスナップが空のときだけ前期間へ（新週の日次 cron 前など）。
+     * 月間の「10 月張り付き」は pickDisplayed 側（初試合日経過で今期間）で防ぐ。
+     * 今月スナップに行があればフォールバックしない。
+     */
+    if (!periodPayloadHasRows(payload) && label === currentLabel) {
+      const prev = previousRankingPeriodLabel(period, label);
+      if (prev && prev < label) {
+        const prevPayload = await loadCachedPayload(prev);
+        if (periodPayloadHasRows(prevPayload)) {
+          payload = prevPayload;
+          label = prev;
+        }
+      }
+    }
+
+    const availableLabels = (await labelsPromise).filter(
+      (l) => l <= currentLabel
+    );
     if (!availableLabels.includes(currentLabel)) {
       availableLabels.unshift(currentLabel);
     }
+    if (label !== currentLabel && !availableLabels.includes(label)) {
+      availableLabels.unshift(label);
+    }
 
+    /** 表示ラベルは最大 60s で切り替わるため CDN を 24h にしない（デプロイ後の張り付き防止） */
+    const periodCdnSec = 60;
     const cacheControl =
       division === "open"
-        ? `private, max-age=60, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
-        : `public, max-age=0, s-maxage=${CUMULATIVE_RANKING_REVALIDATE_SEC}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC * 4}`;
+        ? `private, max-age=${periodCdnSec}, stale-while-revalidate=${CUMULATIVE_RANKING_REVALIDATE_SEC}`
+        : `public, max-age=0, s-maxage=${periodCdnSec}, stale-while-revalidate=${periodCdnSec * 4}`;
 
     if (!payload) {
       return NextResponse.json(

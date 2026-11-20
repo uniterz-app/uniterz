@@ -38,6 +38,8 @@ export type NbaTeamRecentGame = {
   dateLabel: string;
   /** Firestore `games/{id}`。あればボックススコアへ遷移可 */
   gameId?: string;
+  /** 試合開始 ms。TREND の休み / 3IN4 用。古いスナップショットには無い */
+  startMs?: number;
   oppTeamId: string;
   oppAbbr: string;
   home: boolean;

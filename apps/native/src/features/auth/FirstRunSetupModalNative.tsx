@@ -16,6 +16,7 @@ import {
   type MatchScoreDisplayPrefKey,
 } from "../../../../../lib/games/matchScoreDisplayPrefs";
 import { firstRunSetupCopy } from "../../../../../lib/onboarding/firstRunSetup";
+import FirstRunUnitIntroNative from "./FirstRunUnitIntroNative";
 
 type Props = {
   open: boolean;
@@ -47,9 +48,14 @@ export default function FirstRunSetupModalNative({ open, uid, language, onStart 
   const scoreCopy = matchScoreDisplayCopy(language);
   const { prefs, updatePref } = useMatchScoreDisplayPrefsNative(uid);
   const [notify, setNotify] = useState(true);
+  /** 登録直後の 1 枚（UNIT の流れ）を終えたら、通知・スコア表示の確認へ */
+  const [introDone, setIntroDone] = useState(false);
 
   useEffect(() => {
-    if (open) setNotify(true);
+    if (open) {
+      setNotify(true);
+      setIntroDone(false);
+    }
   }, [open]);
 
   const scoreRows: Array<{ key: MatchScoreDisplayPrefKey; title: string; desc: string }> = [
@@ -58,6 +64,16 @@ export default function FirstRunSetupModalNative({ open, uid, language, onStart 
   ];
 
   const start = () => onStart({ notify });
+
+  if (open && !introDone) {
+    return (
+      <FirstRunUnitIntroNative
+        visible
+        language={language}
+        onNext={() => setIntroDone(true)}
+      />
+    );
+  }
 
   return (
     <Modal

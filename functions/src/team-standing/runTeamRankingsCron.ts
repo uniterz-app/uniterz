@@ -18,6 +18,7 @@ export async function runTeamRankingsCronIfNbaGamesToday(): Promise<void> {
     .where("league", "==", "nba")
     .where("startAtJst", ">=", start)
     .where("startAtJst", "<=", end)
+    .select("seasonPhase")
     .get();
 
   const hasRegularStandingsGame = snap.docs.some((doc) =>

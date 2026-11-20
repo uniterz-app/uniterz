@@ -68,3 +68,6 @@ scripts/.tmp-*
 
 # Local EAS builds
 .local-builds/
+
+# 作業用の一時ファイル
+.local-tmp/

@@ -226,7 +226,7 @@ export const officialFeatures = {
     {
       id: "insight",
       name: "Insight",
-      text: "PRO INSIGHT は、無料でも見られる情報を要約し、見るべき点を整理します。勝敗を断定したり、特定の予想を推奨したりする機能ではありません。",
+      text: "PRO PICK は、無料でも見られる情報を要約し、見るべき点を整理します。勝敗を断定したり、特定の予想を推奨したりする機能ではありません。",
     },
     {
       id: "report",
@@ -327,7 +327,7 @@ export const officialPro = {
       variant: "pro" as const,
       items: [
         "Free の内容すべて",
-        "PRO INSIGHT",
+        "PRO PICK",
         "直前の重要変化アラート",
         "週次レポート",
         "Pro Skin / Pro Badge",
@@ -361,7 +361,7 @@ export const officialPro = {
   features: [
     {
       id: "insight",
-      kicker: "PRO INSIGHT",
+      kicker: "PRO PICK",
       title: "試合前に、見るべき点だけを出す",
       text: "無料でも見られるデータを要約し、その試合で重要な分析を 3〜5 件に絞ります。勝敗を断定したり、特定の予想を推奨したりする機能ではありません。最終的な予想は、自分で行います。",
       points: [
@@ -369,7 +369,7 @@ export const officialPro = {
         "各カードに根拠となる数字を添える",
         "重要情報がないときは、無理にカードを作らない",
       ],
-      shots: [{ src: "/lp/pro-insght.png", alt: "Uniterz の PRO INSIGHT" }],
+      shots: [{ src: "/lp/pro-insght.png", alt: "Uniterz の PRO PICK" }],
     },
     {
       id: "report",
@@ -408,10 +408,10 @@ export const officialPro = {
       id: "alert",
       kicker: "ALERT",
       title: "見直しが必要な変化だけ知らせる",
-      text: "Free でも締切や試合開始は受け取れます。Pro は、重要選手の出場ステータス変更や PRO INSIGHT の更新など、予想を見直す必要が高い変化まで届けます。到達は通信環境などにより保証しません。",
+      text: "Free でも締切や試合開始は受け取れます。Pro は、重要選手の出場ステータス変更や PRO PICK の更新など、予想を見直す必要が高い変化まで届けます。到達は通信環境などにより保証しません。",
       points: [
         "重要選手の出場可否の変化",
-        "PRO INSIGHT の重要な更新",
+        "PRO PICK の重要な更新",
         "予想済み試合の再確認",
       ],
     },
@@ -420,7 +420,7 @@ export const officialPro = {
     { feature: "試合予想", free: "あり", pro: "あり" },
     { feature: "基本ランキング", free: "あり", pro: "あり" },
     { feature: "チーム・選手データ / Injury", free: "あり", pro: "あり" },
-    { feature: "PRO INSIGHT", free: "なし", pro: "あり" },
+    { feature: "PRO PICK", free: "なし", pro: "あり" },
     { feature: "直前アラート", free: "基本通知", pro: "重要変化まで" },
     { feature: "週次レポート", free: "なし", pro: "あり" },
     { feature: "月次レポート", free: "なし", pro: "Monthly / Season" },
@@ -532,7 +532,7 @@ export const officialFaq = {
     },
     {
       q: "Pro とは？",
-      a: "サブスクリプション型の有料プランです。PRO INSIGHT、直前アラート、週次・月次レポート、Pro Skin とバッジが対象です。予想の参加費ではなく、競技上の優位を与えるものでもありません。",
+      a: "サブスクリプション型の有料プランです。PRO PICK、直前アラート、週次・月次レポート、Pro Skin とバッジが対象です。予想の参加費ではなく、競技上の優位を与えるものでもありません。",
     },
     {
       q: "Pro に入ると有利になる？",

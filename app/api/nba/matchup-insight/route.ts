@@ -15,12 +15,23 @@ import {
   MATCHUP_INSIGHT_CACHE_REVALIDATE_SEC,
   MATCHUP_INSIGHT_CACHE_TAG,
 } from "@/lib/nba/predict/matchupInsightCache";
-import { loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
+import {
+  GAME_PRO_INSIGHT_FIELDS,
+  loadGameProInsight,
+} from "@/lib/nba/insights/gameProInsightStore";
 import { buildProInsightPreviewTeaser } from "@/lib/predict/proInsightPreviewTeaser";
+import { sanitizeProInsightPredictKit } from "@/lib/nba/insights/predictKit/predictKitTypes";
+import {
+  hasProPickGameUnlock,
+  proPickFirstFreeAvailable,
+} from "@/lib/pro/proPickGameAccess";
 
 async function loadMatchupInsightPayload(gameId: string) {
   const db = getAdminDb();
-  const snap = await db.collection("games").doc(gameId).get();
+  // league の判定と、旧データ（games 上の Pro Insight 項目）のフォールバックだけ読む
+  const [snap] = await db.getAll(db.collection("games").doc(gameId), {
+    fieldMask: ["league", ...GAME_PRO_INSIGHT_FIELDS],
+  });
   if (!snap.exists) return { kind: "not_found" as const };
 
   const game = snap.data() as Record<string, unknown>;
@@ -44,8 +55,9 @@ async function loadMatchupInsightPayload(gameId: string) {
   const brief = sanitizeProBriefForDisplay(
     data.proBrief as PredictProBrief | null | undefined
   );
+  const predictKit = sanitizeProInsightPredictKit(data.predictKit);
 
-  const updatedAtMs =
+  const narrativeAtMs =
     (typeof narrativeMeta.generatedAtMs === "number"
       ? narrativeMeta.generatedAtMs
       : null) ??
@@ -54,6 +66,13 @@ async function loadMatchupInsightPayload(gameId: string) {
       "function"
       ? (data.proBriefUpdatedAt as { toMillis: () => number }).toMillis()
       : null);
+  // アプリの未読の点はこの時刻で判定する。予想の材料を作った / 直したときも点が付くよう新しい方
+  const kitAtMs =
+    predictKit && typeof data.predictKitAtMs === "number" ? data.predictKitAtMs : null;
+  const updatedAtMs =
+    kitAtMs != null && narrativeAtMs != null
+      ? Math.max(kitAtMs, narrativeAtMs)
+      : (kitAtMs ?? narrativeAtMs);
 
   return {
     kind: "ok" as const,
@@ -63,6 +82,8 @@ async function loadMatchupInsightPayload(gameId: string) {
       status,
       narrative,
       narrativeMeta,
+      /** 予想の材料（新しいアプリはこれがあればナラティブの代わりに出す） */
+      predictKit,
       /** @deprecated 旧 HOME/AWAY。新 UI は narrative を使う */
       brief,
       updatedAt:
@@ -77,9 +98,11 @@ async function loadMatchupInsightPayload(gameId: string) {
  * Firestore gameProInsights/{id}（クライアント読み取り不可）:
  *   - proInsightNarrative … 新 UI（試合共通スナップショット · Pro 限定）
  *   - proBrief … 旧 HOME/AWAY テンプレ（互換のため残す）
+ *   - predictKit … 予想の材料（Pro 限定。無料のティーザーには載せない）
  *
  * クライアントは narrative を優先。未生成は status: "empty" | "pending"。
- * Free + `teaser=1`: PREVIEW の第 1 段落だけ `{ locked: true, teaser }`。PREVIEW の無い試合は 403。
+ * Free + `teaser=1`: PREVIEW の第 1 段落と、予想の材料があるか・今季の的中率だけ `{ locked: true, teaser, hasKit, kitRecord }`。
+ *   予想の中身（確率・スコア・得点王）は返さない。どちらも無い試合は 403。
  * Pro 判定は毎回。試合共通部分は unstable_cache（書き込み側 ingest で tag を捨てる）。
  */
 export async function GET(req: Request) {
@@ -94,18 +117,30 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const isPro = await assertProUser(uid);
     const wantsTeaser = searchParams.get("teaser") === "1";
-    if (!isPro && !wantsTeaser) {
-      return NextResponse.json(
-        { ok: false, error: "pro_required", locked: true },
-        { status: 403 }
-      );
-    }
 
     const gameId = (searchParams.get("gameId") ?? "").trim();
     if (!gameId) {
       return NextResponse.json(
         { ok: false, error: "gameId_required" },
         { status: 400 }
+      );
+    }
+
+    // Free でも、この試合を解除済み（初回の無料 / 広告）なら Pro と同じ中身を返す
+    const db = getAdminDb();
+    const unlocked = !isPro && (await hasProPickGameUnlock(db, uid, gameId));
+    const hasAccess = isPro || unlocked;
+    if (!hasAccess && !wantsTeaser) {
+      return NextResponse.json(
+        { ok: false, error: "pro_required", locked: true },
+        { status: 403 }
+      );
+    }
+    if (unlocked && wantsTeaser) {
+      // 解除済みの Free は、クライアントが通常の取得（teaser なし）に切り替える
+      return NextResponse.json(
+        { ok: true, gameId, locked: false, unlocked: true },
+        { headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
@@ -125,16 +160,29 @@ export async function GET(req: Request) {
       );
     }
 
-    if (!isPro) {
+    if (!hasAccess) {
       const teaser = buildProInsightPreviewTeaser(result.body.narrative);
-      if (!teaser) {
+      const hasKit = result.body.predictKit != null;
+      if (!teaser && !hasKit) {
         return NextResponse.json(
           { ok: false, error: "pro_required", locked: true },
           { status: 403 }
         );
       }
+      // 初回の無料解除が使えるか（ボタンの文言を「無料」にするため）
+      const firstFreeAvailable = hasKit
+        ? await proPickFirstFreeAvailable(db, uid)
+        : false;
       return NextResponse.json(
-        { ok: true, gameId, locked: true, teaser },
+        {
+          ok: true,
+          gameId,
+          locked: true,
+          teaser,
+          hasKit,
+          kitRecord: result.body.predictKit?.record ?? null,
+          firstFreeAvailable,
+        },
         { headers: { "Cache-Control": "private, no-store" } }
       );
     }

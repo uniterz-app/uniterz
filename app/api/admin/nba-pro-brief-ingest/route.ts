@@ -9,11 +9,8 @@ import {
   ingestNbaProBriefs,
   type NbaProBriefIngestMode,
 } from "@/lib/nba/insights/ingestProBriefs";
-import {
-  patchProInsightNarrativesIfInjuryChanged,
-  pollProInsightNarrativeBatches,
-  submitProInsightNarrativeBatch,
-} from "@/lib/nba/insights/proInsightLlm/ingestProInsightNarrativeBatch";
+import { pollProInsightNarrativeBatches } from "@/lib/nba/insights/proInsightLlm/ingestProInsightNarrativeBatch";
+import { refreshPredictKits } from "@/lib/nba/insights/predictKit/refreshPredictKits";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { revalidateMatchupInsightCache } from "@/lib/nba/predict/matchupInsightCache";
 import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
@@ -38,10 +35,10 @@ type RouteMode =
  * }
  *
  * full / patch … 旧テンプレ proBrief
- * batch_submit … 毎日 20:00 ナラティブ Batch 投入
- *   includePreseason + syncChat … admin スモーク（通常 cron では使わない）
- * batch_poll … Batch 完了ポーリング
- * narrative_patch … tip 1h 前 · injury 指紋が変わった試合だけ Chat 再生成
+ * batch_submit / narrative_patch … ナラティブ（OpenAI）の生成は停止済み。「予想の材料」+ 裏のシミュレーションだけ
+ *   計算し直す（変わった試合だけ書く。batch_submit = 20:00 に翌日 24h 分を作る。narrative_patch = 毎時、
+ *   もうある予想を欠場が変わったときだけ直す）
+ * batch_poll … 停止前に投入済みの Batch の完了ポーリング（新しい投入は無いので空振りで終わる）
  */
 export async function POST(req: Request) {
   try {
@@ -78,45 +75,44 @@ export async function POST(req: Request) {
                 : "full";
 
     const db = getAdminDb();
-    const respond = (result: { ok: boolean }) => {
-      revalidateMatchupInsightCache();
-      revalidateNbaDocCache([
-        "nbaTeamSeasonRecords",
-        "nbaTeamInsightExtras",
-        "nbaTeamAceOutRecords",
-      ]);
+    /** 毎時・15 分ごとの cron が空振りのたびにキャッシュを捨てると Vercel が Firestore を読み直す */
+    const respond = <T extends { ok: boolean }>(
+      result: T,
+      changed: { insight: boolean; teamDocs: boolean }
+    ) => {
+      if (changed.insight) revalidateMatchupInsightCache();
+      if (changed.teamDocs) {
+        revalidateNbaDocCache([
+          "nbaTeamSeasonRecords",
+          "nbaTeamInsightExtras",
+          "nbaTeamAceOutRecords",
+        ]);
+      }
       return NextResponse.json(result, { status: result.ok ? 200 : 207 });
     };
 
     if (mode === "batch_poll") {
       const result = await pollProInsightNarrativeBatches(db);
-      return respond(result);
+      return respond(result, { insight: result.polled > 0, teamDocs: false });
     }
 
-    if (mode === "batch_submit") {
-      const result = await submitProInsightNarrativeBatch(db, {
-        seasonKey,
-        fullHorizonHours:
-          typeof body.fullHorizonHours === "number"
-            ? body.fullHorizonHours
-            : undefined,
-        gameIds: Array.isArray(body.gameIds)
-          ? body.gameIds.filter((x) => typeof x === "string" && x.trim())
-          : undefined,
-        includePreseason: body.includePreseason === true,
-        syncChat: body.syncChat === true,
-      });
-      return respond(result);
-    }
+    const refreshKits = async (kitMode: "daily" | "hourly") => {
+      try {
+        return await refreshPredictKits(db, { seasonKey, mode: kitMode });
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : String(e) };
+      }
+    };
+    const kitsChanged = (r: Awaited<ReturnType<typeof refreshKits>>) =>
+      "kitWritten" in r && r.kitWritten > 0;
 
-    if (mode === "narrative_patch") {
-      const result = await patchProInsightNarrativesIfInjuryChanged(db, {
-        seasonKey,
-        gameIds: Array.isArray(body.gameIds)
-          ? body.gameIds.filter((x) => typeof x === "string" && x.trim())
-          : undefined,
-      });
-      return respond(result);
+    // ナラティブ（OpenAI）は作らない。cron が送るモード名は変えずに予想の材料だけ回す
+    if (mode === "batch_submit" || mode === "narrative_patch") {
+      const predictKits = await refreshKits(mode === "batch_submit" ? "daily" : "hourly");
+      return respond(
+        { ok: true, narrative: "stopped", predictKits },
+        { insight: kitsChanged(predictKits), teamDocs: false }
+      );
     }
 
     const result = await ingestNbaProBriefs(db, {
@@ -132,7 +128,7 @@ export async function POST(req: Request) {
       rebuildPriorRecords: body.rebuildPriorRecords === true,
     });
 
-    return respond(result);
+    return respond(result, { insight: true, teamDocs: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

@@ -1,7 +1,7 @@
 /** Web `DailyScoreRankRow` 相当 — TODAY UNITERZ / リザルト得点上位の行（順位・アバター・名前・国旗・PTS） */
 import type { ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { CYBER_TAB_CYAN } from "./CyberSlantedTabNative";
+import { CYBER_TAB_CYAN } from "../../ui/cyberSideMenuNative";
 import { RankingsAvatarNative } from "./RankingsAvatarAndTabs";
 import { rankingFlagImageUri } from "./rankingFlagUri";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "./rankingsUiTheme";

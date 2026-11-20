@@ -1102,10 +1102,7 @@ const fr: Messages = {
         "Depuis **Groupes**, **postulez** à une squad ouverte ou entrez avec un **code**.\nPendant l’événement, le **hebdo (×4)** et le **mensuel (×1)** se mettent à jour.\n**Tous les membres** des meilleures squads reçoivent des **UNIT**.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
-        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
-      horizonUnitHowTitle: "Earning UNIT",
-      horizonUnitHowBody:
-        "Gagne via les récompenses des **classements hebdo/mensuels**, **Squad Battle** et **invitations d’amis**.\nÉchange tes UNIT contre des **maillots**, **casquettes**, etc.",
+        "La **pièce** en surbrillance est ton **solde UNIT**.\nTu en gagnes avec les **classements hebdo/mensuels**, **Squad Battle** et les **invitations d’amis**, puis tu les **échanges** contre des **maillots**, **casquettes**, etc.\nUne prédiction ratée ne te fait jamais perdre d’UNIT.",
       horizonCareerTitle: "Career",
       horizonCareerBody:
         "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",

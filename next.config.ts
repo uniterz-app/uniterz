@@ -1,8 +1,5 @@
 // next.config.ts
 import type { NextConfig } from "next";
-import withPWA from "next-pwa";
-
-const isProd = process.env.NODE_ENV === "production";
 
 const baseConfig: NextConfig = {
   reactStrictMode: true,
@@ -25,27 +22,32 @@ const baseConfig: NextConfig = {
     ];
   },
 
+  // 自分のバケットだけ（他人のバケットの画像で /_next/image の変換枠を使わせない）
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "firebasestorage.googleapis.com",
-        pathname: "/v0/b/**",
+        pathname: "/v0/b/matchpik-7dbb1.firebasestorage.app/**",
+      },
+      {
+        protocol: "https",
+        hostname: "firebasestorage.googleapis.com",
+        pathname: "/v0/b/matchpik-7dbb1.appspot.com/**",
       },
       {
         protocol: "https",
         hostname: "storage.googleapis.com",
-        pathname: "/**",
+        pathname: "/matchpik-7dbb1.firebasestorage.app/**",
+      },
+      {
+        protocol: "https",
+        hostname: "storage.googleapis.com",
+        pathname: "/matchpik-7dbb1.appspot.com/**",
       },
     ],
   },
 };
 
-// PWA は本番のみ
-export default isProd
-  ? withPWA({
-      dest: "public",
-      register: true,
-      skipWaiting: true,
-    })(baseConfig)
-  : baseConfig;
+// next-pwa は webpack 用で、Turbopack の `next build` では何もしない（sw.js も生成されていない）
+export default baseConfig;

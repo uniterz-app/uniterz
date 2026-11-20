@@ -13,6 +13,8 @@ export type SeasonAwardsApiPayload = {
   season: string;
   prediction: NbaSeasonAwardsPrediction | null;
   candidates: NbaAwardCandidate[];
+  /** 非公開の理由（返せないとき）。締切前 = before_deadline / 本人の非公開設定 = private */
+  hidden?: "before_deadline" | "private" | null;
   error?: string;
 };
 
@@ -21,6 +23,18 @@ async function authHeader(): Promise<Record<string, string>> {
   if (!user) throw new Error("not authenticated");
   const token = await user.getIdToken();
   return { Authorization: `Bearer ${token}` };
+}
+
+/** ログイン中なら Bearer を付ける（本人判定用・無ければ空） */
+async function optionalAuthHeader(): Promise<Record<string, string>> {
+  const user = auth.currentUser;
+  if (!user) return {};
+  try {
+    const token = await user.getIdToken();
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    return {};
+  }
 }
 
 /** 自分の提出（要ログイン） */
@@ -47,8 +61,10 @@ export async function fetchProfileSeasonAwards(
   season: string = CURRENT_NBA_SEASON_KEY
 ): Promise<SeasonAwardsApiPayload> {
   const qs = new URLSearchParams({ uid, season });
+  const headers = await optionalAuthHeader();
   const res = await fetch(`/api/profile/season-awards?${qs}`, {
     method: "GET",
+    headers,
     cache: "no-store",
   });
   const data = (await res.json().catch(() => ({}))) as SeasonAwardsApiPayload;

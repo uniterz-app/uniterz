@@ -203,11 +203,9 @@ export const NBA_LEAGUE_ADVANCED_CATEGORY_ROWS = chunkForChipGrid(
   NBA_LEAGUE_ADV_CATEGORY_COLS
 );
 
-/** チーム表: Ratings は Basic、SHOT は選手のみ */
+/** チーム表: 公式レーティングは Basic、RATINGS はガベージタイム抜きだけ。SHOT は選手のみ */
 export const NBA_LEAGUE_TEAM_ADVANCED_CATEGORIES =
-  NBA_LEAGUE_ADVANCED_CATEGORIES.filter(
-    (c) => c.id !== "ratings" && c.id !== "shooting"
-  );
+  NBA_LEAGUE_ADVANCED_CATEGORIES.filter((c) => c.id !== "shooting");
 
 export const NBA_LEAGUE_TEAM_ADVANCED_CATEGORY_ROWS = chunkForChipGrid(
   NBA_LEAGUE_TEAM_ADVANCED_CATEGORIES,
