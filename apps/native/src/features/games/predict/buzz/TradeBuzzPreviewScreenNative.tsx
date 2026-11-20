@@ -1,6 +1,6 @@
 /**
- * __DEV__ — トレード Buzz / 確定トレードの UI モック。
- * Buzz を見るとき Free は本物のリワード広告（サーバーで解除を確認・日本時間 0 時まで有効）、Pro はスキップ。確定タブは広告なし。
+ * トレード Buzz / 確定トレード。
+ * Buzz を見るとき Free はリワード広告（サーバーで解除を確認・日本時間 0 時まで有効）、Pro はスキップ。確定タブは広告なし。
  */
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -20,6 +20,7 @@ import {
 } from "../../../../../../../lib/predict/nbaTradeBuzzCurated";
 import { cyberAlert } from "../../../../components/cyberAlert";
 import { useBottomTabBarInsets } from "../../../../navigation/useBottomTabBarInsets";
+import { openProSubscribeNative } from "../../../../navigation/navigationRef";
 type Mode = "buzz" | "confirmed";
 
 type Props = {
@@ -32,15 +33,13 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
   const [mode, setMode] = useState<Mode>("buzz");
-  /** DEV: Free / Pro 切替 */
-  const [isPro, setIsPro] = useState(false);
-  /** 今日（日本時間）の解除があるか（サーバーの判定） */
+  /** 今日（日本時間）の解除があるか（サーバーの判定。Pro もここに含まれる） */
   const [buzzUnlocked, setBuzzUnlocked] = useState(false);
   const [adPlaying, setAdPlaying] = useState(false);
 
   const nowMs = useMemo(() => Date.now(), []);
 
-  const canSeeBuzz = isPro || buzzUnlocked;
+  const canSeeBuzz = buzzUnlocked;
 
   // 開いたとき、サーバーに今日の解除があるか確認する（前に見ていれば広告は出さない）
   useEffect(() => {
@@ -89,31 +88,13 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
   };
 
   return (
-    <MobilePageShell title="トレード Buzz（DEV）" appBackground onClose={onClose}>
+    <MobilePageShell title="トレード Buzz" appBackground onClose={onClose}>
       <ScrollView
         contentContainerStyle={[
           styles.pad,
           { paddingBottom: bottomContentReserveY + 24 },
         ]}
       >
-        <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>DEV</Text>
-          <Text style={styles.bannerBody}>
-            Buzz を見たいとき、Free は先に広告（本物のリワード広告・サーバーで確認）。Pro は広告なしでそのまま。確定タブは広告なし。一度解除すれば日本時間 0 時まで再表示しない。Buzz は取材メモ（手入力）、確定は公式発表のみ。
-          </Text>
-          <Pressable
-            onPress={() => {
-                setIsPro((v) => !v);
-            }}
-            style={styles.toggleBtn}
-            accessibilityRole="button"
-          >
-            <Text style={styles.toggle}>
-              {isPro ? "いま: Pro（広告なし） · tap" : "いま: Free（広告あり） · tap"}
-            </Text>
-          </Pressable>
-        </View>
-
         <View style={{ marginBottom: 14 }}>
           <CyberSlantedTabBarNative fill>
             <CyberSlantedTabNative
@@ -159,12 +140,11 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
                 </Text>
               </Pressable>
               <Pressable
-                onPress={() => {
-                  setIsPro(true);
-                }}
+                onPress={() => openProSubscribeNative("trade_buzz")}
                 style={styles.gateProLink}
+                accessibilityRole="button"
               >
-                <Text style={styles.gateProText}>Pro にする（広告スキップ）</Text>
+                <Text style={styles.gateProText}>Pro なら広告なし</Text>
               </Pressable>
             </View>
           )
@@ -182,48 +162,6 @@ const styles = StyleSheet.create({
   pad: {
     paddingHorizontal: 14,
     paddingTop: 8,
-  },
-  banner: {
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.25)",
-    backgroundColor: "rgba(0,245,255,0.06)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  bannerTitle: {
-    fontFamily: OX,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.4,
-    color: "rgba(0,245,255,0.9)",
-    textTransform: "uppercase",
-  },
-  bannerBody: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.5)",
-  },
-  toggleBtn: {
-    alignSelf: "flex-start",
-    paddingVertical: 2,
-  },
-  toggle: {
-    fontFamily: OX,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    color: "rgba(165,243,252,0.95)",
-    textTransform: "uppercase",
-  },
-  toggleMuted: {
-    fontFamily: OX,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: "rgba(255,255,255,0.4)",
-    textTransform: "uppercase",
   },
   gate: {
     borderWidth: 1,

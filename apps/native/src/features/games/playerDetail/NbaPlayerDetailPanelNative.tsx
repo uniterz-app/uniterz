@@ -262,7 +262,7 @@ function IdMetaCell({
   );
 }
 
-function PlayerIdCard({
+export function PlayerIdCard({
   detail,
   language,
 }: {
@@ -478,7 +478,7 @@ function ZoneStatLabel({
   );
 }
 
-function ShotZoneHeatmap({
+export function ShotZoneHeatmap({
   zones,
   accent,
   seasonLabel,
@@ -1066,7 +1066,7 @@ const CAREER_COLS_NATIVE: Array<{
 ];
 
 /** Web `SeasonHistoryTable` 相当 — BRef 風シーズン平均 */
-function SeasonHistorySection({
+export function SeasonHistorySection({
   playerId,
   regular,
   playoffs,
@@ -1324,7 +1324,7 @@ function SeasonHistorySection({
   );
 }
 
-function PlayerGameSplitsSectionNative({
+export function PlayerGameSplitsSectionNative({
   logs,
   seasonKey,
   accent,
@@ -1480,6 +1480,372 @@ function InfoRow({
         {value}
       </Text>
     </View>
+  );
+}
+
+export function PlayerContractSection({
+  detail,
+  accent,
+  language,
+}: {
+  detail: NbaPlayerDetailPreview;
+  accent: string;
+  language: string;
+}) {
+  const chrome = nbaPlayerDetailChrome(language);
+  const isJa = chrome.catalogJa;
+  const frameColor = hexToRgba(accent, 0.35);
+  const contract = detail.contract;
+  const currentSalary = contract?.seasons[0] ?? null;
+  const isTwoWay =
+    contract?.contractType?.toLowerCase().includes("two-way") ||
+    contract?.contractType?.toLowerCase().includes("2-way") ||
+    detail.position?.toLowerCase().includes("two-way") ||
+    detail.position?.toLowerCase().includes("2-way") ||
+    Boolean(
+      contract?.notes?.some(
+        (n) =>
+          n.toLowerCase().includes("two-way") || n.toLowerCase().includes("2-way")
+      )
+    );
+  const isExhibit10 =
+    !isTwoWay &&
+    (contract?.contractType?.toLowerCase().includes("exhibit 10") ||
+      contract?.contractType?.toLowerCase().includes("exhibit10") ||
+      Boolean(
+        contract?.notes?.some((n) =>
+          n.toLowerCase().includes("exhibit 10")
+        )
+      ));
+  const deadSalary = contract?.deadSalary ?? null;
+  const hasDeadSalary = (deadSalary?.salary ?? 0) > 0;
+  const isContractExpired =
+    !contract ||
+    contract.seasons.length === 0 ||
+    contract.yearsRemaining <= 0 ||
+    contract.contractStatus?.toLowerCase().includes("expired");
+  const showActiveContract =
+    Boolean(contract) && !isContractExpired && Boolean(currentSalary);
+  const deadStretchYears = deadSalary
+    ? deadSalaryStretchSeasonYears(deadSalary)
+    : [];
+  return (
+    <>
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>
+            CONTRACT
+          </Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        {showActiveContract && currentSalary && contract ? (
+            <View
+              style={[styles.contractCard, { borderColor: frameColor }]}
+            >
+              <View style={styles.contractTop}>
+                <View style={styles.contractSalaryBlock}>
+                  <Text style={styles.contractLabel}>
+                    {chrome.thisSeason}
+                    {currentSalary.teamAbbr
+                      ? ` · ${currentSalary.teamAbbr}`
+                      : ""}
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    {currentSalary.baseSalary > 0 ? (
+                      <Text style={styles.contractSalary}>
+                        {formatSalaryUsd(currentSalary.baseSalary)}
+                      </Text>
+                    ) : isTwoWay ? (
+                      <>
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: "800",
+                            color: "rgba(255,255,255,0.7)",
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            paddingHorizontal: 4,
+                            paddingVertical: 1,
+                            borderRadius: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          TW
+                        </Text>
+                        <Text style={styles.contractSalary}>
+                          {formatSalaryUsd(nbaTwoWaySalaryForSeason(CURRENT_NBA_SEASON_KEY))}
+                        </Text>
+                      </>
+                    ) : isExhibit10 ? (
+                      <>
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: "800",
+                            color: "rgba(255,255,255,0.7)",
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            paddingHorizontal: 4,
+                            paddingVertical: 1,
+                            borderRadius: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          E10
+                        </Text>
+                        <Text style={styles.contractSalary}>—</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.contractSalary}>—</Text>
+                    )}
+                  </View>
+                </View>
+                {isPlayerDetailSalaryRankShown(currentSalary.salaryRank) ? (
+                  <View style={styles.contractRankBlock}>
+                    <Text style={styles.contractLabel}>RANK</Text>
+                    <Text style={[styles.contractRank, { color: "#FFFFFF" }]}>
+                      #{currentSalary.salaryRank}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.contractMetaRow}>
+                <Text style={styles.contractMeta}>
+                  {contract.contractType}
+                </Text>
+                <Text style={styles.contractMetaDot}>
+                  ·
+                </Text>
+                <Text style={styles.contractMeta}>
+                  {chrome.rem} {contract.yearsRemaining} YR
+                </Text>
+                <Text style={styles.contractMetaDot}>
+                  ·
+                </Text>
+                <Text style={styles.contractMeta}>
+                  FA {contract.freeAgencyYear}
+                  {contract.freeAgencyType
+                    ? ` ${contract.freeAgencyType}`
+                    : ""}
+                </Text>
+              </View>
+              <Text style={[styles.contractTotal, { color: accent }]}>
+                {chrome.total}{" "}
+                {formatSalaryUsd(contract.totalValue)}
+                {"  ·  "}
+                {chrome.guar}{" "}
+                {formatSalaryUsd(contract.remainingGuaranteed)}
+              </Text>
+
+              <View style={styles.contractSeasonList}>
+                {contract.seasons.map((s, i) => (
+                  <View
+                    key={s.season}
+                    style={[
+                      styles.contractSeasonRow,
+                      i < contract.seasons.length - 1
+                        ? {
+                            borderBottomWidth: StyleSheet.hairlineWidth,
+                            borderBottomColor: hexToRgba(accent, 0.12),
+                          }
+                        : null,
+                    ]}
+                  >
+                    <Text style={styles.contractSeasonYear}>
+                      {formatContractSeasonLabel(s.season)}
+                    </Text>
+                    <Text style={styles.contractSeasonSalary}>
+                      {s.baseSalary > 0
+                        ? formatSalaryUsd(s.baseSalary)
+                        : isTwoWay
+                        ? "TW"
+                        : isExhibit10
+                        ? "E10"
+                        : "—"}
+                    </Text>
+                    {s.option ? (
+                      <Text
+                        style={[styles.contractSeasonOpt, { color: accent }]}
+                      >
+                        {s.option}
+                      </Text>
+                    ) : (
+                      <Text style={styles.contractSeasonOptPlaceholder}> </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+              {contract.notes.length > 0 ? (
+                <Text
+                  style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
+                >
+                  {contract.notes[0]}
+                </Text>
+              ) : null}
+              {hasDeadSalary && deadSalary ? (
+                <View style={styles.contractDeadWrap}>
+                  <Text style={styles.contractLabel}>
+                    {chrome.deadSalaryBadge} · {deadSalary.teamAbbr}
+                  </Text>
+                  {deadStretchYears.map((y) => (
+                    <View key={y} style={styles.contractSeasonRow}>
+                      <Text style={styles.contractSeasonYear}>
+                        {formatContractSeasonLabel(y)}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 9,
+                          fontWeight: "800",
+                          color: "rgba(255,255,255,0.6)",
+                          backgroundColor: "rgba(255,255,255,0.1)",
+                          paddingHorizontal: 4,
+                          paddingVertical: 1,
+                          borderRadius: 2,
+                          overflow: "hidden",
+                          marginRight: 6,
+                        }}
+                      >
+                        {chrome.deadSalaryBadge}
+                      </Text>
+                      <Text style={[styles.contractSeasonSalary, { color: "rgba(255,255,255,0.85)", flex: 1 }]}>
+                        {formatSalaryUsd(deadSalary.salary)}
+                      </Text>
+                    </View>
+                  ))}
+                  <Text
+                    style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
+                  >
+                    {isJa
+                      ? deadSalary.noteJa ??
+                        chrome.deadSalaryHeldBy(deadSalary.teamAbbr)
+                      : deadSalary.noteEn ??
+                        chrome.deadSalaryHeldBy(deadSalary.teamAbbr)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+        ) : hasDeadSalary && deadSalary ? (
+          <View style={[styles.contractCard, { borderColor: frameColor }]}>
+            <Text style={styles.contractLabel}>
+              {chrome.deadSalaryBadge} · {deadSalary.teamAbbr}
+            </Text>
+            {deadStretchYears.map((y) => (
+              <View key={y} style={styles.contractSeasonRow}>
+                <Text style={styles.contractSeasonYear}>
+                  {formatContractSeasonLabel(y)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontWeight: "800",
+                    color: "rgba(255,255,255,0.6)",
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    paddingHorizontal: 4,
+                    paddingVertical: 1,
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    marginRight: 6,
+                  }}
+                >
+                  {chrome.deadSalaryBadge}
+                </Text>
+                <Text style={[styles.contractSeasonSalary, { color: "rgba(255,255,255,0.85)", flex: 1 }]}>
+                  {formatSalaryUsd(deadSalary.salary)}
+                </Text>
+              </View>
+            ))}
+            <Text
+              style={[styles.contractNote, { color: hexToRgba(accent, 0.55) }]}
+            >
+              {isJa
+                ? deadSalary.noteJa ??
+                  chrome.deadSalaryHeldBy(deadSalary.teamAbbr)
+                : deadSalary.noteEn ??
+                  chrome.deadSalaryHeldBy(deadSalary.teamAbbr)}
+            </Text>
+          </View>
+        ) : detail.contract?.contractStatus?.toLowerCase().includes("expired") || (!detail.contract && !currentSalary) ? (
+          <View
+            style={[styles.contractCard, { borderColor: frameColor }]}
+          >
+            <View style={styles.contractTop}>
+              <View style={styles.contractSalaryBlock}>
+                <Text style={styles.contractLabel}>
+                  {chrome.contractStatus}
+                </Text>
+                <Text style={[styles.contractSalary, { fontSize: 18, color: "rgba(255,255,255,0.85)" }]}>
+                  {chrome.freeAgent}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.contractMetaRow}>
+              <Text style={styles.contractMeta}>
+                {detail.contract?.contractType || "Free Agent"}
+                {detail.contract?.freeAgencyYear ? ` · FA ${detail.contract.freeAgencyYear}` : ""}
+                {detail.contract?.freeAgencyType ? ` ${detail.contract.freeAgencyType}` : ""}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <PlayerDetailSectionNoDataNative accent={accent} />
+        )}
+    </>
+  );
+}
+
+export function PlayerMoreSection({
+  detail,
+  accent,
+  language,
+}: {
+  detail: NbaPlayerDetailPreview;
+  accent: string;
+  language: string;
+}) {
+  const chrome = nbaPlayerDetailChrome(language);
+  const isJa = chrome.catalogJa;
+  const frameColor = hexToRgba(accent, 0.35);
+  const displayAge = resolvePlayerDisplayAge(detail);
+  return (
+    <>
+        <View style={styles.advTitleRow}>
+          <Text style={styles.advTitle}>MORE</Text>
+          <View style={styles.advTitleLine} />
+        </View>
+        <View style={[styles.infoCard, { borderColor: frameColor }]}>
+          {displayAge != null ? (
+            <InfoRow
+              label={chrome.age}
+              value={String(displayAge)}
+              accent={accent}
+            />
+          ) : null}
+          <InfoRow
+            label="COLLEGE/PRIOR"
+            value={
+              detail.college?.trim()
+                ? detail.college
+                : isJa
+                  ? "大学なし"
+                  : "None"
+            }
+            accent={accent}
+          />
+          <InfoRow
+            label={
+              detail.availability.status === "retired"
+                ? isJa
+                  ? "最終所属"
+                  : "LAST TEAM"
+                : "TEAM"
+            }
+            value={detail.teamName}
+            accent={accent}
+          />
+          <InfoRow
+            label={chrome.history}
+            value={formatTeamHistory(detail.teamHistory)}
+            accent={accent}
+          />
+        </View>
+    </>
   );
 }
 

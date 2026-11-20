@@ -513,15 +513,13 @@ function ProfileStackScreen() {
             }
           />
         ) : null}
-        {__DEV__ ? (
-          <ProfileStack.Screen
-            name="TradeBuzzPreview"
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .TradeBuzzPreviewScreenWrapper
-            }
-          />
-        ) : null}
+        <ProfileStack.Screen
+          name="TradeBuzzPreview"
+          getComponent={() =>
+            require("../features/profile/screens/ProfileStackWrappers")
+              .TradeBuzzPreviewScreenWrapper
+          }
+        />
         {__DEV__ ? (
           <ProfileStack.Screen
             name="SquadBattlePreview"

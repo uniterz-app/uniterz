@@ -53,6 +53,38 @@ export function nbaAskCopy(language: string | null | undefined) {
         fr: "Mouvements des Lakers",
       }),
     ],
+    /** アプリの質問もできると分かるように、NBA と並べて出す */
+    appSuggestions: [
+      L(lang, {
+        ja: "Unit の稼ぎ方",
+        en: "How to earn Units",
+        ko: "Unit 모으는 방법",
+        zh: "如何获得 Unit",
+        es: "Cómo ganar Units",
+        pt: "Como ganhar Units",
+        fr: "Comment gagner des Units",
+      }),
+      L(lang, {
+        ja: "PRO でできること",
+        en: "What PRO includes",
+        ko: "PRO로 할 수 있는 것",
+        zh: "PRO 能做什么",
+        es: "Qué incluye PRO",
+        pt: "O que o PRO inclui",
+        fr: "Ce que PRO inclut",
+      }),
+      L(lang, {
+        ja: "Unit は何に使える？",
+        en: "What can I redeem Units for?",
+        ko: "Unit은 어디에 쓸 수 있어?",
+        zh: "Unit 可以用来做什么？",
+        es: "¿Para qué sirven los Units?",
+        pt: "Para que servem os Units?",
+        fr: "À quoi servent les Units ?",
+      }),
+    ],
+    suggestionsNbaLabel: "NBA",
+    suggestionsAppLabel: "UNITERZ",
     placeholder: L(lang, {
       ja: "聞きたいことを書く",
       en: "Ask something",

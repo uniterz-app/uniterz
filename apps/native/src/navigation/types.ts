@@ -174,7 +174,7 @@ export type ProfileStackParamList = {
   SeasonPredictPreview: undefined;
   /** __DEV__ TDL トレード予想バレット（モック） */
   TradeBallotPreview: undefined;
-  /** __DEV__ トレード Buzz / 確定（モック） */
+  /** トレード Buzz / 確定トレード */
   TradeBuzzPreview: undefined;
   /** __DEV__ SQUAD BATTLE 全画面プレビュー */
   SquadBattlePreview: undefined;

@@ -10,15 +10,17 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 export default function NbaPlayerMatchupsNative({
   playerId,
   isJa,
+  initialSide = "of",
 }: {
   playerId: string;
   isJa: boolean;
+  initialSide?: string;
 }) {
   const { hub } = useNbaLeagueHubNative();
   const player = hub?.players.find((p) => p.playerId === playerId);
   const defense = player?.matchups ?? [];
   const offense = player?.guardedBy ?? [];
-  const [side, setSide] = useState<"of" | "df">("of");
+  const [side, setSide] = useState<"of" | "df">(initialSide === "df" ? "df" : "of");
   if (defense.length === 0 && offense.length === 0) return null;
   const active = side === "df" ? "df" : "of";
   const rows = active === "df" ? defense : offense;

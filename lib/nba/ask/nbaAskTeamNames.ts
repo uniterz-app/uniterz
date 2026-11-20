@@ -109,6 +109,11 @@ export function findNbaAskTeamsInText(text: string): string[] {
   return hits.sort((a, b) => a.at - b.at).map((h) => h.teamId);
 }
 
+/** チームの日本語の呼び方すべて（選手名の辞書で、チーム名を選手と取り違えないため） */
+export function nbaAskTeamJaWords(): string[] {
+  return Object.values(JA_ALIASES).flat();
+}
+
 /** 日本語の答えで使うチーム名（レイカーズ） */
 export function nbaAskTeamJaName(teamId: string): string | null {
   return JA_ALIASES[teamId]?.[0] ?? null;

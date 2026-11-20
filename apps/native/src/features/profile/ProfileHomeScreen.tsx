@@ -2002,7 +2002,7 @@ export default function ProfileHomeScreen({
           navigation.navigate("SeasonPredictPreview");
         else if (page === "tradeBallotPreview" && __DEV__)
           navigation.navigate("TradeBallotPreview");
-        else if (page === "tradeBuzzPreview" && __DEV__)
+        else if (page === "tradeBuzzPreview")
           navigation.navigate("TradeBuzzPreview");
         else if (page === "weeklyReportPreview" && __DEV__)
           navigation.navigate("MonthlyReportPreview", { tab: "weekly" });

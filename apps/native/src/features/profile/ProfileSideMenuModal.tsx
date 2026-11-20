@@ -510,6 +510,13 @@ export default function ProfileSideMenuModal({
                       {labels.announcements}
                     </SideMenuItemButtonNative>
                     <SideMenuItemButtonNative
+                      icon="newspaper-variant-outline"
+                      labelStyle={labelStyle}
+                      onPress={() => openUserPage("tradeBuzzPreview")}
+                    >
+                      {labels.tradeBuzz}
+                    </SideMenuItemButtonNative>
+                    <SideMenuItemButtonNative
                       icon="bell-outline"
                       labelStyle={labelStyle}
                       onPress={() => openUserPage("notifications")}
@@ -725,14 +732,6 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("tradeBallotPreview")}
                         >
                           トレードバレット
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="newspaper-variant-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("tradeBuzzPreview")}
-                        >
-                          トレード Buzz
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="file-chart-outline"

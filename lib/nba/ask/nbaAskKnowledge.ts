@@ -41,6 +41,7 @@ import {
 } from "@/lib/communities/limitValues";
 import { NBA_TOP_SCORER_BONUS_POINTS } from "@/lib/nba/topScorer";
 import { PRO_SUBSCRIBE_PREVIEW_PLANS } from "@/lib/pro/proSubscribePreviewPlans";
+import { PREDICT_KIT_RECORD_STRONG_PCT } from "@/lib/nba/insights/predictKit/predictKitTypes";
 import { NBA_ASK_FREE_STATS_DAILY } from "./nbaAskQuota";
 import type { NbaAskDestinationId } from "./nbaAskDestinations";
 
@@ -110,8 +111,8 @@ const ENTRIES: Entry[] = [
   // ---------------------------------------------------------------- 全体
   {
     id: "app_overview",
-    hint: "what UNITERZ is / what you can do in the app",
-    fast: /(?:uniterz|ユニターズ|このアプリ).{0,12}(?:って何|とは|何ができ|なにができ|どんなアプリ)|what is uniterz|what can i do (?:in|with) (?:this|the) app/i,
+    hint: "what UNITERZ is / what you can do in the app / free vs paid basics",
+    fast: /(?:uniterz|ユニターズ|このアプリ).{0,12}(?:って何|とは|何ができ|なにができ|どんなアプリ)|無料(?:で|プラン)?(?:できる|できること|の範囲)|what is uniterz|what can i do (?:in|with) (?:this|the) app/i,
     answer: (lang) =>
       T(
         lang,
@@ -135,7 +136,7 @@ const ENTRIES: Entry[] = [
   {
     id: "prediction_how",
     hint: "how to make a prediction (winner, score, top scorer)",
-    fast: /(?:予想|ピック)の(?:仕方|しかた|やり方|やりかた|方法|手順)|どう(?:やって)?(?:予想|ピック)する|how (?:do i|to) (?:make a )?(?:predict|pick)/i,
+    fast: /^(?!.*(?:アワード|順位|シーズン)予想).*(?:予想|ピック)の(?:仕方|しかた|やり方|やりかた|方法|手順)|どう(?:やって)?(?:予想|ピック)する|how (?:do i|to) (?:make a )?(?:predict|pick)/i,
     open: ["games"],
     answer: (lang) =>
       T(
@@ -157,15 +158,51 @@ const ENTRIES: Entry[] = [
       ),
   },
   {
-    id: "season_predict",
-    hint: "season predictions (standings / award predictions) and their rewards",
-    fast: /シーズン予想|順位予想|アワード予想|season predict|award predictions?|standings predictions?/i,
+    id: "predict_tabs",
+    hint: "tabs on the pick screen before tip-off: PRO PICK / INFORMATION / TREND — what each shows",
+    fast: /(?:予想画面|予想の画面)(?:の)?.{0,6}(?:タブ|information|trend)|information(?:タブ)?(?:って|とは|は何|で何)|TREND(?:タブ)?(?:って|は|の)?(?:どこ|何|なに|見方|みかた)/i,
     open: ["games"],
     answer: (lang) =>
       T(
         lang,
-        `試合一覧のヘッダー左の「アワード予想」「順位予想」から出せます。開幕戦の開始前が締切で、それまでは何度でも直せます。それぞれ別のランキングで、上位20位に Unit が出ます（${rankRuns(SEASON_PREDICT_UNITS_BY_RANK, lang)}）。同点は最後に提出した時刻が早い人が上です。`,
-        `Open "Award Predictions" or "Standings Predictions" at the top left of the games list. They lock at the season's first tip-off and can be edited until then. Each has its own ranking; the top 20 get Units (${rankRuns(SEASON_PREDICT_UNITS_BY_RANK, lang)}). Ties go to the earlier final submission.`
+        [
+          "試合前の予想画面に3つのタブがあります（最初は INFORMATION。同じタブをもう一度タップで閉じる）:",
+          "・PRO PICK: 勝つ確率・予想スコア・得点王の候補（PRO）",
+          "・INFORMATION: 両チームの欠場情報と、チームスタッツ（SEASON / LAST 10 の NET・ORTG・DRTG・PACE・勝敗）",
+          "・TREND: SCHEDULE（休み・連戦2日目・4日で3試合目の成績）、SITUATION（ホーム / アウェー・相手の強さ別・接戦）、MOMENTUM（連勝・連敗と直近10試合）",
+          "試合が始まると、タブの代わりに試合スタッツが出ます。",
+        ].join("\n"),
+        [
+          "Before tip-off the pick screen has three tabs (INFORMATION opens first; tap again to close):",
+          "- PRO PICK: win probability, projected score, top-scorer candidates (PRO)",
+          "- INFORMATION: both teams' injuries and team stats (SEASON / LAST 10: NET, ORTG, DRTG, PACE, record)",
+          "- TREND: SCHEDULE (rest, back-to-backs, 3-in-4s), SITUATION (home / away, by opponent strength, close games), MOMENTUM (streak and last 10)",
+          "After tip-off the tabs are replaced by live game stats.",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "season_predict",
+    hint: "season predictions (standings / award predictions) and their rewards",
+    fast: /(?:シーズン|順位|アワード)予想(?:の)?(?:やり方|仕方|しかた|どこ|見方|みかた)?|season predict|award predictions?|standings predictions?/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        `試合一覧のヘッダー左の「アワード予想」「順位予想」から出せます。開幕戦の開始前が締切で、それまでは何度でも直せます。それぞれ別のランキングで、上位20位に Unit が出ます（${rankRuns(SEASON_PREDICT_UNITS_BY_RANK, lang)}）。Unit はシーズンが終わって採点が確定したあとに付きます（週間・月間ランキングの Unit とは別）。同点は最後に提出した時刻が早い人が上です。`,
+        `Open "Award Predictions" or "Standings Predictions" at the top left of the games list. They lock at the season's first tip-off and can be edited until then. Each has its own ranking; the top 20 get Units (${rankRuns(SEASON_PREDICT_UNITS_BY_RANK, lang)}). Units are given after the season ends and results are final (separate from weekly / monthly ranking Units). Ties go to the earlier final submission.`
+      ),
+  },
+  {
+    id: "postponed",
+    hint: "postponed / cancelled games: what happens to picks and points",
+    fast: /延期|中止|順延|postpone|cancell?ed game/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        "採点は試合が終わったときだけ行います。延期や中止で行われなかった試合はポイントが付かず、外れにもならないので、連勝も切れません。",
+        "Picks are scored only when the game ends. A postponed or cancelled game gives no points and doesn't count as a miss, so it won't break your streak."
       ),
   },
   {
@@ -176,8 +213,8 @@ const ENTRIES: Entry[] = [
     answer: (lang) =>
       T(
         lang,
-        "予想は試合開始時刻まで、何度でも変更・削除できます。開始時刻を過ぎるか試合が始まると、変更も削除もできなくなります。締切が近い未予想の試合は通知でお知らせします（通知設定で何分前かを選べます）。",
-        "You can edit or delete a pick until tip-off. Once the game starts it locks. A reminder before the deadline for unpicked games can be set in notification settings."
+        "予想は試合開始時刻まで、何度でも変更・削除できます。採点は締切の時点で残っている最後の予想で行い、途中で直しても点は減りません。開始時刻を過ぎるか試合が始まると、変更も削除もできなくなります。締切が近い未予想の試合は通知でお知らせします（通知設定で何分前かを選べます）。",
+        "You can edit or delete a pick until tip-off. Only your last pick at the deadline is scored; editing costs nothing. Once the game starts it locks. A reminder before the deadline for unpicked games can be set in notification settings."
       ),
   },
   {
@@ -246,20 +283,44 @@ const ENTRIES: Entry[] = [
     answer: (lang) =>
       T(
         lang,
-        "PICK UP は運営が選んだ注目試合で、PICK UP ランキングはその試合だけで競います（誰でも参加・Unit の対象）。PRO LEAGUE はすべての試合で競う PRO 会員だけのランキングです。試合カードの PICK UP 表示で見分けられます。",
-        "PICK UP games are featured games; the PICK UP ranking counts only those (open to everyone, and it pays Units). PRO LEAGUE counts every game and lists PRO members only. Look for the PICK UP label on game cards."
+        `PICK UP は運営が選んだ注目試合で、PICK UP ランキングはその試合だけで競います（誰でも参加・Unit の対象）。PICK UP の試合だけ予想していれば PICK UP ランキングに載ります（勝率ランキングだけは PICK UP 試合の ${pct(PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE)} 以上の予想が必要）。PRO LEAGUE はすべての試合で競う PRO 会員だけのランキングです。試合カードの PICK UP 表示で見分けられます。`,
+        `PICK UP games are featured games; the PICK UP ranking counts only those (open to everyone, and it pays Units). Picking only PICK UP games is enough to appear on it (the win-rate ranking alone needs picks on ${pct(PERIOD_WIN_RATE_PICKUP_PARTICIPATION_RATE)}+ of PICK UP games). PRO LEAGUE counts every game and lists PRO members only. Look for the PICK UP label on game cards.`
       ),
   },
   {
     id: "ranking",
     hint: "how the rankings work / where they are / when they update",
-    fast: /ランキングの(?:見方|仕組み|更新|ルール)|ランキング(?:って|とは|はいつ更新)|how (?:do|does) (?:the )?rankings? work/i,
+    fast: /^(?!.*VALUE).*(?:ランキング(?:の|は|って)?(?:見方|みかた|仕組み|更新|ルール|どこ)|ランキング(?:って|とは|はいつ更新))|where (?:is|are) (?:the )?rankings?|how (?:do|does) (?:the )?rankings? work/i,
     open: ["rankings"],
     answer: (lang) =>
       T(
         lang,
         "下タブの RANKING で見られます。上で Pick Up / PRO LEAGUE、Season / Weekly / Monthly を切り替え、指標はスコア・最多得点者的中・アップセット・勝率です。全体ランキングは毎日日本時間16時に更新されます。右端の MENU からプレーオフとスクワッドバトルにも行けます。",
         "Open the RANKING tab. Switch Pick Up / PRO LEAGUE and Season / Weekly / Monthly at the top; metrics are score, top-scorer hits, upset, and win rate. Global rankings update daily at 16:00 JST. The MENU on the right edge leads to Playoffs and Squad Battle."
+      ),
+  },
+  {
+    id: "ranking_periods",
+    hint: "weekly vs monthly vs season rankings: when each period starts / resets, joining mid-period, when ranking Units are paid",
+    fast: /(?:週間|weekly).{0,14}(?:月間|monthly).{0,10}(?:違い|ちがい|差|difference)|(?:週間|月間)(?:ランキング)?(?:は|って)?.{0,6}(?:いつから|いつまで|何曜|期間|区切り|リセット|締め)|途中(?:から|参加).{0,16}(?:ランキング|1位|一位|間に合|不利|狙え|勝て)|unit.{0,10}(?:いつ|何時).{0,6}(?:もらえ|付与|入る)/i,
+    open: ["rankings"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "・週間: 月曜〜日曜。月間: 1日〜月末（どちらも米国東部の日付）。Season: シーズンの累計",
+          "・スコアのランキングは期間中のポイントの合計です。予想した試合が多いほど有利で、外しても減りません",
+          "・画面に出す週間・月間は、次の期間の最初の試合日の全試合が終わるまで前の期間のままです（空の NO DATA にしないため）。Unit の付与タイミングは変わりません",
+          "・順位は期間の最後の日の試合まで終わった時点で決まります。期間が変わると全員0から。途中から始めた期間は残りの試合だけで競いますが、次の週・月からは同じ条件です",
+          "・ランキングの Unit は、週間は月曜、月間は毎月1日の日本時間16時過ぎに自動で付きます",
+        ].join("\n"),
+        [
+          "- Weekly: Monday-Sunday. Monthly: 1st to month end (US Eastern dates). Season: the whole season",
+          "- Score rankings sum your points in the period, so more picks help; misses never subtract",
+          "- The weekly / monthly board keeps showing the previous period until that next period's first game day is fully finished (so it does not flash empty). Unit payout timing is unchanged",
+          "- Final standings are set once the period's last day of games is done. Everyone restarts at 0 each period. Joining mid-period means fewer games that period, but the next week / month is a level start",
+          "- Ranking Units are paid automatically on Monday (weekly) and the 1st (monthly), just after 16:00 JST",
+        ].join("\n")
       ),
   },
   {
@@ -289,6 +350,18 @@ const ENTRIES: Entry[] = [
       ),
   },
   // ---------------------------------------------------------------- Unit
+  {
+    id: "unit_rules",
+    hint: "do Units decrease (missed picks), expire, or reset each season",
+    fast: /(?:unit|ユニット).{0,14}(?:減|へる|なくな|消え|有効期限|期限|失効|リセット|没収|引かれ)|(?:units?).{0,10}(?:expire|decrease|reset)/i,
+    open: ["unit_ledger"],
+    answer: (lang) =>
+      T(
+        lang,
+        `予想を外しても Unit は減りません。Unit が減るのは商品交換に使ったときだけです（申請中は確保され、取り消し・却下なら戻ります）。いまは有効期限もなく、シーズンをまたいでも残ります（変えるときは事前にお知らせします）。交換に使えるのは1シーズン ${REDEMPTION_SEASON_CAP_UNITS} Unit までです。`,
+        `Missed picks never cost Units. Units only go down when you redeem them (held while an application is pending, returned if it's cancelled or rejected). They currently don't expire and carry over between seasons (we'll announce any change in advance). Up to ${REDEMPTION_SEASON_CAP_UNITS} Units can be redeemed per season.`
+      ),
+  },
   {
     id: "unit_about",
     hint: "what Units are",
@@ -338,7 +411,7 @@ const ENTRIES: Entry[] = [
     id: "unit_ranking_rewards",
     hint: "the Unit table per ranking rank (weekly / monthly / categories)",
     fast: /(?:週間|月間|ランキング|順位|位).{0,10}(?:unit|ユニット)|(?:unit|ユニット)(?:表|テーブル)|unit table|units? for (?:#?\d|rank|weekly|monthly)/i,
-    open: ["rankings"],
+    open: ["rankings", "redeem"],
     answer: (lang) => {
       const dept = PERIOD_RANKING_UNIT_DEPARTMENT_METRICS[0]!;
       return T(
@@ -349,6 +422,7 @@ const ENTRIES: Entry[] = [
           `月間: ${rankRuns(periodUnits("monthly", PERIOD_RANKING_UNIT_OVERALL_METRIC), lang)}`,
           `月間の部門（アップセット・得点者、それぞれ）: ${rankRuns(periodUnits("monthly", dept), lang)}`,
           `月間アップセット部門は、その月の勝率が ${pct(PERIOD_UPSET_MIN_WIN_RATE)} 以上の人だけが対象です。RANKING 画面の「unit表」でも見られます。`,
+          "Unit はプロフィールのメニュー →「商品交換」で NBA グッズと交換できます。",
         ].join("\n"),
         [
           "Ranking Units (PICK UP score only; not PRO LEAGUE, season, or win rate; ties get the same amount)",
@@ -356,6 +430,7 @@ const ENTRIES: Entry[] = [
           `Monthly: ${rankRuns(periodUnits("monthly", PERIOD_RANKING_UNIT_OVERALL_METRIC), lang)}`,
           `Monthly categories (upset, top scorer, each): ${rankRuns(periodUnits("monthly", dept), lang)}`,
           `The monthly upset category requires a ${pct(PERIOD_UPSET_MIN_WIN_RATE)}+ win rate that month. Also on the RANKING screen's Unit table chip.`,
+          "Units can be redeemed for NBA gear from Profile → MENU → Redeem Units.",
         ].join("\n")
       );
     },
@@ -387,7 +462,7 @@ const ENTRIES: Entry[] = [
   {
     id: "invite",
     hint: "inviting friends / invite code rewards",
-    fast: /^(?!.*(?:グループ|group)).*(?:招待|紹介コード|invite|referral)/i,
+    fast: /^(?!.*(?:グループ|group|招待コードの(?:見方|みかた|どこ|確認))).*(?:友達.{0,6}招待|紹介コード|invite|referral)|友達を招待/i,
     open: ["invite"],
     answer: (lang) =>
       T(
@@ -409,9 +484,21 @@ const ENTRIES: Entry[] = [
   },
   // ---------------------------------------------------------------- 仲間
   {
+    id: "squads_vs_groups",
+    hint: "difference between Squad Battle and groups",
+    fast: /(?:スクワッド|squad).{0,14}(?:グループ|group).{0,10}(?:違い|ちがい|差|difference)|(?:グループ|group).{0,14}(?:スクワッド|squad).{0,10}(?:違い|ちがい|差|difference)/i,
+    open: ["groups", "squads"],
+    answer: (lang) =>
+      T(
+        lang,
+        `グループは仲間内のランキングです。いつでも作れて（最大 ${MAX_MEMBERS_PER_GROUP}人）、メンバー同士でポイントを比べるだけで Unit はありません。スクワッドバトルは ${GROUP_BATTLE_MIN_MEMBERS}〜${GROUP_BATTLE_MAX_MEMBERS}人のチームで出る大会で、約2ヶ月に1回の開催期間に、PICK UP 試合のスコア平均でほかのチームと競います。上位チームはメンバー全員に Unit（週間1位 ${GROUP_BATTLE_DEFAULT_WEEKLY_UNITS_PER_MEMBER[0]}・月間1位 ${GROUP_BATTLE_DEFAULT_MONTHLY_UNITS_PER_MEMBER[0]} が目安）。`,
+        `A group is a private ranking among friends: create one any time (up to ${MAX_MEMBERS_PER_GROUP} members) and compare points; no Units. Squad Battle is an event for teams of ${GROUP_BATTLE_MIN_MEMBERS}-${GROUP_BATTLE_MAX_MEMBERS}, held about every 2 months, where squads compete on the members' average PICK UP score; top squads earn Units for every member (about ${GROUP_BATTLE_DEFAULT_WEEKLY_UNITS_PER_MEMBER[0]} for weekly #1, ${GROUP_BATTLE_DEFAULT_MONTHLY_UNITS_PER_MEMBER[0]} for monthly #1).`
+      ),
+  },
+  {
     id: "squads",
     hint: "Squad Battle (team competition) and its rewards",
-    fast: /スクワッド|squad/i,
+    fast: /スクワッド|squad|(?:バトル|グループバトル)(?:の)?(?:参加|やり方|始め方|入り方)/i,
     open: ["squads"],
     answer: (lang) =>
       T(
@@ -423,13 +510,13 @@ const ENTRIES: Entry[] = [
   {
     id: "groups",
     hint: "groups / communities: create, join, invite code, limits",
-    fast: /グループ(?:を|の|に|って|とは|作|参加|入)|コミュニティ|community|communities/i,
+    fast: /グループ(?:を|の|に|って|とは|作|参加|入)|コミュニティ|招待コードの(?:見方|みかた|どこ|確認)|community|communities/i,
     open: ["groups"],
     answer: (lang) =>
       T(
         lang,
-        `下タブの GROUP で、仲間内のランキング（グループ）を作ったり参加したりできます。1グループ最大 ${MAX_MEMBERS_PER_GROUP}人。参加できるのは無料 ${FREE_MAX_MEMBERSHIPS}・PRO ${PRO_MAX_MEMBERSHIPS} グループ、作れるのは無料 ${FREE_MAX_OWNED_GROUPS}・PRO ${PRO_MAX_OWNED_GROUPS} グループまで。参加は作った人が共有する8文字の招待コードで行います。招待コードは GROUP タブでそのグループを開くと見られます（作った直後にも表示されます）。`,
-        `Use the GROUP tab to create or join private rankings (groups). Up to ${MAX_MEMBERS_PER_GROUP} members each. You can join ${FREE_MAX_MEMBERSHIPS} groups free (${PRO_MAX_MEMBERSHIPS} on PRO) and create ${FREE_MAX_OWNED_GROUPS} (${PRO_MAX_OWNED_GROUPS} on PRO). Join with the 8-character code the owner shares; open the group in the GROUP tab to see its code (it is also shown right after you create it).`
+        `下タブの GROUP で、仲間内のランキング（グループ）を作ったり参加したりできます。1つのグループに入れるのは最大 ${MAX_MEMBERS_PER_GROUP}人。1人が参加できるグループの数は無料 ${FREE_MAX_MEMBERSHIPS}個・PRO ${PRO_MAX_MEMBERSHIPS}個、作れるグループの数は無料 ${FREE_MAX_OWNED_GROUPS}個・PRO ${PRO_MAX_OWNED_GROUPS}個まで。参加は作った人が共有する8文字の招待コードで行います。招待コードは GROUP タブでそのグループを開くと見られます（作った直後にも表示されます）。`,
+        `Use the GROUP tab to create or join private rankings (groups). A group holds up to ${MAX_MEMBERS_PER_GROUP} members. One user can be in up to ${FREE_MAX_MEMBERSHIPS} groups free (${PRO_MAX_MEMBERSHIPS} on PRO) and own up to ${FREE_MAX_OWNED_GROUPS} groups (${PRO_MAX_OWNED_GROUPS} on PRO). Join with the 8-character code the owner shares; open the group in the GROUP tab to see its code (it is also shown right after you create it).`
       ),
   },
   {
@@ -462,15 +549,77 @@ const ENTRIES: Entry[] = [
     answer: (lang) =>
       T(
         lang,
-        `チーム詳細・選手詳細の星ボタンでお気に入りに登録できます。お気に入りチームは1つ、選手は無料 ${NBA_FAVORITE_MAX_PLAYERS_FREE}人・PRO ${NBA_FAVORITE_MAX_PLAYERS_PRO}人まで。プロフィールに表示され、お気に入り選手のテクニカルや退場は通知でも届きます。`,
-        `Tap the star on a team or player page to favorite it. One favorite team; players: ${NBA_FAVORITE_MAX_PLAYERS_FREE} free, ${NBA_FAVORITE_MAX_PLAYERS_PRO} on PRO. They show on your profile, and favorite players' techs and ejections can notify you.`
+        `チーム詳細・選手詳細の星ボタンでお気に入りに登録できます。お気に入りチームは1つ、選手は無料 ${NBA_FAVORITE_MAX_PLAYERS_FREE}人・PRO ${NBA_FAVORITE_MAX_PLAYERS_PRO}人まで。プロフィールに表示され、お気に入り選手のテクニカルや退場は通知でも届きます。お気に入りチームの試合は試合一覧の先頭に並び、日付の列とカレンダーではその試合がある日にチームカラーの印が付きます。`,
+        `Tap the star on a team or player page to favorite it. One favorite team; players: ${NBA_FAVORITE_MAX_PLAYERS_FREE} free, ${NBA_FAVORITE_MAX_PLAYERS_PRO} on PRO. They show on your profile, and favorite players' techs and ejections can notify you. Your favorite team's games come first in the games list, and its game days get a team-color mark on the date strip and calendar.`
       ),
   },
   // ---------------------------------------------------------------- PRO
   {
+    id: "pro_cancel_league",
+    hint: "what happens to PRO LEAGUE rank / points after cancelling or when PRO expires, and on rejoining PRO",
+    fast: /(?:解約|cancel).{0,16}(?:pro\s*league|プロリーグ|ランキング|ポイント|順位|points|ranking)|(?:pro|プロ)(?:が|を|の期限が)?(?:切れ|やめ|失効|expire).{0,16}(?:pro\s*league|プロリーグ|ランキング|ポイント|順位|points|ranking)|(?:pro\s*league|プロリーグ).{0,14}(?:解約|やめ|切れ|cancel)/i,
+    open: ["plan_status"],
+    answer: (lang) =>
+      T(
+        lang,
+        "解約しても、支払い済みの期間が終わるまでは PRO のままで、PRO LEAGUE にも載ります。期間が切れると、次の更新（毎日日本時間16時）から PRO LEAGUE に出なくなります。ポイントは消えません。PRO LEAGUE はそのとき PRO の人を並べるので、また PRO になれば、無料の間に予想した試合の分も含めて戻ります。PICK UP ランキングは無料でもそのまま続きます。",
+        "After cancelling you stay PRO, and on PRO LEAGUE, until the paid period ends. Once it lapses you drop off PRO LEAGUE at the next update (daily, 16:00 JST). Your points are kept: PRO LEAGUE lists whoever is PRO at the time, so rejoining brings you back, including games you picked while free. The PICK UP ranking continues as normal on the free plan."
+      ),
+  },
+  {
+    id: "pro_pick_accuracy",
+    hint: "PRO PICK accuracy: what the percentages mean and how they are measured",
+    fast: /(?:pro\s*pick|プロピック|pro\s*insight)(?:の)?.{0,4}(?:精度|的中率|当たる確率|当たって|accuracy)/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          `PRO PICK の精度は、今季の終わった試合をその試合より前のデータだけで予想し直した検証と、本番の予想を試合後に採点した結果を合わせて出しています。本番の結果は毎日の採点で足されていきます。`,
+          `・勝つチームを当てた割合`,
+          `・勝つ確率 ${PREDICT_KIT_RECORD_STRONG_PCT}% 以上と出た試合だけの割合`,
+          `・得点王の候補の1番手が、実際に両チーム最多得点だった割合`,
+          `精度は予想画面の PRO PICK タブで見られます（無料プランでも見られます）。当たることを保証するものではありません。`,
+        ].join("\n"),
+        [
+          "PRO PICK accuracy combines a test (re-predicting this season's finished games using only data from before each game) with grading the live picks after each game; live results are added daily.",
+          "- How often it picked the winner",
+          `- The rate on games where the win probability was ${PREDICT_KIT_RECORD_STRONG_PCT}% or more`,
+          "- How often the top scorer candidate was actually the game's top scorer",
+          "See it in the PRO PICK tab of the pick screen (free users can see it too). It doesn't guarantee a correct pick.",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "pro_pick",
+    hint: "what PRO PICK shows (win probability, projected score, top scorer), when it updates, what free users see",
+    fast: /(?:pro\s*pick|プロピック|pro\s*insight)(?:は|って|の|で|が)?.{0,6}(?:何|なに|とは|わかる|分かる|見れ|見られ|どうやって見|いつ|更新)/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "PRO PICK は、試合前の予想画面（試合カードをタップ）の PRO PICK タブにある予想の材料です（PRO 向け・プレシーズンは対象外）。",
+          "・WINNER: 有利なチームと勝つ確率、予想点差の内訳（実力差〔ガベージタイム抜き・相手補正〕・ホーム・連戦・休養・欠場など）。みんなの予想（20人以上のとき）も並びます",
+          "・SCORING: 予想スコアと合計点、リーグ平均よりロースコア寄りかハイスコア寄りか",
+          "・TOP SCORER: 両チームで最多得点になる確率が高い選手",
+          `・精度: 勝つチームを当てた割合、勝つ確率 ${PREDICT_KIT_RECORD_STRONG_PCT}% 以上の試合だけの割合、得点王の1番手が当たった割合。今季の終わった試合をその試合より前のデータだけで予想し直した検証と、本番の予想の試合後の採点から出しています`,
+          "前日の夜に作り、欠場情報が変わると作り直します。更新されるとタブに黄色の点が付き、予想が大きく変わったときは通知も届きます（PRO・通知設定で切り替え）。無料プランでは精度だけ見られ、この試合の中身は PRO で表示されます。当たることを保証するものではありません。",
+        ].join("\n"),
+        [
+          "PRO PICK is the prediction kit in the PRO PICK tab of the pick screen (tap a game card before tip-off). PRO only; not for preseason.",
+          "- WINNER: the favored team and its win probability, with the projected margin broken down (team strength [garbage time removed, opponent-adjusted], home, back-to-back, rest, injuries). The crowd pick appears when 20+ people picked",
+          "- SCORING: projected score and total, and whether it leans low or high versus the league average",
+          "- TOP SCORER: players most likely to be the game's top scorer",
+          `- Accuracy: how often it picked the winner, the rate on games at ${PREDICT_KIT_RECORD_STRONG_PCT}%+ win probability, and the top-scorer hit rate. Measured by re-predicting this season's finished games using only data from before each game, plus grading the live picks after each game`,
+          "Built the evening before and rebuilt when injury news changes. Updates put a yellow dot on the tab, and a big change sends a notification (PRO; toggle in notification settings). Free users see the accuracy only; the game's kit shows on PRO. It doesn't guarantee a correct pick.",
+        ].join("\n")
+      ),
+  },
+  {
     id: "pro_plans",
     hint: "PRO price, plans, free trial, what PRO includes, PRO features like Pro Pick (formerly Pro Insight)",
-    fast: /(?:pro|プロ).{0,8}(?:料金|値段|いくら|価格|プラン|トライアル|無料期間|特典|でできる|って何|とは|のメリット)|(?:料金|月額|年額|サブスク)|pro ?(?:insight|pick)(?:って|とは)|how much is pro|pro (?:price|plans?)/i,
+    fast: /(?:pro|プロ).{0,8}(?:料金|値段|いくら|価格|プラン|トライアル|無料期間|特典|でできる|って何|とは|のメリット)|(?:料金|月額|年額|サブスク|課金)(?:の)?(?:やり方|方法|見方)?|pro ?(?:insight|pick)(?:って|とは)|how much is pro|pro (?:price|plans?)/i,
     open: ["pro"],
     answer: (lang) =>
       T(
@@ -494,12 +643,12 @@ const ENTRIES: Entry[] = [
   {
     id: "ask_chat",
     hint: "this ASK chat: what it can answer and limits",
-    fast: /このチャット|(?:ask|アスク|ai).{0,6}(?:何回|回数|制限|何が聞|何を聞)|何回(?:聞|質問)/i,
+    fast: /このチャット|(?:ask|アスク|ai).{0,6}(?:何回|回数|制限|何が聞|何を聞)|何回(?:聞|質問)|スタッツ(?:の)?質問(?:は|って)?(?:何回|回数|制限)/i,
     answer: (lang) =>
       T(
         lang,
-        `このチャットは試合一覧の右上の吹き出しアイコンから開けます。アプリの使い方の質問は無制限です。NBA のスタッツの質問は無料で 1 日 ${NBA_ASK_FREE_STATS_DAILY} 回（日本時間 0 時に戻ります）、PRO は無制限です（試合日程は無料でも回数に入りません）。ニュース（トレードや噂）は調べられません。答えはアプリのデータとヘルプだけから作ります。`,
-        `Open this chat from the speech-bubble icon at the top right of the games list. App questions are unlimited. NBA stats questions: ${NBA_ASK_FREE_STATS_DAILY} per day free (resets at midnight JST), unlimited on PRO (schedule questions don't count). It can't look up news (trades, rumors). Answers come only from the app's data and help.`
+        `このチャットは試合一覧の右下の ASK ボタンから開けます。アプリの使い方の質問は無制限です。NBA のスタッツの質問は無料で 1 日 ${NBA_ASK_FREE_STATS_DAILY} 回（日本時間 0 時に戻ります）、PRO は無制限です（試合日程は無料でも回数に入りません）。ニュース（トレードや噂）は調べられません。答えはアプリのデータとヘルプだけから作ります。`,
+        `Open this chat from the ASK button at the bottom right of the games list. App questions are unlimited. NBA stats questions: ${NBA_ASK_FREE_STATS_DAILY} per day free (resets at midnight JST), unlimited on PRO (schedule questions don't count). It can't look up news (trades, rumors). Answers come only from the app's data and help.`
       ),
   },
   // ---------------------------------------------------------------- 設定
@@ -577,8 +726,8 @@ const ENTRIES: Entry[] = [
   },
   {
     id: "password",
-    hint: "forgot password / reset password",
-    fast: /パスワード.{0,4}(?:忘れ|わすれ|リセット|再設定|変更|変え|わから)|forgot (?:my )?password|reset (?:my )?password|change (?:my )?password/i,
+    hint: "forgot password / reset password / can't log in",
+    fast: /パスワード.{0,4}(?:忘れ|わすれ|リセット|再設定|変更|変え|わから)|ログイン(?:でき|出来)ない|サインイン(?:でき|出来)ない|forgot (?:my )?password|reset (?:my )?password|change (?:my )?password|can'?t log ?in/i,
     answer: (lang) =>
       T(
         lang,
@@ -589,7 +738,7 @@ const ENTRIES: Entry[] = [
   {
     id: "help_contact",
     hint: "help page, contact support, feature requests, terms",
-    fast: /問い合わせ|問合せ|サポート|ヘルプ|機能リクエスト|要望|不具合|バグ|contact|support|feature request/i,
+    fast: /問い合わせ|問合せ|サポート|ヘルプ|機能リクエスト|要望|不具合|バグ|利用規約|プライバシー(?:ポリシー)?|contact|support|feature request|terms|privacy/i,
     open: ["help"],
     answer: (lang) =>
       T(
@@ -612,9 +761,130 @@ const ENTRIES: Entry[] = [
       ),
   },
   {
+    id: "games_filter",
+    hint: "filtering the games list (one team only, PICK UP only) and the order of games",
+    fast: /(?:試合一覧|試合)?(?:の)?(?:絞り込|しぼりこ|フィルター|フィルタ)|(?:チーム|試合)(?:の試合)?(?:だけ|のみ)(?:を)?(?:表示|見せ|出|並べ)|filter (?:the )?games/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        "試合一覧に絞り込み（特定のチームの試合だけ表示など）はありません。お気に入りチームを登録すると、その試合が一覧の先頭に並び、日付の列とカレンダーにも印が付きます。PICK UP の試合はカードに PICK UP と出ます。",
+        "The games list has no filter (e.g. one team only). Set a favorite team and its games come first, with marks on the date strip and calendar. PICK UP games show a PICK UP label on the card."
+      ),
+  },
+  {
+    id: "games_calendar",
+    hint: "games list calendar and moving between dates (future / past game days, back to today)",
+    fast: /カレンダー|(?:先|未来|過去|前|別)の(?:日付|日)に(?:飛|移|行)|calendar/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "試合一覧の右上のカレンダーで、先の日も過去の日も選べます（押せるのは試合がある日だけ）。各日に試合数、お気に入りチームの試合日に印が出て、下の「今日」で今日以降の最初の試合日へ戻ります。",
+          "ほかに、一覧を左右にスワイプすると前後の試合日へ、月の見出しの ←/→ で前後の月へ移れます。見出しの年月をダブルタップすると今日の試合日に戻ります。",
+        ].join("\n"),
+        [
+          "Use the calendar at the top right of the games list to pick past or future dates (only game days can be tapped). Each day shows its game count, your favorite team's game days are marked, and \"Today\" jumps to the next game day.",
+          "You can also swipe the list left / right for the previous / next game day, or use the month header's arrows. Double-tap the month to return to today.",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "game_stats",
+    hint: "box score / live game stats / finished game details: where to see them",
+    fast: /ボックススコア|box\s*score|ライブスコア|クォータースコア|試合中(?:の)?スコア|(?:試合|ゲーム)(?:の)?(?:スタッツ|詳細|結果の詳細|スコア)(?:は|って|を|が)?(?:どこ|見たい|見れ|見られ|どうやって|見方)/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "試合が始まったら、試合一覧でその試合のカードをタップすると、試合スタッツ（Score by Quarter・Team Stats・Game Leaders・Box Score）が見られます。試合中も見られます。",
+          "自分が予想した終わった試合は、タップするとリザルト詳細が開き、上の STATS タブに同じスタッツ、UNITERZ タブにポイントの内訳があります。選手名・チーム名をタップで詳細へ。チーム詳細の GAMES の試合ログの行からも開けます。",
+          "スコアを見たくないときは、表示設定でライブ・試合後のスコアを隠せます。",
+        ].join("\n"),
+        [
+          "Once a game starts, tap its card in the games list for game stats (Score by Quarter, Team Stats, Game Leaders, Box Score), live as well.",
+          "For finished games you picked, the card opens the result detail: STATS has the same stats and UNITERZ has your point breakdown. Tap a player or team for its page. A team page's GAMES log rows open box scores too.",
+          "To avoid spoilers, hide live / final scores in display settings.",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "crowd_picks",
+    hint: "the crowd pick split (what percent picked each team): where it is and when it shows",
+    fast: /みんなの予想|予想人数|(?:予想|ピック)(?:の)?(?:割合|比率|分布)|何(?:人|％|%)(?:が|が勝つと)?予想|crowd picks?|pick (?:counts?|split|distribution)/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        "みんなの予想は、予想画面（試合カードをタップ）の上のマッチカードの下に、両チームを選んだ割合のバーと総予想数で出ます。予想する前も後も、試合開始後も見られます。割合だけで、誰がどちらを選んだかは出ません。",
+        "The crowd pick shows on the pick screen (tap a game card), under the match card: a bar with each team's share and the total number of picks. It's visible before and after you pick, and after tip-off. Only percentages; it doesn't show who picked what."
+      ),
+  },
+  {
+    id: "others_picks",
+    hint: "seeing other users' picks / who can see my pick",
+    fast: /(?:他の人|ほかの人|他人|友達|友だち|フレンド|上位の人|ランカー)(?:の|が)?(?:予想|ピック)(?:を|が|は)?(?:見|確認|わか)|(?:自分の)?予想(?:は|って|が)?(?:他の人|ほかの人|みんな)に(?:見え|見られ|バレ)|see (?:other (?:users'?|people'?s)|friends'?) picks/i,
+    open: ["rankings"],
+    answer: (lang) =>
+      T(
+        lang,
+        "ほかの人の予想は、試合開始後にランキングでその人をタップしてプロフィールを開くと、決着した予想が見られます。自分の予想も試合が始まるまでほかの人には見えません。試合ごとの「みんなの予想」は割合だけで、誰がどちらを選んだかは出ません。",
+        "To see someone's picks, tap them on a ranking after tip-off to open their profile and see their settled picks. Your own pick is hidden from others until tip-off. A game's crowd view only shows percentages, not who picked what."
+      ),
+  },
+  {
+    id: "compare",
+    hint: "comparing two players or teams side by side",
+    fast: /(?:選手|チーム)(?:同士|どうし)?(?:を|の)?(?:比較|比べ)(?:でき|られ|れる|たい|する)|compare (?:two )?(?:players|teams)/i,
+    open: ["standings"],
+    answer: (lang) =>
+      T(
+        lang,
+        "選手は、STANDING → LEAGUE → PLAYER → STYLE のスタイルマップで1人目の点をタップしたあと2人目をタップすると、今季のスタッツを左右に並べて比べられます（検索で選手を図に足せます）。このチャットでも「レブロンとカリーを比べて」「レイカーズとセルティックスを比べて」のように聞けます。",
+        "For players, open STANDING → LEAGUE → PLAYER → STYLE, tap one dot on the style map, then another, to see this season's stats side by side (search adds players to the map). You can also ask here, e.g. \"compare LeBron and Curry\" or \"compare the Lakers and Celtics\"."
+      ),
+  },
+  {
+    id: "injuries_where",
+    hint: "where to see injury / availability information in the app",
+    fast: /(?:(?:ケガ|怪我|けが)(?:人|情報)?|負傷者|欠場(?:者|情報)?(?:一覧)?|injur(?:y|ies)|INJURIES?(?:タブ)?)(?:の)?(?:情報|一覧)?(?:は|って|を|が|の)?(?:どこ|見たい|見れ|見られ|見方|みかた)/i,
+    open: ["games"],
+    answer: (lang) =>
+      T(
+        lang,
+        "欠場情報は、予想画面（試合前）の INFORMATION タブ、チーム詳細の TEAM タブの INJURIES、選手詳細の OVERVIEW の出場可否で見られます。このチャットでも「レイカーズのケガ人」「今日の欠場者」のように聞けます。",
+        "Injury info is in the INFORMATION tab of the pick screen (before tip-off), INJURIES on a team page's TEAM tab, and availability on a player page's OVERVIEW. You can also ask here, e.g. \"Lakers injuries\" or \"who's out today\"."
+      ),
+  },
+  {
+    id: "share",
+    hint: "sharing: ranking card, result card, profile, LEAGUE charts (Instagram / X / LINE)",
+    fast: /共有|シェア|インスタ|instagram|ストーリー|(?:x|twitter|ツイッター|line)に(?:載せ|投稿|送)|share/i,
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "共有は画像（PNG）で、スマホの共有画面から Instagram・X・LINE などに送れます。",
+          "・順位カード: RANKING の自分の順位カードの共有ボタン（PRO のとき）",
+          "・リザルトカード: RESULT のカード左下の角のメニュー → 共有",
+          "・LEAGUE の図: スタイルマップ・ラダー・TOP PERFORMANCES などの見出し右の共有アイコン",
+          "・プロフィール: プロフィールの「ID」をタップで、プロフィールのリンクを共有",
+        ].join("\n"),
+        [
+          "Shares are images (PNG) sent through your phone's share sheet to Instagram, X, LINE, etc.",
+          "- Ranking card: the share button on your rank card in RANKING (PRO)",
+          "- Result card: the corner menu at the bottom left of a card in RESULT → Share",
+          "- LEAGUE charts: the share icon next to the style map, ladders, top performances, etc.",
+          "- Profile: tap your ID on the profile to share your profile link",
+        ].join("\n")
+      ),
+  },
+  {
     id: "nav_stats",
     hint: "where team / player league stats tables are",
-    fast: /(?:スタッツ|成績|リーダー)(?:表)?(?:は|って|が|を)?(?:どこ|どうやって見|見たい|どこで見)|where (?:are|can i see) (?:the )?(?:team |player )?stats/i,
+    fast: /^(?!.*(?:今日|TODAY|today)).*(?:スタッツ(?:画面|表)?|成績(?:表)?)(?:は|って|が|を|の)?(?:どこ|どうやって見|見たい|どこで見|見方|みかた)|where (?:are|can i see) (?:the )?(?:team |player )?stats/i,
     open: ["stats"],
     answer: (lang) =>
       T(
@@ -626,7 +896,7 @@ const ENTRIES: Entry[] = [
   {
     id: "nav_standings",
     hint: "where the standings are",
-    fast: /順位表(?:は|って)?(?:どこ|見たい|どうやって)|where (?:are|is) (?:the )?standings/i,
+    fast: /(?:順位表|STANDING(?:タブ)?)(?:は|って)?(?:どこ|見たい|どうやって|見方|みかた)|where (?:are|is) (?:the )?standings/i,
     open: ["standings"],
     answer: (lang) =>
       T(
@@ -638,13 +908,143 @@ const ENTRIES: Entry[] = [
   {
     id: "nav_league_hub",
     hint: "LEAGUE tab: MVP ladder, charts, milestones, top performances",
-    fast: /league\s*(?:タブ|tab)|mvpラダー|ラダー(?:は|って)?どこ/i,
+    fast: /league\s*(?:タブ|tab)|(?:LEAGUE|リーグ)タブ(?:は|って)?(?:どこ|何)|(?:mvp|dpoy|mip|新人王|シックスマン)?(?:ラダー|ladder)(?:の|は|って)?(?:見方|みかた|どこ|どこで見|どうやって見|どうやってみ)|VALUE(?:ランキング)?(?:は|の)?(?:どこ|見方)/i,
     open: ["standings"],
     answer: (lang) =>
       T(
         lang,
-        "試合一覧の右端 STANDING → 上の LEAGUE タブに、MVP・新人王などのラダー、週間トップパフォーマンス、好調・不調、通算の節目、選手やチームの散布図があります（今季だけ）。",
-        "Right edge STANDING → LEAGUE tab: MVP / rookie ladders, top performances of the week, hot and cold players, milestones, and player / team charts (this season only)."
+        [
+          "試合一覧の右端 STANDING → 上の LEAGUE タブ → PLAYER → LADDER です（今季だけ）。",
+          "LADDER の中で MVP / ROOKIE / DPOY / SIXTH MAN / MIP を切り替えられます。",
+          "同じ LEAGUE タブに、週間トップパフォーマンス・好調 / 不調・通算の節目・スタイルマップもあります。",
+        ].join("\n"),
+        [
+          "Right edge STANDING → LEAGUE → PLAYER → LADDER (this season only).",
+          "Switch MVP / ROOKIE / DPOY / SIXTH MAN / MIP inside LADDER.",
+          "The same LEAGUE tab also has top performances, hot / cold, milestones, and style maps.",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "style_map",
+    hint: "how to open / read / use the STYLE MAP (player and team scatter charts in the LEAGUE tab)",
+    fast: /(?:スタイルマップ|style\s*map)(?:は|って|の|を)?(?:どこ|どうやって|どう(?:見|使)|見方|見かた|使い方|とは|って何|ってなに|何|なに)/i,
+    open: ["standings"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "試合一覧の右端 STANDING → 上の LEAGUE タブ → PLAYER か TEAM → STYLE にあります（今季だけ）。",
+          "・横軸と縦軸の 2 つのスタッツで選手（チーム）を並べた図です。図の上の一文が軸の読み方です",
+          "・四隅（右上・左上・右下・左下）の言葉の意味: 図の真ん中の 2 本の線は、図に出ている選手（チーム）の平均です。四隅の言葉は、その線で 4 つに分けた区画に入る選手（チーム）のタイプ名です。右上は横軸も縦軸も平均より良い側、左下はどちらも平均より悪い側です（失点や被 FG% のように低いほど良い軸は、低い値ほど右・上に来ます）。例えば「3P の量と質」の図なら、右上 = エリートシューター（多く打ってよく入る）、左上 = セレクティブシューター（少なめでよく入る）、右下 = ボリュームシューター（多く打つが確率は平均以下）、左下 = 不調",
+          "・PLAYER: 上の段で SCORING / ATTACK / DEFENSE / BALL / IMPACT / REB を選び、下の段で図を切り替えます。G / F / C の絞り込み、TOP 30 / 50、検索で選手を図に追加できます",
+          "・点をタップするとその選手の数字と順位・似たスタイルの選手が出て、もう 1 人タップすると 2 人を比較できます。名前をタップで選手詳細",
+          "・TEAM: PLAY STYLE（OVERALL / OFFENSE / PLAY TYPE / DEFENSE）と ROSTER の図で 30 チームを並べます。四角をタップでそのチームの数字",
+        ].join("\n"),
+        [
+          "Right edge STANDING → LEAGUE tab → PLAYER or TEAM → STYLE (this season only).",
+          "- Each map plots players (or teams) on two stats. The line above the map explains the axes",
+          "- What the four corner words (top right, top left, bottom right, bottom left) mean: the two center lines are the average of everyone on the map, and each corner word names the style of the players (teams) in that area. Top right = the better side of average on both axes, bottom left = the worse side on both (for lower-is-better stats such as points allowed or opponent FG%, lower values sit right / up). On the 3PT map: top right = ELITE SHOOTER (many attempts, high %), top left = SELECTIVE SHOOTER, bottom right = VOLUME SHOOTER (many attempts, below-average %), bottom left = COLD",
+          "- PLAYER: pick SCORING / ATTACK / DEFENSE / BALL / IMPACT / REB on the top row and the map on the second row. Filter G / F / C, switch TOP 30 / 50, or search to add a player",
+          "- Tap a dot for the player's numbers, ranks, and similar players; tap another to compare the two. Tap the name for the player page",
+          "- TEAM: PLAY STYLE (OVERALL / OFFENSE / PLAY TYPE / DEFENSE) and ROSTER maps of all 30 teams. Tap a square for that team's numbers",
+        ].join("\n")
+      ),
+    short: (lang) =>
+      T(
+        lang,
+        "STANDING → LEAGUE → PLAYER か TEAM → STYLE。点（四角）をタップで数字、もう 1 人タップで比較です。",
+        "STANDING → LEAGUE → PLAYER or TEAM → STYLE. Tap a dot (square) for numbers, tap another to compare."
+      ),
+  },
+  {
+    id: "league_hub_player_tabs",
+    hint: "LEAGUE tab → PLAYER sections: STYLE, ZONE, LADDER, TREND, ON/OFF — what each shows",
+    fast: /(?:zone|ladder|on\s*\/?\s*off)(?:タブ|画面)(?:は|って|には|で)?(?:何|なに|どこ)|(?:ゾーン|ラダー|オンオフ)タブ(?:は|って|には|で)?(?:何|なに|どこ)/i,
+    open: ["standings"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "STANDING → LEAGUE → PLAYER の上のタブ（今季だけ）:",
+          "・STYLE: 選手のスタイルマップ（散布図）",
+          "・ZONE: コートのエリアごとのシュート成功率トップ。コートをタップでエリア切り替え、名前で選手詳細",
+          "・LADDER: MVP / ROOKIE / DPOY / SIXTH MAN / MIP の UNITERZ の試算ランキング（公式の投票とは別物）。先週からの順位の上下も出ます",
+          "・TREND: 週間 TOP PERFORMANCES（1試合の Game Score 順）、HOT / COLD（直近5試合とそれより前の平均得点の差）、ホーム / アウェー・連戦2日目の得点差、SEASON HIGHS、連続記録と回数（20点以上連続・ダブルダブルなど）、VALUE（年俸の順位と働きの順位の差）、MILESTONE WATCH（通算の節目まであと少しの選手）",
+          "・ON/OFF: コートにいるときといないときの得失点の差（オン100分・オフ50分以上の上位10人）",
+        ].join("\n"),
+        [
+          "STANDING → LEAGUE → PLAYER tabs (this season only):",
+          "- STYLE: player style maps (scatter charts)",
+          "- ZONE: top shooters by court zone. Tap the court to switch zones, a name for the player",
+          "- LADDER: UNITERZ's MVP / ROOKIE / DPOY / SIXTH MAN / MIP estimates (not the official vote), with moves since last week",
+          "- TREND: top performances of the week (single-game Game Score), HOT / COLD (last 5 games vs before), home / away and back-to-back scoring gaps, season highs, streaks and counts (20+ points, double-doubles…), VALUE (salary rank vs production rank), and MILESTONE WATCH (players close to career milestones)",
+          "- ON/OFF: point differential with the player on vs off the court (100+ on / 50+ off minutes, top 10)",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "award_ladders",
+    hint: "how the LADDER (MVP / rookie / DPOY / sixth man / MIP) rankings are calculated",
+    fast: /^(?!.*どうやってみ).*(?:(?:ladder|ラダー)(?:の)?.{0,10}(?:どうやって決め|どうやって計算|決め|計算|基準|仕組み)|(?:mvp|dpoy|mip|新人王|シックスマン)(?:ラダー|ladder)?(?:は|って|の順位は)?(?:どうやって決め|どう決め|計算|基準))/i,
+    open: ["standings"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "LADDER は UNITERZ の試算で、公式の投票とは別物です（STANDING → LEAGUE → PLAYER → LADDER）。",
+          "・MVP: 65試合ルール（20分以上の出場）にまだ届く選手を、個人の貢献度（PIE）5割・効率込みの得点2割・チームの勝率3割",
+          "・ROOKIE: 前季までに NBA の試合に出ていない選手を、Game Score の平均6割・PIE 2割・総出場時間2割（チーム試合の半分以上・平均12分以上）",
+          "・DPOY: 65試合ルールにまだ届く選手を、出場中の失点ペース（DRtg）3割・STL+BLK 2.5割・ディフレクション+シュートチェック2割・マークした相手の FG% 1.5割・DREB 1割",
+          "・SIXTH MAN: 65試合ルールにまだ届き、先発よりベンチ出場が多い選手を、ベンチ出場時の Game Score 平均5割・効率込みの得点3割・PIE 2割",
+          "・MIP: 前季20試合以上・前季平均25点未満で65試合ルールにまだ届く選手の伸び。得点の増分3割・得点の伸び率2割・PIE の増分3割・出場時間の増分2割",
+        ].join("\n"),
+        [
+          "LADDER is UNITERZ's estimate, not the official vote (STANDING → LEAGUE → PLAYER → LADDER).",
+          "- MVP: players still able to meet the 65-game rule (20+ minutes), weighted PIE 50%, efficiency-adjusted scoring 20%, team win rate 30%",
+          "- ROOKIE: players with no NBA games before this season; average Game Score 60%, PIE 20%, total minutes 20% (half the team's games and 12+ minutes a game)",
+          "- DPOY: 65-game-rule eligible; on-court DRtg 30%, STL+BLK 25%, deflections + contests 20%, opponent FG% when guarding 15%, DREB 10%",
+          "- SIXTH MAN: 65-game-rule eligible and more bench than starting games; bench Game Score 50%, efficiency-adjusted scoring 30%, PIE 20%",
+          "- MIP: 20+ games and under 25 points a game last season, 65-game-rule eligible; points gain 30%, points growth rate 20%, PIE gain 30%, minutes gain 20%",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "league_hub_team_tabs",
+    hint: "LEAGUE tab → TEAM sections: STYLE, SCORING, FORM, DEFENSE, LINEUP — what each shows",
+    fast: /(?:scoring mix|form & splits|allowed by position)|league.{0,6}team.{0,6}(?:タブ|tab)/i,
+    open: ["standings"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "STANDING → LEAGUE → TEAM の上のタブ（今季だけ）:",
+          "・STYLE: チームのスタイルマップ（PLAY STYLE と ROSTER）",
+          "・SCORING: 得点（失点）のうち 3P・ペイント・ミドル・フリースローが占める割合",
+          "・FORM: 連勝・連敗と状況別の勝敗（5点差以内・連戦2日目・4日で3試合目・勝率5割以上の相手・ホーム / アウェー・東 / 西）、日程の厳しさ（当たった相手と残りの相手の勝率の平均）、UNITERZ PICKS（みんなの予想から出した予想の勝ち数と実際の差）",
+          "・DEFENSE: 相手のガード・フォワード・センターに1試合で取られた得点・リバウンド・アシスト・3P",
+          "・LINEUP: 5人組のネットレーティングのリーグ上位",
+        ].join("\n"),
+        [
+          "STANDING → LEAGUE → TEAM tabs (this season only):",
+          "- STYLE: team style maps (PLAY STYLE and ROSTER)",
+          "- SCORING: share of points (scored / allowed) from 3s, the paint, midrange, and free throws",
+          "- FORM: streaks and situational records (games within 5, back-to-backs, 3 in 4 nights, vs .500+ teams, home / away, East / West), strength of schedule (played and remaining), and UNITERZ PICKS (expected wins from the crowd's picks vs actual)",
+          "- DEFENSE: points, rebounds, assists, and 3s allowed per game to guards, forwards, and centers",
+          "- LINEUP: the league's best five-man lineups by net rating",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "playoffs_view",
+    hint: "playoff bracket / playoff picture / play-in: what the app shows",
+    fast: /(?:トーナメント表|ブラケット|組み合わせ表|bracket)|(?:プレーオフ|playoff)(?:の)?(?:組み合わせ|表|picture|進出圏)|(?:プレーオフ|プレーイン)(?:進出)?圏(?:って|は|の)?(?:どこ|どう|わかる|見方|みかた)|プレーイン(?:圏)?(?:って|は|の)?(?:どこ|どう|わかる|見方|みかた)/i,
+    open: ["standings"],
+    answer: (lang) =>
+      T(
+        lang,
+        "今のアプリにプレーオフの組み合わせ表（トーナメント表）はありません。順位表（試合一覧の右端 STANDING）では 1〜6位が緑、7〜10位（プレーイン圏）が黄、11位以下が赤で、6位と7位・10位と11位の間に区切り線があります。プレーオフの試合も予想でき、RANKING の MENU → PLAYOFFS にプレーオフのランキングがあります。",
+        "The app has no playoff bracket right now. In the standings (STANDING on the right edge of the games list), seeds 1-6 are green, 7-10 (play-in) yellow, 11+ red, with lines after 6th and 10th. Playoff games can be picked, and RANKING → MENU → PLAYOFFS has the playoff ranking."
       ),
   },
   {
@@ -657,6 +1057,30 @@ const ENTRIES: Entry[] = [
         lang,
         "チーム詳細は、STATS の表や検索でチームをタップ、STANDING の順位表の行をタップ、または予想画面の STATS タブから開けます。",
         "Open a team page by tapping it in STATS (table or search), a row in STANDING, or from the STATS tab of the pick screen."
+      ),
+  },
+  {
+    id: "nav_team_payroll",
+    hint: "how to view team salary / payroll / cap / draft picks in the app",
+    fast: /^(?!.*選手).*(?:チーム|球団)?(?:の)?(?:サラリー|年俸|ペイロール|payroll|給料)(?:総額|一覧)?(?:の|って|は)?(?:見方|みかた|見かた|どこ|どうやって|見れる|見られる|開き方)|(?:年俸総額|サラリーキャップ|キャップ|ぜいたく税|贅沢税|ドラフト指名権)(?:の|って|は)?(?:見方|みかた|どこ|どうやって|見れる)|OFFICE(?:タブ)?.*(?:年俸|サラリー|ペイロール|指名権)|(?:where|how).{0,12}(?:team )?(?:payroll|salary|cap|draft picks?)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        "チームのサラリー（年俸総額・キャップ・エプロン）とドラフト指名権は、チーム詳細の OFFICE タブにあります。STATS や STANDING、予想画面の STATS からチームを開いて OFFICE を選んでください。選手ひとりの契約・年俸は選手詳細の CONTRACT タブです。",
+        "Team salary (payroll, cap, aprons) and draft picks are on the team's OFFICE tab. Open a team from STATS, STANDING, or the pick screen's STATS tab, then choose OFFICE. A single player's contract / salary is on the player's CONTRACT tab."
+      ),
+  },
+  {
+    id: "nav_player_contract",
+    hint: "how to view a player's contract / salary in the app",
+    fast: /選手(?:の)?(?:契約|年俸|サラリー|給料)(?:年数)?(?:の|って|は)?(?:見方|みかた|どこ|どうやって|見れる|見られる)|契約(?:の)?(?:見方|みかた|どこ|どうやって)|CONTRACT(?:タブ)?(?:は|って)?(?:どこ|何)|(?:where|how).{0,12}(?:player )?(?:contract|salary)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        "選手の契約・今季年俸・FA は、選手詳細の CONTRACT タブにあります。STATS の PLAYER や検索、チーム詳細のロスターから選手を開いてください。チーム全体の年俸総額はチーム詳細の OFFICE タブです。",
+        "A player's contract, this season's salary, and free agency are on the player's CONTRACT tab. Open a player from STATS (PLAYER or search) or a team roster. Team payroll totals are on the team's OFFICE tab."
       ),
   },
   {
@@ -674,19 +1098,131 @@ const ENTRIES: Entry[] = [
   {
     id: "nav_today",
     hint: "TODAY screen: today's NBA stat leaders and UNITERZ score leaders",
-    fast: /today(?:'s)? leaders|today(?:タブ|画面)|今日のリーダー/i,
+    fast: /today(?:'s)? leaders|today(?:タブ|画面)?(?:の)?(?:見方|みかた|どこ)?|今日のリーダー(?:は|って)?(?:どこ|見たい)?|今日の(?:スタッツ)?リーダー/i,
     open: ["today"],
     answer: (lang) =>
       T(
         lang,
-        "試合一覧の右端 TODAY に、その日の NBA スタッツリーダー（得点・リバウンドなど）と、UNITERZ の今日のスコアリーダー（PICK UP / PRO LEAGUE）があります。",
-        "TODAY on the right edge of the games list shows the day's NBA stat leaders and UNITERZ score leaders (PICK UP / PRO LEAGUE)."
+        "試合一覧の右端 TODAY に、その日の NBA スタッツリーダー（得点・リバウンドなど）と、UNITERZ の今日のスコアリーダー（PICK UP / PRO LEAGUE・上位50人）があります。UNITERZ タブの MY RANK は、その試合日の自分の順位（N位 / 何人中）・予想数と的中数・合計ポイントです（その日に終わった試合があるとき。PRO LEAGUE は PRO のみ）。UNITERZ に新しい結果があると TODAY に黄色の点が付きます。",
+        "TODAY on the right edge of the games list shows the day's NBA stat leaders and UNITERZ score leaders (PICK UP / PRO LEAGUE, top 50). MY RANK in the UNITERZ tab shows your rank that game day (N of M), picks and hits, and total points (once a game has finished that day; PRO LEAGUE is PRO only). A yellow dot on TODAY means new UNITERZ results."
+      ),
+  },
+  {
+    id: "team_detail_tabs",
+    hint: "team detail page tabs: TEAM / GAMES / ROSTER / LINEUP / OFFICE and sections like SPLITS, EDGE, PERFORMANCE METRICS",
+    fast: /チーム詳細(?:の)?(?:タブ|画面)?(?:は|って|には|で)?(?:何が見|何がある|なにがある)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "チーム詳細のタブ:",
+          "・TEAM: 概要・ケガ人・PERFORMANCE METRICS（攻撃 / 守備の効率、NET の全時間 / ガベージ抜き / 相手補正 / 直近10試合）・ポジション別失点・HOW THEY PLAY（プレーの特徴）・SPLITS・EDGE（得意な形 / 苦手な形の勝敗）・ON / OFF",
+          "・GAMES: 直近10試合の流れ、試合ログ（行をタップで試合スタッツ）、直接対決、日程の厳しさ",
+          "・ROSTER: ロスター、オフシーズンの IN / OUT、DISCIPLINE（テクニカル・罰金など）",
+          "・LINEUP: 2〜5人の組み合わせの成績",
+          "・OFFICE: 年俸総額（キャップ・エプロン）・ドラフト指名権・球団情報",
+          "SPLITS は状況別の成績です: ホーム / アウェー、対東 / 対西、勝率5割以上 / 未満の相手、連戦2日目・4日で3試合目の勝敗と、それぞれの1試合平均スタッツ。",
+        ].join("\n"),
+        [
+          "Team page tabs:",
+          "- TEAM: summary, injuries, PERFORMANCE METRICS (offense / defense ratings; NET all minutes / garbage time removed / opponent-adjusted / last 10), points allowed by position, HOW THEY PLAY, SPLITS, EDGE (records in favorable / unfavorable game shapes), ON / OFF",
+          "- GAMES: last-10 form, game logs (tap a row for the box score), head-to-head, schedule strength",
+          "- ROSTER: roster, offseason IN / OUT, DISCIPLINE (techs, fines…)",
+          "- LINEUP: two- to five-man lineup results",
+          "- OFFICE: payroll (cap, aprons), draft picks, franchise info",
+          "SPLITS are situational records: home / away, vs East / West, vs .500+ / sub-.500 teams, back-to-backs and 3-in-4s, each with per-game averages.",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "player_detail_tabs",
+    hint: "player detail page tabs: OVERVIEW / GAMES / CAREER / CONTRACT and what each has",
+    fast: /選手詳細(?:の)?(?:タブ|画面)?(?:は|って|には|で)?(?:何が見|何がある|なにがある)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "選手詳細のタブ:",
+          "・OVERVIEW: 出場可否・シーズン平均・次の試合・HOW THEY PLAY（プレーの特徴）・マッチアップ・ON / OFF・シュートチャート・安定感",
+          "・GAMES: 直近20試合の推移・試合ログ・SPLITS（連戦2日目・4日で3試合目・相手の強さ別など）・シーズン最高・HIT RATE",
+          "HIT RATE は、得点・リバウンド・アシスト・3P成功数がそれぞれ基準（例: 20点以上、10リバウンド以上）に届いた試合が、今季と直近10試合で何試合中何試合あったかです。基準は今季平均に近い値を各項目2つまで（今季一度も届いていない基準は出さない）。",
+          "・CAREER: 年ごとの平均（レギュラー / プレーオフ）・受賞・経歴",
+          "・CONTRACT: 契約（今季年俸・残り・総額・FA）と DISCIPLINE（テクニカル・罰金など）",
+        ].join("\n"),
+        [
+          "Player page tabs:",
+          "- OVERVIEW: availability, season averages, next game, HOW THEY PLAY, matchups, ON / OFF, shot chart, consistency",
+          "- GAMES: last-20 trend, game logs, SPLITS (back-to-backs, 3-in-4s, opponent strength…), season highs, HIT RATE",
+          "HIT RATE shows how many games (this season and last 10) the player reached a line in points, rebounds, assists, and 3s made (e.g. 20+ points, 10+ rebounds). Up to two lines per stat near the season average; lines never reached this season aren't shown.",
+          "- CAREER: season-by-season averages (regular / playoffs), awards, background",
+          "- CONTRACT: contract (this season's salary, years left, total, free agency) and DISCIPLINE (techs, fines…)",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "discipline",
+    hint: "technical fouls / flagrants / ejections / suspensions / fines: where to see them and how fines are calculated",
+    fast: /(?:テクニカル|フラグラント|退場|出場停止|罰金|discipline|technical fouls?)(?:の)?(?:数|回数)?(?:は|って|を|が)?(?:どこ|見たい|見れ|見られ)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "テクニカル（TECH）・フラグラント（FLAG）・退場（EJECT）・出場停止（SUSP）・罰金（FINES）は、STATS の表の左の DISCIPLINE、チーム詳細の ROSTER タブ、選手詳細の CONTRACT タブで見られます（シーズン累計とリーグ順位）。",
+          "・テクニカル・フラグラント・退場は試合記録から数えます（コーチは除く・リーグが取り消した分は引く・プレーインは数えない）",
+          "・罰金は、テクニカル・退場の NBA 規定額、出場停止で失った年俸（労使協定の日割り）、リーグが発表した罰金の合計です",
+        ].join("\n"),
+        [
+          "Techs (TECH), flagrants (FLAG), ejections (EJECT), suspensions (SUSP), and fines (FINES) are under DISCIPLINE on the left of the STATS tables, the ROSTER tab of a team page, and the CONTRACT tab of a player page (season totals and league ranks).",
+          "- Techs, flagrants, and ejections are counted from game records (coaches excluded, rescinded ones removed, play-in not counted)",
+          "- Fines add up the NBA's set amounts for techs and ejections, salary lost to suspensions (per the CBA), and fines the league announced",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "clean_ratings",
+    hint: "what garbage time removed / CLN NET / CLN ORTG / CLN DRTG / ADJ NET / L10 NET mean",
+    fast: /(?:ガベージ(?:タイム)?(?:抜き)?|garbage time|cln(?:\s*(?:net|ortg|drtg))?|adj\s*net|l10\s*net|相手補正)(?:レーティング)?(?:って|とは|の意味|はどういう|の定義|の見方|みかた|はどこ|どこで見)|what (?:is|does) (?:garbage time|cln|adj net)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "CLN はガベージタイム（大差がついた終盤）を除いた値です。",
+          "・ガベージタイム: 4Q の残り12〜9分で25点差以上、9〜6分で20点差以上、6分〜で10点差以上の時間（延長は含めない。点差が縮めば戻る）",
+          "・CLN NET / ORTG / DRTG: ガベージタイム抜きの得失点差 / 攻撃効率 / 守備効率（100ポゼッションあたり）",
+          "・ADJ NET: ガベージ抜きの NET を、対戦相手の強さとホーム / アウェーで補正した値",
+          "・L10 NET: 直近10試合のガベージ抜きの NET",
+          "STATS のチーム表の RATINGS とチーム詳細の PERFORMANCE METRICS にあります（公式の ORTG / DRTG / NET は BASIC）。",
+        ].join("\n"),
+        [
+          "CLN means garbage time (late blowout minutes) removed.",
+          "- Garbage time: in the 4th quarter, a 25+ point margin with 12-9 minutes left, 20+ with 9-6, 10+ with under 6 (not in overtime; it ends if the margin shrinks)",
+          "- CLN NET / ORTG / DRTG: net, offensive, and defensive rating per 100 possessions without garbage time",
+          "- ADJ NET: clean NET adjusted for opponent strength and home / away",
+          "- L10 NET: clean NET over the last 10 games",
+          "Find them under RATINGS in the STATS team table and in PERFORMANCE METRICS on team pages (official ORTG / DRTG / NET are under BASIC).",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "tutorial",
+    hint: "replay the tutorial",
+    fast: /チュートリアル|tutorial/i,
+    open: ["profile"],
+    answer: (lang) =>
+      T(
+        lang,
+        "チュートリアルはプロフィールの右端の MENU →「サポート」の「チュートリアル」から、もう一度最初から見られます。",
+        "Replay the tutorial from Profile → MENU (right edge) → Support → Tutorial."
       ),
   },
   {
     id: "nav_results",
     hint: "where to see my past picks and their results",
-    fast: /(?:自分の|過去の)?予想(?:の)?(?:結果|履歴)(?:は|って|を|が)?(?:どこ|見たい|見れ|確認)|(?:my )?(?:pick|prediction) (?:history|results)/i,
+    fast: /(?:自分の|過去の)?予想(?:の)?(?:結果|履歴)(?:は|って|を|が)?(?:どこ|見たい|見れ|確認)|リザルト(?:の)?(?:見方|みかた|どこ)|結果画面(?:は|って)?(?:どこ|見方)|(?:my )?(?:pick|prediction) (?:history|results)/i,
     open: ["results"],
     answer: (lang) =>
       T(
@@ -695,7 +1231,216 @@ const ENTRIES: Entry[] = [
         "Your picks and results are in the RESULT tab. Tap one for the game detail and point breakdown."
       ),
   },
+  {
+    id: "nav_my_rank",
+    hint: "where MY RANK / my ranking card is",
+    fast: /(?:my\s*rank|マイランク|自分の順位(?:カード)?)(?:の)?(?:見方|みかた|どこ)|順位カード(?:は|って)?(?:どこ|見方)/i,
+    open: ["rankings", "today"],
+    answer: (lang) =>
+      T(
+        lang,
+        "自分の順位は、下タブの RANKING の MY RANK カードで見られます。今日の試合日の自分の順位・的中は、試合一覧右端の TODAY → UNITERZ タブの MY RANK にもあります。",
+        "Your place on the board is the MY RANK card in the RANKING tab. For today's game-day rank and hits, open TODAY (right edge of the games list) → UNITERZ → MY RANK."
+      ),
+  },
+  {
+    id: "nav_detail_sections",
+    hint: "where shot chart / on-off / lineups / splits / HOW THEY PLAY are on detail pages",
+    fast: /(?:ショットチャート|シュートチャート|shot\s*chart|オン.?オフ|on\s*\/?\s*off|ラインナップ|lineup|splits?|edge|how they play|ハウゼイプレイ)(?:の|って|は)?(?:見方|みかた|どこ|どうやって|見れる)/i,
+    open: ["stats"],
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "チーム詳細 / 選手詳細の中にあります。",
+          "・ショットチャート・ON / OFF・HOW THEY PLAY: 選手詳細の OVERVIEW",
+          "・試合ログ・SPLITS: 選手詳細の GAMES / チーム詳細の GAMES・TEAM",
+          "・ラインナップ・ON / OFF: チーム詳細の LINEUP / TEAM",
+          "・EDGE（得意形 / 苦手形）: チーム詳細の TEAM",
+          "開き方は STATS・STANDING・予想画面の STATS / ROSTER からチームや選手をタップです。",
+        ].join("\n"),
+        [
+          "They're on team and player pages:",
+          "- Shot chart, ON / OFF, HOW THEY PLAY: player OVERVIEW",
+          "- Game logs and SPLITS: player GAMES and team GAMES / TEAM",
+          "- Lineups and ON / OFF: team LINEUP / TEAM",
+          "- EDGE (favorable / unfavorable shapes): team TEAM tab",
+          "Open a team or player from STATS, STANDING, or the pick screen's STATS / ROSTER tabs."
+        ].join("\n")
+      ),
+  },
+  {
+    id: "nav_profile",
+    hint: "where the profile / settings screens are",
+    fast: /プロフィール(?:の)?(?:見方|みかた|どこ|開き方)|設定画面(?:は|って)?(?:どこ|見方)|profile(?: screen)?(?:は|って)?(?:どこ)/i,
+    open: ["profile"],
+    answer: (lang) =>
+      T(
+        lang,
+        "プロフィールは下タブの右端です。右端の MENU から通知・表示・プラン・サポート（ヘルプ・お問い合わせ・利用規約）などに行けます。",
+        "Profile is the rightmost bottom tab. The MENU on its right edge opens notifications, display, plan, and support (help, contact, terms)."
+      ),
+  },
+  {
+    id: "hit_rate_where",
+    hint: "where to see my hit rate / accuracy",
+    fast: /(?:的中率|正解率|ヒット率)(?:の)?(?:見方|みかた|どこ)|自分の(?:的中|正解)(?:率)?(?:は|って)?(?:どこ|見方)/i,
+    open: ["rankings", "results"],
+    answer: (lang) =>
+      T(
+        lang,
+        "勝者の的中率は、RANKING の勝率指標と、自分の RESULT / MY RANK まわりで確認できます。週間・月間の勝率ランキングに載るには、その時点までの PICK UP 試合の一定割合以上を予想している必要があります。",
+        "Winner hit rate shows under RANKING's win-rate metric and around your RESULT / MY RANK. Weekly / monthly win-rate boards require picking a minimum share of PICK UP games so far."
+      ),
+  },
+  {
+    id: "stats_refresh",
+    hint: "when NBA stats / scores / injuries in the app update",
+    fast: /(?:スタッツ|データ|スコア|欠場|ケガ)(?:は|って)?(?:いつ|何時)(?:更新|反映)|(?:更新|反映)(?:は|って)?(?:いつ|何時)|いつ(?:スタッツ|データ)(?:が|は)?(?:更新|入)/i,
+    answer: (lang) =>
+      T(
+        lang,
+        [
+          "アプリ内のデータは次のタイミングで入ります（ライブの外部サイト取得ではありません）。",
+          "・試合中のスコア / ボックス: 試合があるあいだ、約1分ごとに更新",
+          "・リーグ表・詳細スタッツ・試合ログなど: 試合終了後に随時、保険で毎日18:00頃にもまとめ更新",
+          "・欠場情報: 16:00 / 23:00 と、試合開始前の窓でも更新",
+          "・全体ランキング: 毎日日本時間16時",
+        ].join("\n"),
+        [
+          "In-app data updates on this schedule (not live pulls from third-party sites on each open):",
+          "- Live scores / box scores: about every minute while games are on",
+          "- League tables, detail stats, game logs: after games finish, plus a daily pass around 18:00 JST",
+          "- Injuries: 16:00 / 23:00 JST and pregame windows",
+          "- Global rankings: daily at 16:00 JST",
+        ].join("\n")
+      ),
+  },
+  {
+    id: "platforms",
+    hint: "iOS / Android availability and offline",
+    fast: /(?:android|アンドロイド|iphone|ios|アイフォン)(?:でも|だけ|対応)|オフライン(?:で)?(?:使える|利用)/i,
+    answer: (lang) =>
+      T(
+        lang,
+        "iPhone（App Store）と Android（Google Play）の両方で使えます。試合スコアやスタッツはネット接続が必要で、オフライン専用モードはありません。",
+        "Available on iPhone (App Store) and Android (Google Play). Scores and stats need a network connection; there is no offline-only mode."
+      ),
+  },
 ];
+
+/** どの話題にも入りきらない細かい仕様。AI が説明文から答えるときだけ使う（コード・規約で確かめたものだけ） */
+const FACTS: Array<(lang: Lang) => string> = [
+  (lang) => T(lang, "延長戦になった試合は、延長を含む最終スコアで採点します。", "Overtime games are scored on the final score including overtime."),
+  (lang) => T(lang, "最多得点者が同点のときは、同点の全員が当たりです。", "If players tie for the most points, picking any of them counts as a hit."),
+  (lang) =>
+    T(
+      lang,
+      "予想しなかった試合は、ポイントも付かず減点もありません。連勝も切れません（予想した試合だけで数えます。シーズンが変わると連勝は0に戻ります）。",
+      "Games you don't pick give no points and no penalty, and don't break your streak (only picked games count; streaks reset each season)."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "プレシーズンの試合も予想・採点されますが、ランキング・通算成績・連勝には入りません。",
+      "Preseason games can be picked and are scored, but they don't count toward rankings, career stats, or streaks."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "プレーオフの試合も予想できます。RANKING の MENU → PLAYOFFS に別のランキングがあります（総合と各ラウンド）。プレーインはランキングに入りません。",
+      "Playoff games can be picked too, with a separate ranking under RANKING → MENU → PLAYOFFS (overall and by round). Play-In games don't count."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "ランキングで同点の人は同じ順位です（Unit も同額）。一覧は100位まで（100位が同点ならその全員）。",
+      "Tied users share the same rank (and the same Units). Lists show the top 100 (everyone tied at 100th is included)."
+    ),
+  (lang) => T(lang, "PICK UP の試合は運営が週ごとに選びます。", "PICK UP games are chosen by the UNITERZ team each week."),
+  (lang) =>
+    T(
+      lang,
+      "招待コード・パートナーコードを入れられるのは新規登録のときだけです。登録したあとから入れることはできません。",
+      "Invite and partner codes can only be entered at sign-up, not afterwards."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "予想・ポイント・Unit・PRO はアカウントに保存されます。機種変更や再インストールのあとも、同じメールアドレスとパスワードでログインすればそのまま戻ります（ログインはメールアドレスとパスワード）。PRO が出ないときは購入画面の「購入を復元」。",
+      "Picks, points, Units, and PRO are saved to your account. After changing phones or reinstalling, log in with the same email and password and everything is back (sign-in is email and password). If PRO is missing, tap \"Restore purchases\" on the purchase screen."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "PRO は端末ではなくアカウントに付くので、同じアカウントなら iPhone でも Android でも PRO です。解約やプラン変更は買ったストア側（iPhone で買ったなら App Store）で行います。1つの購入は1つのアカウントにだけ紐づきます。",
+      "PRO belongs to your account, not the device, so the same account is PRO on both iPhone and Android. Cancel or change plans in the store you bought from (App Store if bought on iPhone). One purchase links to one account."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "Weekly と Monthly は、プロフィールのメニュー →「プランの確認」から切り替えられます（手続きは App Store / Google Play）。上げるときはストアの仕様どおりに反映、下げるときは今の期間が終わってからで返金はありません。Season Pass は買い切りで、Weekly / Monthly へ切り替えることはできません（期間が終わったら、あらためて好きなプランを購入）。",
+      "Switch between Weekly and Monthly from Profile → MENU → Plan Status (handled by the App Store / Google Play). Upgrades apply per the store's rules; downgrades start after the current period with no refund. The Season Pass is a one-time purchase and can't be switched to Weekly / Monthly (buy a plan again after it ends)."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "商品交換の送料（海外も）と関税は原則運営が負担します。住所の誤りなどで再配達・転送になったときは着払い770円（税込）。海外にも送れます（ブラジルは対象外）。申請には氏名・住所・電話番号が要ります。注文後の変更やキャンセルはできません。",
+      "Shipping (including overseas) and import duties for redemptions are generally covered by UNITERZ. Redelivery or forwarding due to a wrong address is cash on delivery, 770 JPY (tax incl.). Overseas shipping is available (except Brazil). You need your name, address, and phone number. Orders can't be changed or cancelled once placed."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "PRO の料金は、一度支払ったあとは途中で解約しても日割りや返金はありません（Season Pass も同じ）。返金を求めるときは、買ったストア（App Store / Google Play）の返金手続きになります。",
+      "PRO fees aren't prorated or refunded by UNITERZ after payment, even if you cancel mid-period (the Season Pass too). For a refund, use the refund process of the store you bought from (App Store / Google Play)."
+    ),
+  (lang) => T(lang, "いまアプリ内に広告は出ません。", "The app currently shows no ads."),
+  (lang) =>
+    T(
+      lang,
+      "ログインボーナスや毎日のボーナスはありません（Unit はランキング・スクワッドバトル・招待などでもらえます）。",
+      "There's no login or daily bonus (Units come from rankings, Squad Battle, invites, and so on)."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "Unit は買う・換金する・払い戻す・人に譲る（友達に送る）ことはできません。",
+      "Units can't be bought, cashed out, refunded, or transferred (you can't send them to friends)."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "アカウントを削除すると Unit の残高は0になり、戻せません。",
+      "Deleting your account sets your Unit balance to 0 and it can't be restored."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "スクワッドのメンバーの参加・脱退・入れ替えは、エントリー期間（募集中）だけです。バトルが始まると追加も交代もできません。",
+      "Squad members can join, leave, or be swapped only during the entry window. Once the battle starts, no additions or substitutions."
+    ),
+  (lang) =>
+    T(
+      lang,
+      "PRO PICK は勝つ確率や予想スコアなどの予想の材料で、当たることを保証するものではありません。",
+      "PRO PICK gives prediction inputs such as win probability and projected score; it doesn't guarantee a correct pick."
+    ),
+];
+
+/** AI が説明文から答えるときに渡す全文（毎回同じ文 → プロンプトキャッシュが効く） */
+export function nbaAskKnowledgeReference(language: string): string {
+  const lang = language === "ja" ? "ja" : "en";
+  const lines: string[] = [];
+  for (const e of ENTRIES) {
+    if (e.id === "scoring") {
+      for (const focus of ["overview", "upset", "win", "streak"] as const) lines.push(`[scoring:${focus}] ${e.answer(lang, focus)}`);
+      continue;
+    }
+    lines.push(`[${e.id}] ${e.answer(lang, null)}`);
+  }
+  for (const f of FACTS) lines.push(`[fact] ${f(lang)}`);
+  return lines.join("\n");
+}
 
 const BY_ID = new Map(ENTRIES.map((e) => [e.id, e]));
 
@@ -708,7 +1453,11 @@ export function nbaAskKnowledgeCatalogLine(): string {
 
 /** NBA のデータを聞いている語。これがあれば即答しない（AI に読ませる） */
 const NBA_DATA_WORDS =
-  /平均|直近|前回|前の試合|ラインナップ|ロスター|契約|年俸|ケガ|怪我|けが|欠場|リバウンド|アシスト|得点王|何点|勝敗|成績|スタッツを|順位は|何位|MVP争い|ドラフト|トレード|移籍/;
+  /平均|直近|前回|前の試合|ラインナップ|ロスター|契約|年俸|サラリー|ペイロール|ケガ|怪我|けが|欠場|リバウンド|アシスト|得点王|何点|勝敗|成績|スタッツを|順位は|何位|MVP争い|ドラフト|トレード|移籍/;
+
+/** 画面の場所・見方の質問。データ語（年俸など）が混ざっても即答してよい */
+const APP_HOW_TO_VIEW_WORDS =
+  /見方|みかた|見かた|開き方|どこ|どうやって|見れる|見られる|where|how (?:do|to) (?:i |you )?(?:view|see|open|find)/i;
 
 /**
  * よくあるアプリの質問だけ、言い回しで即答する。迷うものは null（AI に読ませる）。
@@ -717,7 +1466,7 @@ const NBA_DATA_WORDS =
 export function matchNbaAskKnowledge(question: string): { id: string; focus?: Focus } | null {
   const q = question.trim();
   if (!q || q.length > 60) return null;
-  if (NBA_DATA_WORDS.test(q)) return null;
+  if (NBA_DATA_WORDS.test(q) && !APP_HOW_TO_VIEW_WORDS.test(q)) return null;
   for (const e of ENTRIES) {
     if (!e.fast?.test(q)) continue;
     if (e.id === "scoring") {

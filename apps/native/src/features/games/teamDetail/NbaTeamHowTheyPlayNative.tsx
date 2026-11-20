@@ -102,6 +102,9 @@ type Props = {
   /** @deprecated use language */
   isJa?: boolean;
   bundle?: NbaLeagueTeamStatsBundle;
+  /** 最初に開くタブ（ASK がジャンルを聞かれたとき） */
+  initialTab?: TeamHowTheyPlayTab;
+  initialTrackGroup?: (typeof TEAM_TRACK_GROUPS)[number]["id"];
 };
 
 export default function NbaTeamHowTheyPlayNative({
@@ -110,6 +113,8 @@ export default function NbaTeamHowTheyPlayNative({
   language,
   isJa,
   bundle,
+  initialTab = "fourFactors",
+  initialTrackGroup = "drive",
 }: Props) {
   const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
   const { lang } = chrome;
@@ -117,11 +122,13 @@ export default function NbaTeamHowTheyPlayNative({
     () => (bundle ? getTeamHowTheyPlay(teamId, bundle) : null),
     [teamId, bundle]
   );
-  const [tab, setTab] = useState<TeamHowTheyPlayTab>("fourFactors");
+  const [tab, setTab] = useState<TeamHowTheyPlayTab>(initialTab);
   const [factorId, setFactorId] = useState("efg");
   const [hustleId, setHustleId] = useState("deflections");
-  const [trackId, setTrackId] = useState("drives");
-  const [trackGroup, setTrackGroup] = useState<(typeof TEAM_TRACK_GROUPS)[number]["id"]>("drive");
+  const [trackGroup, setTrackGroup] = useState(initialTrackGroup);
+  const [trackId, setTrackId] = useState(
+    () => TEAM_TRACK_GROUPS.find((g) => g.id === initialTrackGroup)?.ids[0] ?? "drives"
+  );
   const [rebId, setRebId] = useState("boxOuts");
   if (!board) return null;
 
