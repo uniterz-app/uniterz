@@ -214,7 +214,11 @@ export async function loadGamesWindow(
   const peerRaw =
     params.includePeers === false
       ? windowRows
-      : await mergePlayoffSeriesPeersForWindowGamesAdmin(db, windowRows);
+      : await mergePlayoffSeriesPeersForWindowGamesAdmin(
+          db,
+          windowRows,
+          league === "nba" ? NBA_GAMES_WINDOW_FIELDS : undefined
+        );
 
   const rows = windowRows.map((r) =>
     serializeGameDoc(String(r.id), r as Record<string, unknown>)

@@ -24,7 +24,7 @@ import { notifyDailyRankingUpdatedPush } from "./notifications/notifyPushEvents"
 export { onGameFinalV2 } from "./onGameFinalV2";
 export { onPlayoffResultsWrite } from "./playoff-bracket/onPlayoffResultsWrite";
 export { onPlayoffBracketRescoreTaskCreated } from "./playoff-bracket/onPlayoffBracketRescoreTaskCreated";
-export { getCumulativeRanking } from "./rankings/getCumulativeRanking";
+// getCumulativeRanking（HTTP）は呼び出し元が無いので export しない（ランキングは Next の API）
 
 // 🔥 Pro 期限切れユーザーを Free に戻す Cron
 export { expireProUsers } from "./triggers/expireProUsers";
@@ -58,10 +58,9 @@ export {
 } from "./nba/runNbaInjuryIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）
 export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
-// Pro Insight 前日 19:00 ナラティブ Batch 投入
+// Pro Insight 前日 20:00 予想の材料（翌日 24h 分）
 export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
-// Pro Insight OpenAI Batch 完了ポーリング（15 分）
-export { runNbaProInsightBatchPollCron } from "./nba/runNbaProInsightBatchPollCron";
+// Pro Insight の OpenAI Batch（ナラティブ）は停止済み。完了ポーリング cron は export しない
 // Pro Insight tip 1h 前パッチ（injury は専用 cron が更新済みスナップショットを読む）
 export { runNbaProBriefPatchCron } from "./nba/runNbaProBriefPatchCron";
 // お気に入り選手のテクニカル / フレグラント / 退場（試合中 = ライブ alert、取りこぼしは日次）
@@ -298,17 +297,6 @@ export const rebuildGroupBattleSnapshotsEveningCron = onSchedule(
         err
       );
     }
-  }
-);
-
-/* ============================================================================
- * Game start push — 廃止（スケジュール枠は no-op で残し、デプロイ差分で消えるのを避ける）
- * ==========================================================================*/
-
-export const notifyGameStartPushCron = onSchedule(
-  { schedule: "*/10 * * * *", timeZone: "Asia/Tokyo" },
-  async () => {
-    console.log("[notifyGameStartPushCron] retired — skip");
   }
 );
 

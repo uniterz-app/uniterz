@@ -1,14 +1,18 @@
-import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import {
   applyProEntitlement,
   revokeProEntitlement,
 } from "@/lib/billing/applyProEntitlement";
 import {
+  acknowledgeGoogleProduct,
+  acknowledgeGoogleSubscription,
   fetchGoogleProductPurchase,
   fetchGoogleSubscriptionV2,
   type GoogleSubscriptionPurchaseV2,
 } from "@/lib/billing/google/googlePlayApi";
 import {
+  googlePurchaseTokenIndexRef,
+  isBillingOwnerDeleted,
   resolveUidByGooglePurchaseToken,
   userBillingSecureRef,
 } from "@/lib/billing/userBillingSecure";
@@ -52,7 +56,8 @@ async function tokenOwnerConflict(
   purchaseToken: string
 ): Promise<boolean> {
   const owner = await resolveUidByGooglePurchaseToken(db, purchaseToken);
-  return owner != null && owner !== uid;
+  if (owner == null || owner === uid) return false;
+  return !(await isBillingOwnerDeleted(db, owner));
 }
 
 async function grantGooglePro(
@@ -126,6 +131,12 @@ async function applySubscription(
   const proUntil = ensureProUntilCoversFirstWeeklyReport(expiry, now);
 
   await grantGooglePro(db, uid, planType, proUntil, purchaseToken, cancelAtPeriodEnd);
+  const ackProductId = productId || expectedProductId;
+  if (sub.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING" && ackProductId) {
+    await acknowledgeGoogleSubscription(ackProductId, purchaseToken).catch((e) => {
+      console.warn("[google-play] subscription acknowledge failed", e);
+    });
+  }
   return { ok: true, planType, proUntil };
 }
 
@@ -151,6 +162,11 @@ async function applyOneTime(
   const proUntil = stubProUntilForPlan(planType, purchasedAt);
 
   await grantGooglePro(db, uid, planType, proUntil, purchaseToken, false);
+  if (purchase.acknowledgementState === 0) {
+    await acknowledgeGoogleProduct(productId, purchaseToken).catch((e) => {
+      console.warn("[google-play] product acknowledge failed", e);
+    });
+  }
   return { ok: true, planType, proUntil };
 }
 
@@ -166,9 +182,28 @@ export async function verifyAndApplyGooglePurchase(
   if (await tokenOwnerConflict(db, uid, purchaseToken)) {
     return { ok: false, reason: "token_owned_by_other_user" };
   }
-  return isSubscriptionPlan(planType)
-    ? applySubscription(db, uid, purchaseToken, productId)
-    : applyOneTime(db, uid, productId, purchaseToken);
+  const result = isSubscriptionPlan(planType)
+    ? await applySubscription(db, uid, purchaseToken, productId)
+    : await applyOneTime(db, uid, productId, purchaseToken);
+  if (!result.ok && result.reason === "pending") {
+    /** 支払い完了の RTDN（アプリが閉じていても届く）で持ち主を引けるよう先に索引だけ置く */
+    await googlePurchaseTokenIndexRef(db, purchaseToken).set(
+      { uid, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  }
+  return result;
+}
+
+/** RTDN から：保留だった一回払いの支払い完了などを反映 */
+export async function refreshGoogleOneTimeByToken(
+  db: Firestore,
+  productId: string,
+  purchaseToken: string
+): Promise<ApplyGooglePlayResult | { ok: false; reason: "uid_not_found" }> {
+  const uid = await resolveUidByGooglePurchaseToken(db, purchaseToken);
+  if (!uid) return { ok: false, reason: "uid_not_found" };
+  return applyOneTime(db, uid, productId, purchaseToken);
 }
 
 /** RTDN から：トークンの持ち主を引いて定期購入の最新状態を反映 */

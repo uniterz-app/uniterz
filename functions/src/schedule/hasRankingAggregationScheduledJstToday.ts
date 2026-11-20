@@ -13,6 +13,7 @@ export async function hasRankingAggregationScheduledJstToday(): Promise<boolean>
     .where("startAtJst", ">=", start)
     .where("startAtJst", "<=", end)
     .limit(1)
+    .select()
     .get();
 
   return !nbaSnap.empty;

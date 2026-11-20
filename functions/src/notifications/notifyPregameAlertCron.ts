@@ -154,6 +154,16 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
         .where("startAtJst", ">=", Timestamp.fromMillis(now))
         .where("startAtJst", "<=", Timestamp.fromDate(until))
         .limit(LOOKAHEAD_LIMIT)
+        .select(
+          "final",
+          "injuryReport",
+          "proInsightNarrative",
+          "proBrief",
+          "pushPregame",
+          "predictorUids",
+          "home",
+          "away"
+        )
         .get()
     )
   );
@@ -164,9 +174,12 @@ export async function runNotifyPregameAlertCron(): Promise<void> {
     if (gameData.final === true) continue;
 
     const injuryFp = fingerprint(gameData.injuryReport ?? null);
-    // Pro Insight は gameProInsights/{id}（移行前は games 上の旧フィールド）
-    const insightDoc =
-      (await firestore.collection("gameProInsights").doc(gameDoc.id).get()).data() ?? {};
+    // Pro Insight は gameProInsights/{id}（移行前は games 上の旧フィールド）。シミュ等の大きい項目は読まない
+    const [insightSnap] = await firestore.getAll(
+      firestore.collection("gameProInsights").doc(gameDoc.id),
+      { fieldMask: ["predictKit", "proInsightNarrative", "proBrief"] }
+    );
+    const insightDoc = insightSnap?.data() ?? {};
     const insightFp = fingerprint(
       insightConclusionMaterial({
         proInsightNarrative:

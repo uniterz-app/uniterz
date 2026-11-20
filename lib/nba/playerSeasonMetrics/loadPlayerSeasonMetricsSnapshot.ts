@@ -47,7 +47,14 @@ function resolveMetrics(
       typeof rankRaw === "number" && Number.isFinite(rankRaw)
         ? Math.max(0, Math.round(rankRaw))
         : 0;
-    out[k as NbaPlayerLeaderMetricId] = { value, rank };
+    const made = cell.made;
+    const att = cell.att;
+    out[k as NbaPlayerLeaderMetricId] = {
+      value,
+      rank,
+      ...(typeof made === "number" && Number.isFinite(made) ? { made } : {}),
+      ...(typeof att === "number" && Number.isFinite(att) ? { att } : {}),
+    };
   }
   return out;
 }

@@ -5,6 +5,7 @@ import {
 } from "@/lib/billing/userBillingSecure";
 import type { ProIapPlan } from "@/lib/pro/iapProductIds";
 import { revalidateRankingUserFields } from "@/lib/rankings/rankingCommentCache";
+import { userDataIsPro } from "@/lib/pro/userPlanActive";
 
 export type ApplyProEntitlementInput = {
   planType: ProIapPlan | string;
@@ -36,8 +37,12 @@ export async function applyProEntitlement(
     await writeUserBillingSecure(db, uid, input.billing);
   }
 
-  await db.doc(`users/${uid}`).set(userPatch, { merge: true });
-  revalidateRankingUserFields();
+  const userRef = db.doc(`users/${uid}`);
+  const [before] = await db.getAll(userRef, { fieldMask: ["plan", "proUntil"] });
+  const wasPro = userDataIsPro(before?.data());
+  await userRef.set(userPatch, { merge: true });
+  // 更新・復元のたびに全員共有のランキング用キャッシュを捨てない（表示が変わるのは Free → Pro だけ）
+  if (!wasPro) revalidateRankingUserFields();
 
   try {
     const { ensureUserPlanStartDate } = await import(

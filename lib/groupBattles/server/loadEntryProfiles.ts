@@ -3,7 +3,7 @@
  * users + cumulative_stats を getAll、期間順位は週/月スナップ 3 本だけ読む。
  */
 
-import type { Firestore } from "firebase-admin/firestore";
+import { FieldPath, type Firestore } from "firebase-admin/firestore";
 import type { GroupBattleEntryProfile } from "@/lib/groupBattles/entryProfileTypes";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { periodRankingSnapshotDocId } from "@/lib/rankings/rankingDivision";
@@ -18,6 +18,25 @@ import { userDataPlan } from "@/lib/pro/userPlanActive";
 export type { GroupBattleEntryProfile } from "@/lib/groupBattles/entryProfileTypes";
 
 const GET_ALL_CHUNK = 100;
+
+const ENTRY_USER_FIELDS = [
+  "deletedAt",
+  "handle",
+  "displayName",
+  "photoURL",
+  "avatarUrl",
+  "plan",
+  "proUntil",
+];
+
+const ENTRY_CUMULATIVE_FIELDS = [
+  new FieldPath("rankingBySeason", CURRENT_NBA_SEASON_KEY),
+  "ranking",
+  "activeWinStreakBasketball",
+  "streakBySport",
+  "activeWinStreak",
+  "streakSeasonKeyBasketball",
+];
 
 type SeasonBucket = {
   totalPoints?: unknown;
@@ -80,7 +99,8 @@ function streakFromCumulative(data: Record<string, unknown> | undefined): number
 async function loadRanksMap(
   db: Firestore,
   period: "weekly" | "monthly",
-  label: string
+  label: string,
+  uids: string[]
 ): Promise<Record<string, number>> {
   const docId = periodRankingSnapshotDocId({
     division: "standard",
@@ -88,8 +108,12 @@ async function loadRanksMap(
     label,
     metric: "totalPoints",
   });
-  const snap = await db.collection("period_ranking_snapshots").doc(docId).get();
-  if (!snap.exists) return {};
+  // ranks は全参加者の map（rows も含めると doc 全体で数十 KB）。表示する人の分だけ読む
+  const [snap] = await db.getAll(
+    db.collection("period_ranking_snapshots").doc(docId),
+    { fieldMask: uids.map((uid) => new FieldPath("ranks", uid)) }
+  );
+  if (!snap?.exists) return {};
   const ranks = snap.data()?.ranks;
   if (!ranks || typeof ranks !== "object") return {};
   const out: Record<string, number> = {};
@@ -118,9 +142,9 @@ export async function loadGroupBattleEntryProfiles(
   const lastMonth = previousMonthKeyJST(now);
 
   const [thisWeekRanks, lastWeekRanks, lastMonthRanks] = await Promise.all([
-    loadRanksMap(db, "weekly", thisWeek),
-    loadRanksMap(db, "weekly", lastWeek),
-    loadRanksMap(db, "monthly", lastMonth),
+    loadRanksMap(db, "weekly", thisWeek, unique),
+    loadRanksMap(db, "weekly", lastWeek, unique),
+    loadRanksMap(db, "monthly", lastMonth, unique),
   ]);
 
   for (let i = 0; i < unique.length; i += GET_ALL_CHUNK) {
@@ -130,8 +154,8 @@ export async function loadGroupBattleEntryProfiles(
       db.collection("cumulative_stats").doc(uid)
     );
     const [userSnaps, cumSnaps] = await Promise.all([
-      db.getAll(...userRefs),
-      db.getAll(...cumRefs),
+      db.getAll(...userRefs, { fieldMask: ENTRY_USER_FIELDS }),
+      db.getAll(...cumRefs, { fieldMask: ENTRY_CUMULATIVE_FIELDS }),
     ]);
 
     for (let j = 0; j < chunk.length; j++) {

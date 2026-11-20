@@ -101,7 +101,10 @@ export async function advanceDueGroupBattlePhases(): Promise<{
 }> {
   const db = getFirestore(adminApp);
   const now = Date.now();
-  const snap = await db.collection(COLLECTION).limit(80).get();
+  const snap = await db
+    .collection(COLLECTION)
+    .where("phase", "in", ["announced", "recruiting", "battle", "settling", "final"])
+    .get();
   let advanced = 0;
 
   for (const doc of snap.docs) {

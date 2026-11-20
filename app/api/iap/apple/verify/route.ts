@@ -8,7 +8,10 @@ import { fetchAppleTransactionById } from "@/lib/billing/apple/fetchAppleTransac
 import { verifyAndDecodeAppleTransactionJws } from "@/lib/billing/apple/appleSignedDataVerifier";
 import { applyAppleTransactionEntitlement } from "@/lib/billing/apple/applyAppleTransactionEntitlement";
 import { applyProEntitlement } from "@/lib/billing/applyProEntitlement";
-import { resolveUidByAppleOriginalTransactionId } from "@/lib/billing/userBillingSecure";
+import {
+  isBillingOwnerDeleted,
+  resolveUidByAppleOriginalTransactionId,
+} from "@/lib/billing/userBillingSecure";
 
 async function applyAppleVerifyStub(
   uid: string,
@@ -105,7 +108,7 @@ export async function POST(req: NextRequest) {
         db,
         originalTransactionId
       );
-      if (ownerUid && ownerUid !== uid) {
+      if (ownerUid && ownerUid !== uid && !(await isBillingOwnerDeleted(db, ownerUid))) {
         return NextResponse.json(
           { error: "transaction_owned_by_other_user" },
           { status: 409 }

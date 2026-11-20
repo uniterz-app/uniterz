@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       trigger,
       baselineSlot,
     });
-    if (!result.skipped) revalidateNbaInjuryApiCache();
+    if (!result.skipped && !result.unchanged) revalidateNbaInjuryApiCache();
 
     return NextResponse.json(result);
   } catch (e: unknown) {

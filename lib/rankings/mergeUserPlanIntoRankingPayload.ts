@@ -4,7 +4,10 @@ import { getAdminDb } from "@/lib/firebaseAdmin";
 import { parseEquippedProSkinFromUserDoc } from "@/lib/profile/profilePlanProBgVariantField";
 import type { ProfilePlanProBgVariant } from "@/lib/profile/profilePlanProBgVariants";
 import { userDataPlan } from "@/lib/pro/userPlanActive";
-import { rankingCommentFromUserDoc } from "@/lib/rankings/rankingComment";
+import {
+  RANKING_COMMENT_FIELD,
+  rankingCommentFromUserDoc,
+} from "@/lib/rankings/rankingComment";
 import { RANKING_USER_FIELDS_TAG } from "@/lib/rankings/rankingCommentCache";
 
 type RowLike = Record<string, unknown> & { uid?: string };
@@ -118,6 +121,21 @@ async function loadUserMergeFieldsByUid(
   }
 }
 
+/** users doc は数十 KB になり得る（課金・通知・スキン進捗など）。行に載せる項目だけ読む */
+const USER_MERGE_FIELD_MASK = [
+  "plan",
+  "proUntil",
+  "countryCode",
+  "handle",
+  "slug",
+  "username",
+  "displayName",
+  "name",
+  "photoURL",
+  "planProBgVariant",
+  RANKING_COMMENT_FIELD,
+];
+
 /** Firestore users をバッチ取得して uid → plan / countryCode（1 回の getAll で両方） */
 async function readUserMergeFieldsByUid(
   unique: string[]
@@ -128,7 +146,7 @@ async function readUserMergeFieldsByUid(
   for (let i = 0; i < unique.length; i += BATCH) {
     const batch = unique.slice(i, i + BATCH);
     const refs = batch.map((id) => db.collection("users").doc(id));
-    const snaps = await db.getAll(...refs);
+    const snaps = await db.getAll(...refs, { fieldMask: USER_MERGE_FIELD_MASK });
     snaps.forEach((snap, j) => {
       const id = batch[j];
       if (!id) return;

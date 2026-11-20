@@ -15,6 +15,9 @@ export type NbaPlayerSeasonMetricCell = {
    * `0` = 資格外（値だけ詳細に出す。順位 UI は出さない）。
    */
   rank: number;
+  /** 成功率の指標だけ: 1 試合平均の成功数 / 試投数 */
+  made?: number;
+  att?: number;
 };
 
 export type NbaPlayerSeasonMetricsDoc = {

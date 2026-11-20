@@ -10,6 +10,7 @@ import {
 import { safeRankMetricNum } from "./safeRankMetricNum";
 import { userDataPlan } from "../shared/userPlanActive";
 import {
+  CUMULATIVE_OPEN_RANKING_TOTAL_POSTS_FIELD,
   CUMULATIVE_RANKING_TOTAL_POSTS_FIELD,
   rankingTotalPostsFromAggregate,
 } from "./cumulativeSnapshotIndex";
@@ -222,6 +223,7 @@ export function buildCumulativeIncrementFields(
 
   // PRO LEAGUE（open）— 全試合
   if (contrib.forOpenRanking) {
+    out[CUMULATIVE_OPEN_RANKING_TOTAL_POSTS_FIELD] = FieldValue.increment(posts);
     out.openRanking = flatBlock();
     if (contrib.nbaSeasonKey) {
       out.openRankingBySeason = { [contrib.nbaSeasonKey]: seasonBlock() };
@@ -425,7 +427,10 @@ export function cumulativePayloadFromAggregate(
     openRankingBySeason: agg.openRankingBySeason,
     rankingByNbaPlayoffs: agg.rankingByNbaPlayoffs,
 
-    ...rankingTotalPostsFromAggregate(agg.ranking.totalPosts),
+    ...rankingTotalPostsFromAggregate(
+      agg.ranking.totalPosts,
+      agg.openRanking.totalPosts
+    ),
 
     cumulativeLiveUpdates: true,
     lastReconciledDateKey,

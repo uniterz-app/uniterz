@@ -57,14 +57,22 @@ export async function GET(req: Request) {
       division,
     });
 
-    return NextResponse.json({
-      ok: true,
-      resolvedUid,
-      seasonKey: CURRENT_NBA_SEASON_KEY,
-      rankingLeague,
-      wcStage: null,
-      points,
-    });
+    // 元データ（rankSnapshotHistory）はルールで公開読取・更新は 1 日数回なので CDN で共有する
+    return NextResponse.json(
+      {
+        ok: true,
+        resolvedUid,
+        seasonKey: CURRENT_NBA_SEASON_KEY,
+        rankingLeague,
+        wcStage: null,
+        points,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
+        },
+      }
+    );
   } catch (e: unknown) {
     console.error("[api/profile/rank-playoff-trend]", e);
     return NextResponse.json(

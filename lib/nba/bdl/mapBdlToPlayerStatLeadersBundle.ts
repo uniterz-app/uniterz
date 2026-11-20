@@ -159,11 +159,16 @@ function rate(v: number | null): number | null {
 
 function rowOf(
   p: MergedPlayer,
-  value: number
+  value: number,
+  shot?: { made: number | null; att: number | null }
 ): NbaPlayerStatLeaderRow | null {
   if (!Number.isFinite(value)) return null;
   const conference = nbaConferenceForTeam(p.ref.teamId);
   if (!conference) return null;
+  const perGame = (v: number | null | undefined) =>
+    v != null && Number.isFinite(v) ? Math.round(v * 10) / 10 : null;
+  const made = perGame(shot?.made);
+  const att = perGame(shot?.att);
   return {
     playerId: p.ref.playerId,
     playerName: p.ref.playerName,
@@ -171,6 +176,7 @@ function rowOf(
     conference,
     gamesPlayed: p.gp,
     value,
+    ...(made != null && att != null ? { made, att } : {}),
   };
 }
 
@@ -180,7 +186,10 @@ type PlayerMetricsAccum = Map<
     teamId: string;
     gamesPlayed: number;
     metrics: Partial<
-      Record<NbaPlayerLeaderMetricId, { value: number; rank: number }>
+      Record<
+        NbaPlayerLeaderMetricId,
+        { value: number; rank: number; made?: number; att?: number }
+      >
     >;
   }
 >;
@@ -223,6 +232,9 @@ function commitBoard(
     bag.metrics[metric] = {
       value: row.value,
       rank: rankById.get(row.playerId) ?? 0,
+      ...(row.made != null && row.att != null
+        ? { made: row.made, att: row.att }
+        : {}),
     };
   }
   return orderedQualified.slice(0, limit);
@@ -502,7 +514,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
         n(p.advanced, "fgm") ?? makesTotal(n(p.base, "fgm"), p.gp);
       const pct = n(p.base, "fg_pct") ?? n(p.advanced, "fg_pct");
       if (pct == null || fgm == null) continue;
-      const row = rowOf(p, pct);
+      const row = rowOf(p, pct, { made: n(p.base, "fgm"), att: n(p.base, "fga") });
       if (!row) continue;
       rows.push({
         ...row,
@@ -527,7 +539,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const ftm = makesTotal(n(p.base, "ftm"), p.gp);
       const pct = n(p.base, "ft_pct");
       if (pct == null || ftm == null) continue;
-      const row = rowOf(p, pct);
+      const row = rowOf(p, pct, { made: n(p.base, "ftm"), att: n(p.base, "fta") });
       if (!row) continue;
       rows.push({
         ...row,
@@ -552,7 +564,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       const fg3m = makesTotal(n(p.base, "fg3m"), p.gp);
       const pct = n(p.base, "fg3_pct");
       if (pct == null || fg3m == null) continue;
-      const row = rowOf(p, pct);
+      const row = rowOf(p, pct, { made: n(p.base, "fg3m"), att: n(p.base, "fg3a") });
       if (!row) continue;
       rows.push({
         ...row,
@@ -618,6 +630,8 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
       shootingPct?: boolean;
       /** 指定時は上の既定資格の代わりに使う（TOV% の出場時間・使用率） */
       qualifies?: (p: MergedPlayer) => boolean;
+      /** 成功率の指標: 1 試合平均の成功数 / 試投数 */
+      shot?: (p: MergedPlayer) => { made: number | null; att: number | null };
     }
   ) => {
     const limit = opts?.limit ?? LEADER_BOARD_LIMIT;
@@ -626,7 +640,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     for (const p of merged) {
       const v = pick(p);
       if (v == null) continue;
-      const row = rowOf(p, v);
+      const row = rowOf(p, v, opts?.shot?.(p));
       if (!row) continue;
       let qualifies = false;
       if (opts?.qualifies) {
@@ -770,6 +784,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   fillAdv("drive_pts", true, (p) => n(p.drives, "drive_pts"));
   fillAdv("drive_fg_pct", true, (p) => rate(n(p.drives, "drive_fg_pct")), {
     shootingPct: true,
+    shot: (p) => ({ made: n(p.drives, "drive_fgm"), att: n(p.drives, "drive_fga") }),
   });
   fillAdv("drive_passes", true, (p) => n(p.drives, "drive_passes", "passes"));
   fillAdv("drive_tov", true, (p) => n(p.drives, "drive_tov", "tov"));
@@ -792,14 +807,23 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
     "cns_fg_pct",
     true,
     (p) => rate(n(p.catchShoot, "catch_shoot_fg_pct")),
-    { shootingPct: true }
+    {
+      shootingPct: true,
+      shot: (p) => ({
+        made: n(p.catchShoot, "catch_shoot_fgm"),
+        att: n(p.catchShoot, "catch_shoot_fga"),
+      }),
+    }
   );
   fillAdv("cns_pts", true, (p) => n(p.catchShoot, "catch_shoot_pts"));
   fillAdv(
     "pullup_fg_pct",
     true,
     (p) => rate(n(p.pullUp, "pull_up_fg_pct")),
-    { shootingPct: true }
+    {
+      shootingPct: true,
+      shot: (p) => ({ made: n(p.pullUp, "pull_up_fgm"), att: n(p.pullUp, "pull_up_fga") }),
+    }
   );
   fillAdv("pullup_pts", true, (p) => n(p.pullUp, "pull_up_pts"));
   fillAdv("paint_touches", true, (p) => n(p.paintTouch, "paint_touches"));
@@ -901,6 +925,7 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
   fillAdv("clutch_pts", true, (p) => n(p.clutchBase, "pts"));
   fillAdv("clutch_fg_pct", true, (p) => rate(n(p.clutchBase, "fg_pct")), {
     shootingPct: true,
+    shot: (p) => ({ made: n(p.clutchBase, "fgm"), att: n(p.clutchBase, "fga") }),
   });
   fillAdv("clutch_usg", true, (p) =>
     rate(n(p.clutchAdvanced, "usg_pct", "usage_percentage"))
@@ -921,7 +946,10 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
         n(p.shootingZone, "restricted_area_fg_pct", "restricted_fg_pct")
       );
       if (pct == null) continue;
-      const row = rowOf(p, pct);
+      const row = rowOf(p, pct, {
+        made: n(p.shootingZone, "restricted_area_fgm", "restricted_fgm"),
+        att: fgaPg,
+      });
       if (!row) continue;
       rows.push({
         ...row,
@@ -954,7 +982,10 @@ export async function buildPlayerStatLeadersBundleFromBdl(input: {
         n(p.shootingZone, "corner_3_fg_pct", "corner3_fg_pct")
       );
       if (pct == null) continue;
-      const row = rowOf(p, pct);
+      const row = rowOf(p, pct, {
+        made: n(p.shootingZone, "corner_3_fgm", "corner3_fgm"),
+        att: fgaPg,
+      });
       if (!row) continue;
       rows.push({
         ...row,

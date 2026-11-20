@@ -103,15 +103,33 @@ function uniqueGameTeamIds(
 }
 
 function teamDecrementFields(
-  teamId: string,
+  teamIds: string[],
   dec: Record<string, unknown>
 ): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(dec)) {
-    if (k === "updatedAt") continue;
-    out[`teams.${teamId}.${k}`] = v;
+  const { updatedAt: _omit, ...rest } = dec;
+  return {
+    teams: Object.fromEntries(teamIds.map((teamId) => [teamId, rest])),
+  };
+}
+
+/** updateUserStatsV2 の日次キーと同じ: NBA は米国東部、その他は JST */
+function statsDateKey(startAt: Timestamp, leagueKey: string | null): string {
+  const d = startAt.toDate();
+  if (leagueKey === "nba") {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+    return `${get("year")}-${get("month")}-${get("day")}`;
   }
-  return out;
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const yyyy = j.getUTCFullYear();
+  const mm = String(j.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(j.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export const onPostDeletedV2 = onDocumentDeleted(
@@ -168,12 +186,10 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
     const db = getFirestore();
 
-    const d = startAt.toDate();
-    const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-    const yyyy = j.getUTCFullYear();
-    const mm = String(j.getUTCMonth() + 1).padStart(2, "0");
-    const dd = String(j.getUTCDate()).padStart(2, "0");
-    const dateKey = `${yyyy}-${mm}-${dd}`;
+    const dateKey = statsDateKey(
+      startAt,
+      normalizeLeague(typeof before.league === "string" ? before.league : null)
+    );
 
     const dailyRef = db.doc(`user_stats_v2_daily/${uid}_${dateKey}`);
     const markerRef = dailyRef.collection("applied_posts").doc(snap.id);
@@ -188,6 +204,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
         const markerSnap = await tx.get(markerRef);
         if (!markerSnap.exists) return;
 
+        const userSnap = await tx.get(userRef);
+        const user = userSnap.exists ? userSnap.data()! : {};
+
         const dec = {
           posts: FieldValue.increment(-1),
           updatedAt: FieldValue.serverTimestamp(),
@@ -200,8 +219,6 @@ export const onPostDeletedV2 = onDocumentDeleted(
           tx.set(dailyRef, { leagues: { [leagueKey]: dec } }, { merge: true });
         }
 
-        const userSnap = await tx.get(userRef);
-        const user = userSnap.exists ? userSnap.data()! : {};
         applyCumulativeIncrementInTransaction(
           tx,
           cumulativeRef,
@@ -255,6 +272,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
     const leagueKey = before.league ?? null;
     const exactMatch = stats.exactMatch === true;
     const goalScorerHit = (stats.goalScorerBonus ?? 0) > 0;
+    const upsetBonus = Number(stats.upsetBonus ?? 0);
+    const streakBonus = Number(stats.streakBonus ?? 0);
+    const goalScorerBonus = Number(stats.goalScorerBonus ?? 0);
 
     await db.runTransaction(async (tx) => {
       const dailySnap = await tx.get(dailyRef);
@@ -262,6 +282,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
 
       const markerSnap = await tx.get(markerRef);
       if (!markerSnap.exists) return;
+
+      const userSnap = await tx.get(userRef);
+      const user = userSnap.exists ? userSnap.data()! : {};
 
       const marker = markerSnap.data() as
         | {
@@ -280,9 +303,12 @@ export const onPostDeletedV2 = onDocumentDeleted(
         upsetHitCount: FieldValue.increment(upsetHit ? -1 : 0),
         upsetPickCount: FieldValue.increment(hadUpsetGame ? -1 : 0),
         upsetPointsSum: FieldValue.increment(-upsetPoints),
-        exactHitCount: FieldValue.increment(0),
+        exactHitCount: FieldValue.increment(exactMatch ? -1 : 0),
         goalScorerHitCount: FieldValue.increment(goalScorerHit ? -1 : 0),
         pointsSumV3: FieldValue.increment(-pointsV3),
+        upsetBonusSum: FieldValue.increment(-upsetBonus),
+        streakBonusSum: FieldValue.increment(-streakBonus),
+        goalScorerBonusSum: FieldValue.increment(-goalScorerBonus),
         updatedAt: FieldValue.serverTimestamp(),
       };
 
@@ -342,13 +368,9 @@ export const onPostDeletedV2 = onDocumentDeleted(
             marker?.countedForRanking !== false)) &&
         forPickupRanking;
       if (countTeams && gameTeamIds.length > 0) {
-        for (const teamId of gameTeamIds) {
-          tx.set(dailyRef, teamDecrementFields(teamId, dec), { merge: true });
-        }
+        tx.set(dailyRef, teamDecrementFields(gameTeamIds, dec), { merge: true });
       }
 
-      const userSnap = await tx.get(userRef);
-      const user = userSnap.exists ? userSnap.data()! : {};
       applyCumulativeIncrementInTransaction(
         tx,
         cumulativeRef,
