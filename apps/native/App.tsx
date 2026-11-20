@@ -33,12 +33,14 @@ import AppShellNative from "./src/components/AppShellNative";
 import TutorialRestartCoverNative from "./src/features/tutorial/TutorialRestartCoverNative";
 import MaintenanceGateNative from "./src/components/MaintenanceGateNative";
 import CyberAlertProvider from "./src/components/CyberAlertProvider";
+import RootErrorBoundaryNative from "./src/components/RootErrorBoundaryNative";
 import AppStoreUpdatePromptNative from "./src/components/AppStoreUpdatePromptNative";
 import { APP_MESH_BG_FALLBACK } from "../../lib/app/appMeshBackground";
 import { ensureNativeSplashHeld } from "./src/bootstrap/nativeBootSplash";
 import { initNativeObservability } from "./src/observability/initNativeObservability";
 import { useOtaAutoApplyNative } from "./src/bootstrap/useOtaAutoApplyNative";
 import { isLightAppTheme } from "./src/theme/themeColorRuntime";
+import { ensureAdsReadyNative } from "./src/features/ads/adsConsentNative";
 
 ensureNativeSplashHeld();
 initNativeObservability();
@@ -83,12 +85,19 @@ export default function App() {
     void loadFontsAsync(DEFERRED_FONTS).catch(() => {});
   }, [criticalFontsLoaded]);
 
+  // 広告の同意（EU の同意フォーム）と広告 SDK の初期化。画面が出たあとに 1 回だけ行う
+  useEffect(() => {
+    if (!criticalFontsLoaded) return;
+    void ensureAdsReadyNative();
+  }, [criticalFontsLoaded]);
+
   useNativeShareDeepLinks();
   useOtaAutoApplyNative();
 
   if (!criticalFontsLoaded) return null;
 
   return (
+    <RootErrorBoundaryNative>
     <ChineseScriptProviderNative>
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_MESH_BG_FALLBACK }}>
       <SafeAreaProvider style={{ flex: 1, backgroundColor: "transparent" }}>
@@ -139,5 +148,6 @@ export default function App() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
     </ChineseScriptProviderNative>
+    </RootErrorBoundaryNative>
   );
 }

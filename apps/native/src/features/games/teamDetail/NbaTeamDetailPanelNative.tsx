@@ -380,7 +380,7 @@ function FormChip({
   );
 }
 
-function RecentFormSection({
+export function RecentFormSection({
   games,
   streak,
   accent,
@@ -448,7 +448,7 @@ function RecentFormSection({
 
 const GAME_LOGS_COLLAPSED = 10;
 
-function GameLogsSection({
+export function GameLogsSection({
   games,
   accent,
   ui,
@@ -591,7 +591,7 @@ function GameLogsSection({
   );
 }
 
-function InjuriesSection({
+export function InjuriesSection({
   injuries,
   accent,
   ui,
@@ -795,7 +795,7 @@ function shapeDeltaPpLabel(deltaWinPct: number): string {
   return `${pp > 0 ? "+" : ""}${pp}pp`;
 }
 
-function TeamShapeEdgesSectionNative({
+export function TeamShapeEdgesSectionNative({
   shapeEdges,
   accent,
   lang,
@@ -917,7 +917,7 @@ function ApronBadge({
   );
 }
 
-function PayrollSection({
+export function PayrollSection({
   payroll,
   rosterBlock,
   accent,
@@ -1447,7 +1447,7 @@ function DraftTeamColoredTextNative({
   );
 }
 
-function DraftPicksSection({
+export function DraftPicksSection({
   teamId,
   accent,
   ui,

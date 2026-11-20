@@ -18,6 +18,7 @@ import {
 } from "../../../../../../lib/predict/predictProBrief";
 import { sanitizeProBriefForDisplay } from "../../../../../../lib/predict/validateProBrief";
 import { proInsightGateCopy } from "../../../../../../lib/predict/proInsightGateCopy";
+import { proPickAdCopy } from "../../../../../../lib/predict/proPickAdCopy";
 import { PRO_INSIGHT_PREDICT_KIT_SAMPLES } from "../../../../../../lib/predict/proInsightPredictKitSample";
 import PredictProInsightKitNative, {
   PredictKitAccuracyHeroNative,
@@ -52,6 +53,10 @@ type Props = {
   /** Free: タイトル + 精度（無ければ説明 1 文）+ CTA + この試合の伏せ字カード */
   locked?: boolean;
   onPressUpgrade?: () => void;
+  /** Free: この試合だけ解除（初回は無料 / それ以外は広告） */
+  onPressProPickUnlock?: () => void;
+  firstFreeAvailable?: boolean;
+  unlockBusy?: boolean;
   /** Free に出す今季の的中率（20 試合未満は null） */
   kitRecord?: ProInsightPredictKitRecord | null;
   /** みんなの予想（伏せ字カードに出す公開情報） */
@@ -396,10 +401,14 @@ export default function PredictProBriefPanelNative({
   awayTeamName,
   locked = false,
   onPressUpgrade,
+  onPressProPickUnlock,
+  firstFreeAvailable = false,
+  unlockBusy = false,
   kitRecord = null,
   crowd = null,
 }: Props) {
   const gate = proInsightGateCopy(language);
+  const unlockCopy = proPickAdCopy(language);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
   const awayNick = teamNick(awayTeamId, awayTeamName).toUpperCase();
   const homeColor = getTeamJerseyPrimaryColor("nba", homeTeamId);
@@ -551,6 +560,31 @@ export default function PredictProBriefPanelNative({
                 ) : (
                   <Text style={styles.gateBody}>{gate.body}</Text>
                 )}
+                {onPressProPickUnlock ? (
+                  <Pressable
+                    onPress={onPressProPickUnlock}
+                    disabled={unlockBusy}
+                    style={({ pressed }) => [
+                      styles.cta,
+                      pressed || unlockBusy ? styles.ctaPressed : null,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      firstFreeAvailable ? unlockCopy.firstFreeCta : unlockCopy.adCta
+                    }
+                  >
+                    {({ pressed }) => (
+                      <Text
+                        style={[
+                          styles.ctaLabel,
+                          pressed ? styles.ctaLabelPressed : null,
+                        ]}
+                      >
+                        {firstFreeAvailable ? unlockCopy.firstFreeCta : unlockCopy.adCta}
+                      </Text>
+                    )}
+                  </Pressable>
+                ) : null}
                 {onPressUpgrade ? (
                   <Pressable
                     onPress={onPressUpgrade}

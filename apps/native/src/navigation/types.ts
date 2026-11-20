@@ -172,6 +172,10 @@ export type ProfileStackParamList = {
   ProSubscribe: undefined;
   ProSubscribePreview: undefined;
   SeasonPredictPreview: undefined;
+  /** __DEV__ TDL トレード予想バレット（モック） */
+  TradeBallotPreview: undefined;
+  /** __DEV__ トレード Buzz / 確定（モック） */
+  TradeBuzzPreview: undefined;
   /** __DEV__ SQUAD BATTLE 全画面プレビュー */
   SquadBattlePreview: undefined;
   /** __DEV__ 週間/月間レポート UI プレビュー（mock） */

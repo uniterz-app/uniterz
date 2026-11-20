@@ -20,9 +20,19 @@ type TeaserState = {
   teaser: ProInsightPreviewTeaser | null;
   hasKit: boolean;
   kitRecord: ProInsightPredictKitRecord | null;
+  /** この試合を解除済み（初回の無料 / 広告）。中身の取得に切り替える */
+  unlocked: boolean;
+  /** 初回の無料解除がまだ使える（ボタンを「無料」にする） */
+  firstFreeAvailable: boolean;
 };
 
-const EMPTY: TeaserState = { teaser: null, hasKit: false, kitRecord: null };
+const EMPTY: TeaserState = {
+  teaser: null,
+  hasKit: false,
+  kitRecord: null,
+  unlocked: false,
+  firstFreeAvailable: false,
+};
 
 export function useNbaMatchupInsightTeaser(opts: {
   gameId?: string | null;
@@ -50,11 +60,19 @@ export function useNbaMatchupInsightTeaser(opts: {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {
-            const json = (await res.json()) as { teaser?: unknown; hasKit?: unknown; kitRecord?: unknown };
+            const json = (await res.json()) as {
+              teaser?: unknown;
+              hasKit?: unknown;
+              kitRecord?: unknown;
+              unlocked?: unknown;
+              firstFreeAvailable?: unknown;
+            };
             next = {
               teaser: sanitizeProInsightPreviewTeaser(json.teaser),
               hasKit: json.hasKit === true,
               kitRecord: sanitizePredictKitRecord(json.kitRecord),
+              unlocked: json.unlocked === true,
+              firstFreeAvailable: json.firstFreeAvailable === true,
             };
           }
         }

@@ -6,6 +6,48 @@ import { L, resolveLocalizedLang, type LocalizedLang } from "../../../../../lib/
 export type ProfileChartLang = LocalizedLang;
 export const resolveProfileChartLang = resolveLocalizedLang;
 
+/** Ranking Progress の集計単位（シーズン通算の日ごと / 週ごと / 月ごと） */
+export type ProfileRankTrendScope = "season" | "weekly" | "monthly";
+
+/** Ranking Progress の副題（何の順位かを明示する） */
+export function profileRankTrendScopeSubtitle(
+  language: string | null | undefined,
+  scope: ProfileRankTrendScope
+): string {
+  const lang = resolveLocalizedLang(language);
+  if (scope === "weekly") {
+    return L(lang, {
+      ja: "週ごとの最終順位（今週は現在の順位）",
+      en: "Final rank of each week (this week: current)",
+      ko: "주별 최종 순위 (이번 주는 현재 순위)",
+      zh: "每周最终排名（本周为当前排名）",
+      es: "Ranking final de cada semana (esta semana: actual)",
+      pt: "Ranking final de cada semana (esta semana: atual)",
+      fr: "Rang final de chaque semaine (cette semaine : actuel)",
+    });
+  }
+  if (scope === "monthly") {
+    return L(lang, {
+      ja: "月ごとの最終順位（今月は現在の順位）",
+      en: "Final rank of each month (this month: current)",
+      ko: "월별 최종 순위 (이번 달은 현재 순위)",
+      zh: "每月最终排名（本月为当前排名）",
+      es: "Ranking final de cada mes (este mes: actual)",
+      pt: "Ranking final de cada mês (este mês: atual)",
+      fr: "Rang final de chaque mois (ce mois-ci : actuel)",
+    });
+  }
+  return L(lang, {
+    ja: "シーズン通算の順位（日ごと・最新10件）",
+    en: "Season rank by day (latest 10)",
+    ko: "시즌 누적 순위 (일별 · 최근 10건)",
+    zh: "赛季累计排名（按日 · 最近 10 条）",
+    es: "Ranking de la temporada por día (últimos 10)",
+    pt: "Ranking da temporada por dia (últimos 10)",
+    fr: "Rang de la saison par jour (10 derniers)",
+  });
+}
+
 export function profileRankTrendCopy(language: string | null | undefined) {
   const lang = resolveLocalizedLang(language);
   return {

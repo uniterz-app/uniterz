@@ -12,6 +12,20 @@ import {
 import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
+import ProPickAdMockModalNative from "./ProPickAdMockModalNative";
+import { requestProPickUnlock } from "../../../../../../lib/nba/predict/proPickUnlockApi";
+import { proPickAdCopy } from "../../../../../../lib/predict/proPickAdCopy";
+import { cyberAlert } from "../../../components/cyberAlert";
+import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
+import { showProPickRewardedAdNative } from "../../ads/proPickRewardedAdNative";
+
+/**
+ * AdMob のリワード広告を使うか（EAS の env で切り替える。既定は使わない）。
+ * 使わないときは開発ビルドだけモック広告を出す。
+ */
+const PRO_PICK_AD_SDK_ENABLED = process.env.EXPO_PUBLIC_PRO_PICK_AD_SDK === "1";
+/** Free の「広告で PRO PICK を見る」ボタンの表示。本番は SDK を有効にしたときだけ出す */
+const PRO_PICK_AD_UI_ENABLED = __DEV__ || PRO_PICK_AD_SDK_ENABLED;
 import PredictProInsightNarrativePanelNative from "./PredictProInsightNarrativePanelNative";
 import PredictProInsightKitNative from "./PredictProInsightKitNative";
 import NbaInjuryReportPanelNative from "./NbaInjuryReportPanelNative";
@@ -167,7 +181,28 @@ export default function NbaPredictToolsTabsNative({
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
   }, [tab]);
 
-  const insightAvailable = isPro && !preseason;
+  const {
+    teaser,
+    hasKit: teaserHasKit,
+    kitRecord,
+    loading: teaserLoading,
+    unlocked: teaserUnlocked,
+    firstFreeAvailable,
+  } = useNbaMatchupInsightTeaser({
+    gameId,
+    apiBaseUrl,
+    enabled: !isPro && !preseason && visited.has("insight"),
+  });
+  const { fUser } = useFirebaseUser();
+  /** Free でも、この試合を解除済み（広告 / 初回の無料）なら Pro と同じ中身を出す */
+  const [proPickUnlockedGameId, setProPickUnlockedGameId] = useState<string | null>(null);
+  const [proPickAdOpen, setProPickAdOpen] = useState(false);
+  const [proPickUnlockBusy, setProPickUnlockBusy] = useState(false);
+  const proPickUnlockedHere =
+    !!gameId && (teaserUnlocked || proPickUnlockedGameId === gameId);
+  const proPickAccess = isPro || proPickUnlockedHere;
+
+  const insightAvailable = proPickAccess && !preseason;
   const {
     narrative: liveNarrative,
     predictKit,
@@ -179,16 +214,50 @@ export default function NbaPredictToolsTabsNative({
     apiBaseUrl,
     enabled: insightAvailable,
   });
-  const {
-    teaser,
-    hasKit: teaserHasKit,
-    kitRecord,
-    loading: teaserLoading,
-  } = useNbaMatchupInsightTeaser({
-    gameId,
-    apiBaseUrl,
-    enabled: !isPro && !preseason && visited.has("insight"),
-  });
+  /** AdMob のリワード広告を見て、SSV の確定を待つ（届くまで数回確認する） */
+  const showSdkProPickAd = async () => {
+    const copy = proPickAdCopy(language);
+    const uid = fUser?.uid;
+    if (!gameId || !uid) return;
+    const result = await showProPickRewardedAdNative({ userId: uid, gameId });
+    if (result === "error") {
+      cyberAlert(copy.adModalTitle, copy.adUnavailable);
+      return;
+    }
+    if (result !== "earned") return;
+    for (let i = 0; i < 10; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const again = await requestProPickUnlock({ apiBase: apiBaseUrl, gameId, adWatched: false });
+      if (again?.unlocked) {
+        setProPickUnlockedGameId(gameId);
+        return;
+      }
+    }
+    cyberAlert(copy.adModalTitle, copy.adPending);
+  };
+
+  const runProPickUnlock = async (adWatched: boolean) => {
+    if (!gameId) return;
+    setProPickUnlockBusy(true);
+    try {
+      const r = await requestProPickUnlock({ apiBase: apiBaseUrl, gameId, adWatched });
+      if (r?.unlocked) {
+        setProPickUnlockedGameId(gameId);
+        return;
+      }
+      if (r?.needsAd) {
+        if (PRO_PICK_AD_SDK_ENABLED && !adWatched) {
+          await showSdkProPickAd();
+        } else {
+          setProPickAdOpen(true);
+        }
+        return;
+      }
+      cyberAlert(proPickAdCopy(language).adModalTitle, proPickAdCopy(language).adUnavailable);
+    } finally {
+      setProPickUnlockBusy(false);
+    }
+  };
   const insightUnread = useProInsightUnreadNative({
     gameId,
     version: insightAvailable && !briefLoading ? insightUpdatedAt : null,
@@ -264,7 +333,7 @@ export default function NbaPredictToolsTabsNative({
             {tab === "insight" ? (
               preseason ? (
                 <PendingPanel text={proInsightPreseasonNotice(language)} />
-              ) : !isPro && teaser && !teaserHasKit ? (
+              ) : !proPickAccess && teaser && !teaserHasKit ? (
                 <PredictProInsightTeaserPanelNative
                   teaser={teaser}
                   language={language}
@@ -272,9 +341,9 @@ export default function NbaPredictToolsTabsNative({
                   awayTeamName={awayTeamName}
                   onPressUpgrade={openProSubscribeFromTeaser}
                 />
-              ) : !isPro && teaserLoading ? (
+              ) : !proPickAccess && teaserLoading ? (
                 <LoadingPanel label={loadingLabel} />
-              ) : !isPro ? (
+              ) : !proPickAccess ? (
                 <PredictProBriefPanelNative
                   brief={null}
                   language={language}
@@ -284,6 +353,13 @@ export default function NbaPredictToolsTabsNative({
                   awayTeamName={awayTeamName}
                   locked
                   onPressUpgrade={() => openProSubscribe()}
+                  onPressProPickUnlock={
+                    PRO_PICK_AD_UI_ENABLED && gameId
+                      ? () => void runProPickUnlock(false)
+                      : undefined
+                  }
+                  firstFreeAvailable={firstFreeAvailable}
+                  unlockBusy={proPickUnlockBusy}
                   kitRecord={kitRecord}
                   crowd={crowd}
                 />
@@ -425,6 +501,15 @@ export default function NbaPredictToolsTabsNative({
           </View>
         </TutorialTargetNative>
       </View>
+      <ProPickAdMockModalNative
+        visible={proPickAdOpen}
+        language={language}
+        onCancel={() => setProPickAdOpen(false)}
+        onWatched={() => {
+          setProPickAdOpen(false);
+          void runProPickUnlock(true);
+        }}
+      />
     </TutorialTargetNative>
   );
 }

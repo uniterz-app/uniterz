@@ -3,11 +3,40 @@
  */
 import { L, resolveLocalizedLang, type LocalizedLang } from "@/lib/i18n/localize";
 import { NBA_OPENING_NIGHT_DATE_KEY } from "@/lib/games/nbaOpeningNightPreviewGames";
+import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
-/** 開幕戦 BOS@DET ティップオフ（10/20 15:00 ET） */
-export const SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS = Date.parse(
-  "2026-10-21T04:00:00+09:00"
-);
+/**
+ * シーズンごとの提出締切（開幕戦 BOS@DET ティップオフ前）。
+ * 新シーズンはここに 1 行足す。足し忘れた季は提出を受け付けない（安全側）。
+ * functions の `notifyEveningPredictNudgesCron.ts` も同じ値を持つ（`scripts/check-season-predict-deadlines.mjs` で一致を確認）。
+ */
+export const SEASON_PREDICT_SUBMIT_DEADLINE_BY_SEASON: Readonly<Record<string, number>> = {
+  /** 開幕戦 BOS@DET ティップオフ（10/20 15:00 ET） */
+  "2026-27": Date.parse("2026-10-21T04:00:00+09:00"),
+};
+
+/** 今季の締切（既存の参照を壊さないため残す） */
+export const SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS =
+  SEASON_PREDICT_SUBMIT_DEADLINE_BY_SEASON[CURRENT_NBA_SEASON_KEY] ?? 0;
+
+/** 指定シーズンの締切（ms）。未登録なら null */
+export function seasonPredictSubmitDeadlineMs(season: string): number | null {
+  return SEASON_PREDICT_SUBMIT_DEADLINE_BY_SEASON[season] ?? null;
+}
+
+/**
+ * 他人から見て、そのシーズンの予想がもう公開対象になっているか。
+ * 過去シーズンは締切を過ぎている扱い。未来シーズンと締切未登録は閉じていない扱い（＝非公開）。
+ */
+export function seasonPredictSubmitClosedForSeason(
+  season: string,
+  nowMs: number = Date.now()
+): boolean {
+  if (season < CURRENT_NBA_SEASON_KEY) return true;
+  if (season > CURRENT_NBA_SEASON_KEY) return false;
+  const deadline = seasonPredictSubmitDeadlineMs(season);
+  return deadline != null && nowMs >= deadline;
+}
 
 export const SEASON_PREDICT_SUBMIT_DEADLINE_WHEN = `${NBA_OPENING_NIGHT_DATE_KEY} 04:00 JST`;
 
@@ -34,7 +63,8 @@ export function seasonPredictSubmitDeadlineLabel(
 export function isSeasonPredictSubmitOpen(
   nowMs: number = Date.now()
 ): boolean {
-  return nowMs < SEASON_PREDICT_SUBMIT_DEADLINE_AT_MS;
+  const deadline = seasonPredictSubmitDeadlineMs(CURRENT_NBA_SEASON_KEY);
+  return deadline != null && nowMs < deadline;
 }
 
 export function seasonPredictSubmitLockedMessage(

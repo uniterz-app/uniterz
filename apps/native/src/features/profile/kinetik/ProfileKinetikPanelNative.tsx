@@ -1820,7 +1820,7 @@ export default function ProfileKinetikPanelNative({
           <View style={styles.favoritesFooter}>
             <ProfileNbaFavoritesRowNative
               favorites={nbaFavorites}
-              language={lang}
+              language={lang === "ja" ? "ja" : "en"}
             />
           </View>
         ) : null}

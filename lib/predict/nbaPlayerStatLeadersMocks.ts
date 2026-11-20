@@ -90,6 +90,9 @@ export type NbaPlayerStatLeaderRow = {
   /** BallDontLie leaders `games_played` */
   gamesPlayed: number;
   value: number;
+  /** 成功率のボードだけ: 1 試合平均の成功数 / 試投数（`NBA_SHOT_PCT_PARTS`） */
+  made?: number;
+  att?: number;
 };
 
 export type NbaPlayerStatLeadersBundle = {

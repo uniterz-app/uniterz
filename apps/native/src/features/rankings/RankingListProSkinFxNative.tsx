@@ -465,7 +465,6 @@ export default function RankingListProSkinFxNative({
           source={{ uri: cached }}
           style={StyleSheet.absoluteFillObject}
           resizeMode="stretch"
-          pointerEvents="none"
         />
       </Animated.View>
     );

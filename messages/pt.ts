@@ -1097,10 +1097,7 @@ const pt: Messages = {
         "Em **Grupos**, **peça** vaga em um esquadrão aberto ou entre com um **código**.\nDurante o evento, o **semanal (×4)** e o **mensal (×1)** atualizam.\n**Todos os membros** dos melhores esquadrões recebem **UNIT**.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
-        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
-      horizonUnitHowTitle: "Earning UNIT",
-      horizonUnitHowBody:
-        "Ganhe com recompensas de **rankings semanais/mensais**, **Squad Battle** e **convite de amigos**.\nTroque UNIT por **camisas**, **bonés** e mais.",
+        "A **moeda** destacada é o seu **saldo de UNIT**.\nGanhe com **rankings semanais/mensais**, **Squad Battle** e **convites de amigos**, e **troque** por **camisas**, **bonés** e mais.\nPalpites errados nunca tiram UNIT.",
       horizonCareerTitle: "Career",
       horizonCareerBody:
         "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",

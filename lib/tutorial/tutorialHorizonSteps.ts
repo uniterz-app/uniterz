@@ -10,7 +10,8 @@ import type { TutorialVisualId } from "@/lib/tutorial/tutorialCopy";
 export const HORIZON_INCLUDE_SQUAD_BATTLE = false;
 
 const HORIZON_SQUAD_STEP_COUNT = 2;
-const HORIZON_PROFILE_FEATURE_STEP_COUNT = 3;
+/** プロフィール側の新機能カード: UNIT（1 枚）+ キャリア */
+const HORIZON_PROFILE_FEATURE_STEP_COUNT = 2;
 
 export const HORIZON_FEATURE_STEP_COUNT = HORIZON_INCLUDE_SQUAD_BATTLE
   ? HORIZON_SQUAD_STEP_COUNT + HORIZON_PROFILE_FEATURE_STEP_COUNT
@@ -26,8 +27,6 @@ export type HorizonPracticeCopy = {
   horizonSquadHowBody: string;
   horizonUnitWhatTitle: string;
   horizonUnitWhatBody: string;
-  horizonUnitHowTitle: string;
-  horizonUnitHowBody: string;
   horizonCareerTitle: string;
   horizonCareerBody: string;
   horizonStatsWhatTitle: string;
@@ -74,12 +73,6 @@ export function buildHorizonFeatureSteps(
     {
       title: p.horizonUnitWhatTitle,
       body: p.horizonUnitWhatBody,
-      visual: null,
-      target: "profile-unit-coin",
-    },
-    {
-      title: p.horizonUnitHowTitle,
-      body: p.horizonUnitHowBody,
       visual: null,
       target: "profile-unit-coin",
     },

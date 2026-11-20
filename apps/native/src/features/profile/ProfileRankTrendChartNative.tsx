@@ -26,6 +26,8 @@ import ProfileRankPlotGridNative from "./ProfileRankPlotGridNative";
 import {
   profileChartDateLocale,
   profileRankTrendCopy,
+  profileRankTrendScopeSubtitle,
+  type ProfileRankTrendScope,
 } from "./profileChartCopy";
 import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 
@@ -83,6 +85,11 @@ type Props = {
   sectionTitle?: string;
   stackedSecondary?: boolean;
   frozen?: boolean;
+  /**
+   * 集計単位。指定すると副題で「何の順位か」を示し、monthly は横軸を月名にする。
+   * weekly は dateKey に週初めの月曜、monthly は YYYY-MM-01 を渡す。
+   */
+  scope?: ProfileRankTrendScope;
 };
 
 function yearsInRows(rows: RankPlayoffTrendPointNative[]): Set<number> {
@@ -98,7 +105,8 @@ function yearsInRows(rows: RankPlayoffTrendPointNative[]): Set<number> {
 function formatAxisDate(
   dateKey: string,
   lang: ReturnType<typeof resolveLocalizedLang>,
-  showYear: boolean
+  showYear: boolean,
+  scope?: ProfileRankTrendScope
 ): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey).trim());
   if (!m) return dateKey;
@@ -106,6 +114,12 @@ function formatAxisDate(
   const mo = Number(m[2]);
   const da = Number(m[3]);
   const d = new Date(Date.UTC(y, mo - 1, da));
+  if (scope === "monthly") {
+    return new Intl.DateTimeFormat(profileChartDateLocale(lang), {
+      month: "short",
+      timeZone: "UTC",
+    }).format(d);
+  }
   return new Intl.DateTimeFormat(profileChartDateLocale(lang), {
     ...(showYear ? { year: "numeric" as const } : {}),
     month: "numeric",
@@ -222,6 +236,7 @@ export default function ProfileRankTrendChartNative({
   sectionTitle,
   stackedSecondary = false,
   frozen = false,
+  scope,
 }: Props) {
   const [rowW, setRowW] = useState(0);
   const copy = profileRankTrendCopy(language);
@@ -382,7 +397,11 @@ export default function ProfileRankTrendChartNative({
   );
 
   const title = copy.title;
-  const subtitle = frozen ? copy.subtitleFrozen : copy.subtitle;
+  const subtitle = frozen
+    ? copy.subtitleFrozen
+    : scope
+      ? profileRankTrendScopeSubtitle(language, scope)
+      : copy.subtitle;
   const emptyHint = copy.emptyHint;
 
   const currentRankIsTop20 =
@@ -581,7 +600,7 @@ export default function ProfileRankTrendChartNative({
                         ]}
                         numberOfLines={1}
                       >
-                        {formatAxisDate(row.dateKey, lang, showYearOnXAxis)}
+                        {formatAxisDate(row.dateKey, lang, showYearOnXAxis, scope)}
                       </Text>
                     );
                   })}

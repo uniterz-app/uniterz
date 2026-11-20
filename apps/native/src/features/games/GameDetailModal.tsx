@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -59,7 +60,6 @@ type GameDetailModalProps = {
   resolveGameStatus: (game: Record<string, unknown>) => "scheduled" | "live" | "final";
   formatCountdownLabel: (startAt: Date, nowMs: number) => string;
   isGameStarted: (game: Record<string, unknown>) => boolean;
-  countdownNowMs: number;
   language: "ja" | "en";
   t: GamesTexts;
   openPredictModal: () => void | Promise<void>;
@@ -85,7 +85,6 @@ export default function GameDetailModal(props: GameDetailModalProps) {
     resolveGameStatus,
     formatCountdownLabel,
     isGameStarted,
-    countdownNowMs,
     language,
     t,
     openPredictModal,
@@ -93,6 +92,20 @@ export default function GameDetailModal(props: GameDetailModalProps) {
     onClose,
     styles,
   } = props;
+
+  // 1 秒ごとの再描画はこのモーダルの中だけで（Games ホーム全体を毎秒描き直さない）
+  const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
+  const countdownActive =
+    visible &&
+    selectedGame != null &&
+    resolveGameStatus(selectedGame) === "scheduled" &&
+    resolveGameStartAt(selectedGame) != null;
+  useEffect(() => {
+    if (!countdownActive) return;
+    setCountdownNowMs(Date.now());
+    const timer = setInterval(() => setCountdownNowMs(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [countdownActive]);
 
   const reduceMotion = useReducedMotion() ?? false;
   const backdropEnter = reduceMotion ? undefined : predictModalBackdropEnter();

@@ -393,6 +393,97 @@ export function applyPlayerCareerSeasonsToPlayerDetail(
   return next;
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * 進行中シーズンの行をキャリア表（Regular）の先頭に足す。
+ *
+ * キャリア ingest は手動で、今季の行はスナップショットに無い。
+ * ロスターの試合平均（Firestore・BDL の今季平均）から 1 行作り、前季までと見比べられるようにする。
+ * - ロスターの平均の季（`averagesSeasonKey`）がキャリアに既にあれば何もしない（開幕前の前季フォールバックも二重にならない）
+ * - 出場 0 試合なら足さない
+ * - GS はロスターに無いので null（UI は「—」）
+ * - 年齢は直近の行から季の差だけ進める（無ければ生年月日の 2/1 時点）
+ */
+export function appendInProgressSeasonToCareer(
+  detail: NbaPlayerDetailPreview,
+  hit: PlayerRosterHit,
+  careerSeasons: {
+    regular: NbaPlayerDetailPreview["careerSeasons"]["regular"];
+    playoffs: NbaPlayerDetailPreview["careerSeasons"]["playoffs"];
+  },
+  averagesSeasonKey: string | null | undefined
+): NbaPlayerDetailPreview {
+  const seasonStart = Number.parseInt(
+    String(averagesSeasonKey ?? "").slice(0, 4),
+    10
+  );
+  if (!Number.isFinite(seasonStart)) return detail;
+  const p = hit.player;
+  const games = Math.round(p.gp || 0);
+  if (games <= 0) return detail;
+  if (careerSeasons.regular.some((r) => r.seasonStart === seasonStart)) {
+    return detail;
+  }
+
+  const newest = [...careerSeasons.regular].sort(
+    (a, b) => b.seasonStart - a.seasonStart
+  )[0];
+  let age = 0;
+  if (newest && newest.age > 0) {
+    age = newest.age + (seasonStart - newest.seasonStart);
+  } else if (detail.birthDate) {
+    const born = Date.parse(`${detail.birthDate}T00:00:00Z`);
+    const ref = Date.UTC(seasonStart + 1, 1, 1);
+    if (Number.isFinite(born)) {
+      age = Math.max(0, Math.floor((ref - born) / (365.2425 * 86400000)));
+    }
+  }
+
+  const fgPct = pct01(p.fgPct);
+  const fg3Pct = pct01(p.fg3Pct);
+  const ftPct = pct01(p.ftPct);
+  const fga = p.fga ?? 0;
+  const fta = p.fta ?? 0;
+  const teamId = hit.teamId;
+  const row: NbaPlayerDetailPreview["careerSeasons"]["regular"][number] = {
+    seasonStart,
+    age,
+    teamId,
+    teamAbbr: TEAM_SHORT[teamId] ?? detail.teamAbbr,
+    position: (p.position || detail.position || "").split("-")[0] ?? "",
+    games,
+    gamesStarted: null,
+    min: p.mpg || 0,
+    fgm: p.fgm ?? round1(fga * fgPct),
+    fga,
+    fgPct,
+    fg3m: p.fg3m ?? 0,
+    fg3a: p.fg3a ?? 0,
+    fg3Pct,
+    ftm: p.ftm ?? round1(fta * ftPct),
+    fta,
+    ftPct,
+    reb: p.rpg ?? 0,
+    ...(p.oreb != null && Number.isFinite(p.oreb) ? { oreb: p.oreb } : {}),
+    ...(p.dreb != null && Number.isFinite(p.dreb) ? { dreb: p.dreb } : {}),
+    ast: p.apg ?? 0,
+    stl: p.spg ?? 0,
+    blk: p.bpg ?? 0,
+    tov: p.tpg ?? 0,
+    ...(p.pf != null && Number.isFinite(p.pf) ? { pf: p.pf } : {}),
+    pts: p.ppg || 0,
+  };
+
+  return {
+    ...detail,
+    careerSeasons: {
+      regular: [row, ...careerSeasons.regular],
+      playoffs: careerSeasons.playoffs,
+    },
+  };
+}
+
 /**
  * 今季ロスターにいない選手（引退・FA 等）。
  * leaders / career から名前・最終所属を埋め、availability を retired にする。

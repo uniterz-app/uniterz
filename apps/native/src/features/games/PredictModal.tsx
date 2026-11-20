@@ -56,6 +56,7 @@ import { rawTeamIdFromGameSide } from "./resolveNativeSeriesStanding";
 import PredictionScoringRulesChipNative from "./PredictionScoringRulesChipNative";
 import MatchListLineFrameNative from "./MatchListLineFrameNative";
 import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
+import { toDateOrNull } from "@/lib/games/transform";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
 import PredictMatchLast5PagerNative from "./predict/PredictMatchLast5PagerNative";
 import { normalizeLeague } from "../../../../../lib/leagues";
@@ -2083,24 +2084,19 @@ export default function PredictModal({
                       isPro={isProUser}
                       gameId={predictData?.gameId ?? null}
                       tipAtMs={(() => {
-                        const raw = predictData?.subjectGame?.startAtJst as
-                          | Date
-                          | number
-                          | { toMillis?: () => number; toDate?: () => Date }
-                          | null
-                          | undefined;
-                        if (raw instanceof Date) return raw.getTime();
-                        if (typeof raw === "number" && Number.isFinite(raw))
-                          return raw;
-                        if (raw && typeof raw.toMillis === "function") {
-                          const ms = raw.toMillis();
-                          return Number.isFinite(ms) ? ms : null;
+                        const raw = predictData?.subjectGame?.startAtJst;
+                        if (
+                          raw &&
+                          typeof raw === "object" &&
+                          typeof (raw as { toMillis?: unknown }).toMillis ===
+                            "function"
+                        ) {
+                          const ms = (
+                            raw as { toMillis: () => number }
+                          ).toMillis();
+                          if (Number.isFinite(ms)) return ms;
                         }
-                        if (raw && typeof raw.toDate === "function") {
-                          const d = raw.toDate();
-                          return d instanceof Date ? d.getTime() : null;
-                        }
-                        return null;
+                        return toDateOrNull(raw)?.getTime() ?? null;
                       })()}
                       homeTeamId={
                         rawTeamIdFromGameSide(matchPreview?.homeSide) ?? ""

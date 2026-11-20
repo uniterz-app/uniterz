@@ -41,6 +41,19 @@ type StackNav = NavigationProp<ParamListBase> & {
   push?: (name: string, params: PublicProfileParams) => void;
 };
 
+/** タブ / スタックをまたぐ名前指定の遷移（ParamListBase だと navigate の引数が never になる） */
+function navigateByName(
+  navigation: NavigationProp<ParamListBase>,
+  name: string,
+  params: object
+): void {
+  (
+    navigation as unknown as {
+      navigate: (name: string, params?: object) => void;
+    }
+  ).navigate(name, params);
+}
+
 function screenParamsFrom(
   params: OpenPublicProfileParams,
   handle: string
@@ -71,7 +84,7 @@ function openOnCurrentStack(
     nav.push("PublicProfile", screenParams);
     return;
   }
-  navigation.navigate("PublicProfile" as never, screenParams as never);
+  navigateByName(navigation, "PublicProfile", screenParams);
 }
 
 export function navigateToPublicProfileNative(
@@ -114,15 +127,15 @@ export function navigateToPublicProfileNative(
     currentTab === "RankingsTab" ||
     currentTab === "ResultTab"
   ) {
-    navigation.navigate(
-      currentTab as never,
-      { screen: "PublicProfile", params: screenParams } as never
-    );
+    navigateByName(navigation, currentTab, {
+      screen: "PublicProfile",
+      params: screenParams,
+    });
     return;
   }
 
-  navigation.navigate(
-    "ProfileTab" as never,
-    { screen: "PublicProfile", params: screenParams } as never
-  );
+  navigateByName(navigation, "ProfileTab", {
+    screen: "PublicProfile",
+    params: screenParams,
+  });
 }

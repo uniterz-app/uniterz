@@ -1084,10 +1084,7 @@ const ko: Messages = {
         "**그룹 탭**에서 빈자리가 있는 스쿼드에 **참가 신청**하거나 **초대 코드**로 들어갑니다.\n배틀 중에는 **주간(원칙 4회)**과 **월간(1회)** 순위가 갱신됩니다.\n**상위 스쿼드 멤버 전원**에게 **UNIT**이 지급됩니다.",
       horizonUnitWhatTitle: "What is UNIT?",
       horizonUnitWhatBody:
-        "The highlighted **coin** is your **UNIT balance**.\nUNITERZ **in-app currency** for **skins** and Profile looks.\nTap the coin to open your **history**.",
-      horizonUnitHowTitle: "Earning UNIT",
-      horizonUnitHowBody:
-        "**주간·월간 랭킹**, **스쿼드 배틀**, **친구 초대** 보상 등으로 얻습니다.\n모은 UNIT은 **유니폼**이나 **모자** 등과 **교환**할 수 있습니다.",
+        "하이라이트된 **코인**이 **UNIT 잔액**입니다.\n**주간·월간 랭킹**, **스쿼드 배틀**, **친구 초대**로 모이고, **유니폼**이나 **모자**와 **교환**할 수 있습니다.\n예측이 빗나가도 UNIT은 줄지 않습니다.",
       horizonCareerTitle: "Career",
       horizonCareerBody:
         "Your predictor **track record**, opened from **CAREER** at the top of Profile.\nLook back on **hit rate, streaks, season ranks**, and other **long-term stats**.",

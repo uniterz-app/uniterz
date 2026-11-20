@@ -343,7 +343,8 @@ export function useNativeCumulativeRankingsBulk(
   > | null>(null);
 
   const mountPrimaryGenRef = useRef(0);
-  const metricReqSeqRef = useRef(0);
+  /** 遅延指標は並行で取りに行くので、古い応答の判定は指標ごと */
+  const metricReqSeqRef = useRef(new Map<string, number>());
   const phaseRoundGenRef = useRef(0);
   const byMetricRef = useRef(byMetric);
   byMetricRef.current = byMetric;
@@ -401,7 +402,7 @@ export function useNativeCumulativeRankingsBulk(
 
   useEffect(() => {
     phaseRoundGenRef.current += 1;
-    metricReqSeqRef.current += 1;
+    metricReqSeqRef.current = new Map();
     attemptedMetricsRef.current = new Set();
     let cancelled = false;
 
@@ -501,7 +502,10 @@ export function useNativeCumulativeRankingsBulk(
       attemptedMetricsRef.current.add(metric);
 
       const genAtStart = phaseRoundGenRef.current;
-      const seq = ++metricReqSeqRef.current;
+      const seqMap = metricReqSeqRef.current;
+      const seq = (seqMap.get(metric) ?? 0) + 1;
+      seqMap.set(metric, seq);
+      const isLatest = () => metricReqSeqRef.current.get(metric) === seq;
       try {
         const partial = await resolveSharedList(
           metric,
@@ -510,7 +514,7 @@ export function useNativeCumulativeRankingsBulk(
           wcStage
         );
         if (genAtStart !== phaseRoundGenRef.current) return;
-        if (seq !== metricReqSeqRef.current) return;
+        if (!isLatest()) return;
         setByMetric((prev) => {
           const next = mergeMetricBundles(
             prev,
@@ -525,7 +529,7 @@ export function useNativeCumulativeRankingsBulk(
           return next;
         });
       } catch {
-        if (seq !== metricReqSeqRef.current) return;
+        if (!isLatest()) return;
         setByMetric((prev) =>
           mergeMetricBundles(prev, { [metric]: emptyBulkMetric() })
         );

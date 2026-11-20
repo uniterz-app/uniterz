@@ -21,12 +21,12 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import type { FirebaseError } from "firebase/app";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { spacing } from "../../theme/tokens";
-import { auth, db } from "../../lib/firebase";
+import { auth } from "../../lib/firebase";
+import { initNewUserDocNative } from "./initNewUserDocNative";
 import { useRoute, useNavigation, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -236,17 +236,7 @@ export default function AuthEntryScreen({
         await signInWithEmailAndPassword(auth, normalizedEmail, password);
       } else {
         const cred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-        await setDoc(
-          doc(db, "users", cred.user.uid),
-          {
-            displayName: "",
-            bio: "",
-            photoURL: cred.user.photoURL ?? "",
-            createdAt: serverTimestamp(),
-            counts: { posts: 0 },
-          },
-          { merge: true }
-        );
+        await initNewUserDocNative(cred.user.uid, cred.user.photoURL);
       }
     } catch (error: unknown) {
       cyberAlert(copy.authErrorTitle, mapAuthErrorMessage(error, mode));

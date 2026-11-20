@@ -10,8 +10,12 @@ import {
 
 type PostLike = {
   gameId?: string | null;
+  league?: unknown;
   result?: { home?: unknown; away?: unknown } | null;
 };
+
+/** PK 戦が無い競技。games doc を丸ごと読みに行かない */
+const NO_PK_LEAGUES = new Set(["nba", "bj"]);
 
 /** 投稿に pkScore が無い確定試合向けに games から補完 */
 export function useResultPostsPkScores(
@@ -25,6 +29,7 @@ export function useResultPostsPkScores(
           ? post.gameId.trim()
           : "";
       if (!gameId) continue;
+      if (typeof post.league === "string" && NO_PK_LEAGUES.has(post.league)) continue;
       const hasFinal =
         typeof post.result?.home === "number" &&
         typeof post.result?.away === "number";

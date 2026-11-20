@@ -8,16 +8,20 @@ import { leagueTeamRowsHaveCleanRatings } from "../../../../../../lib/nba/cleanR
 import {
   LEAGUE_HUB_PLAY_TYPES,
   LEAGUE_HUB_TEAM_ACE,
+  LEAGUE_HUB_TEAM_ACE_OUT,
   LEAGUE_HUB_TEAM_ADJ_STRENGTH,
   LEAGUE_HUB_TEAM_AGE,
   LEAGUE_HUB_TEAM_ATTACK,
   LEAGUE_HUB_TEAM_BENCH,
   LEAGUE_HUB_TEAM_CLEAN_STRENGTH,
+  LEAGUE_HUB_TEAM_CLOSE,
   LEAGUE_HUB_TEAM_CLUTCH,
   LEAGUE_HUB_TEAM_CONTEST,
   LEAGUE_HUB_TEAM_PASS_VALUE,
   LEAGUE_HUB_TEAM_DRIVE_FINISH,
+  LEAGUE_HUB_TEAM_PICKS,
   LEAGUE_HUB_TEAM_SCREEN,
+  LEAGUE_HUB_TEAM_SCHEDULE_SOS,
   LEAGUE_HUB_TEAM_SHOT_ALLOW,
   LEAGUE_HUB_TEAM_DEPTH,
   LEAGUE_HUB_TEAM_HUSTLE,
@@ -29,6 +33,7 @@ import {
   LEAGUE_HUB_TEAM_STRENGTH,
   LEAGUE_HUB_TEAM_TEMPO,
   LEAGUE_HUB_TEAM_THREE,
+  LEAGUE_HUB_TEAM_THREE_IN_FOUR,
   LEAGUE_HUB_TEAM_TURNOVER,
   leagueHubPlayTypePreset,
   type LeagueHubPlayTypeId,
@@ -531,7 +536,12 @@ type StylePresetId =
   | "bench"
   | "payroll"
   | "age"
-  | "size";
+  | "size"
+  | "scheduleSos"
+  | "picks"
+  | "close"
+  | "threeInFour"
+  | "aceOut";
 type StyleMapId = StylePresetId | `pt-${LeagueHubPlayTypeId}`;
 type StyleGroup = {
   id: string;
@@ -565,6 +575,11 @@ const STYLE_PRESETS: Record<StylePresetId, LeagueHubScatterPreset<LeagueHubTeamM
   payroll: LEAGUE_HUB_TEAM_PAYROLL,
   age: LEAGUE_HUB_TEAM_AGE,
   size: LEAGUE_HUB_TEAM_SIZE,
+  scheduleSos: LEAGUE_HUB_TEAM_SCHEDULE_SOS,
+  picks: LEAGUE_HUB_TEAM_PICKS,
+  close: LEAGUE_HUB_TEAM_CLOSE,
+  threeInFour: LEAGUE_HUB_TEAM_THREE_IN_FOUR,
+  aceOut: LEAGUE_HUB_TEAM_ACE_OUT,
 };
 
 const PLAY_STYLE_GROUPS: readonly StyleGroup[] = [
@@ -624,6 +639,23 @@ const ROSTER_GROUPS: readonly StyleGroup[] = [
     ],
   },
 ];
+
+/** FORM タブの散布図（一覧の上に出す） */
+const FORM_GROUPS: readonly StyleGroup[] = [
+  {
+    id: "form",
+    label: "FORM",
+    maps: [
+      { id: "scheduleSos", label: "SCHEDULE" },
+      { id: "picks", label: "PICKS" },
+      { id: "close", label: "CLOSE" },
+      { id: "threeInFour", label: "3IN4" },
+      { id: "aceOut", label: "ACE OUT" },
+    ],
+  },
+];
+
+type AceOutWl = { wins: number; losses: number; gamesOut: number };
 
 function stylePreset(id: StyleMapId): LeagueHubScatterPreset<LeagueHubTeamMetric> {
   return id.startsWith("pt-")
@@ -691,7 +723,7 @@ function StyleMaps({
   );
 }
 
-type RecordMode = "streak" | ConditionId;
+export type RecordMode = "streak" | ConditionId;
 
 const RECORD_MODES: readonly { id: RecordMode; label: string }[] = [
   { id: "streak", label: "STREAK" },
@@ -745,16 +777,18 @@ const RECORD_HINTS: Record<RecordMode, Record<HubLang, string>> = {
 };
 
 /** 連勝・連敗と状況別の勝敗は同じ「上位 5 / 下位 5」の 2 列なので 1 つの欄で切り替える */
-function TeamRecords({
+export function TeamRecords({
   teams,
   lang,
   onSelectTeam,
+  initialMode = "streak",
 }: {
   teams: LeagueHubTeamRow[];
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
+  initialMode?: RecordMode;
 }) {
-  const [mode, setMode] = useState<RecordMode>("streak");
+  const [mode, setMode] = useState<RecordMode>(initialMode);
   const [showAll, setShowAll] = useState(false);
   const ja = lang === "ja";
   const league = mode === "streak" ? null : leagueRecord(teams, mode);
@@ -1081,16 +1115,18 @@ function signed(v: number): string {
 }
 
 /** 対戦相手の今の勝率の平均（終わった試合 / 残り日程） */
-function ScheduleStrength({
+export function ScheduleStrength({
   teams,
   lang,
   onSelectTeam,
+  initialMode = "played",
 }: {
   teams: LeagueHubTeamRow[];
   lang: HubLang;
   onSelectTeam: (teamId: string) => void;
+  initialMode?: "played" | "remaining";
 }) {
-  const [mode, setMode] = useState<"played" | "remaining">("played");
+  const [mode, setMode] = useState<"played" | "remaining">(initialMode);
   const [showAll, setShowAll] = useState(false);
   const ja = lang === "ja";
   if (!teams.some((t) => t.schedule != null)) return null;
@@ -1180,7 +1216,7 @@ function ScheduleStrength({
 }
 
 /** UNITERZ ユーザーの勝敗予想（選んだ割合の合計）と実際の勝ち数 */
-function UniterzPicks({
+export function UniterzPicks({
   teams,
   lang,
   onSelectTeam,
@@ -1324,11 +1360,79 @@ export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectT
   });
   const rows = bundle.season;
   const teams = hub?.teams ?? [];
+  const [aceOutByTeam, setAceOutByTeam] = useState<Map<string, AceOutWl>>(() => new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    const baseUrl = getUniterzApiBaseUrl();
+    if (!baseUrl) return;
+    const base = baseUrl.replace(/\/$/, "");
+    void (async () => {
+      try {
+        const res = await fetch(
+          `${base}/api/nba/team-ace-out-records?season=${encodeURIComponent(CURRENT_NBA_SEASON_KEY)}`
+        );
+        if (!res.ok || cancelled) return;
+        const json = (await res.json()) as {
+          teams?: Array<{
+            teamId?: string;
+            gamesOut?: number;
+            whenOut?: { wins?: number; losses?: number };
+          }>;
+        };
+        const next = new Map<string, AceOutWl>();
+        for (const t of json.teams ?? []) {
+          const id = typeof t.teamId === "string" ? t.teamId : "";
+          const wins = t.whenOut?.wins;
+          const losses = t.whenOut?.losses;
+          if (!id || typeof wins !== "number" || typeof losses !== "number") continue;
+          next.set(id, {
+            wins,
+            losses,
+            gamesOut: typeof t.gamesOut === "number" ? t.gamesOut : wins + losses,
+          });
+        }
+        if (!cancelled) setAceOutByTeam(next);
+      } catch {
+        /* 公開 API 失敗時は ACE OUT マップだけ点が無い */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /** ロスターの指標は hub 側にあるのでリーグ表の行に重ねる */
   const rosterRows = useMemo(() => {
     const byTeam = new Map(teams.map((t) => [t.teamId, t.m]));
     return rows.map((r) => ({ ...r, ...byTeam.get(r.teamId) }));
   }, [rows, teams]);
+
+  /** FORM 散布図用: hub の schedule / picks / close / 3IN4 + ace-out API */
+  const formRows = useMemo(() => {
+    const hubBy = new Map(teams.map((t) => [t.teamId, t]));
+    return rows.map((r) => {
+      const t = hubBy.get(r.teamId);
+      const closePct = recordPct(t?.close);
+      const closeG = recordGames(t?.close);
+      const threePct = recordPct(t?.threeInFour);
+      const threeG = recordGames(t?.threeInFour);
+      const picks = t?.picks;
+      const ace = aceOutByTeam.get(r.teamId);
+      const aceG = ace ? ace.wins + ace.losses : 0;
+      const played = t?.schedule?.played;
+      return {
+        ...r,
+        ...(typeof played === "number" && Number.isFinite(played) ? { scheduleSos: played } : null),
+        ...(closeG >= 2 && closePct != null ? { closeWinPct: closePct } : null),
+        ...(threeG >= 2 && threePct != null ? { threeInFourWinPct: threePct } : null),
+        ...(picks && picks.games >= 3
+          ? { picksExpectedWins: picks.expectedWins, picksWins: picks.wins }
+          : null),
+        ...(ace && ace.gamesOut >= 2 && aceG > 0 ? { aceOutWinPct: ace.wins / aceG } : null),
+      };
+    });
+  }, [rows, teams, aceOutByTeam]);
 
   /** 切り替えてもマップの選択などを残すため、隠すだけでアンマウントしない */
   const shown = (id: LeagueHubTeamSection) => (section === id ? null : styles.hidden);
@@ -1375,6 +1479,17 @@ export default function LeagueHubTeamPanelNative({ hub, lang, section, onSelectT
       </View>
 
       <View style={shown("form")}>
+        {rowsLoading ? (
+          spinner
+        ) : (
+          <StyleMaps
+            title="FORM MAPS"
+            groups={FORM_GROUPS}
+            rows={formRows}
+            lang={lang}
+            onSelectTeam={onSelectTeam}
+          />
+        )}
         <TeamRecords teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
         <ScheduleStrength teams={teams} lang={lang} onSelectTeam={onSelectTeam} />
         <UniterzPicks teams={teams} lang={lang} onSelectTeam={onSelectTeam} />

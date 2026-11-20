@@ -60,7 +60,13 @@ function useNeedsOnboarding(uid: string | undefined): boolean | null {
       setNeeds(null);
       return;
     }
-    return subscribeUserDocLive(uid, (data) => {
+    return subscribeUserDocLive(uid, (data, meta) => {
+      if (!data && (meta.fromCache || meta.error)) {
+        // オフライン起動・読み込み失敗で既存ユーザーをオンボーディングへ送らない。
+        // 判定済みならそのまま、未判定ならメインへ（サーバーの結果が来たら決め直す）
+        setNeeds((prev) => prev ?? false);
+        return;
+      }
       const handle = data?.handle;
       setNeeds(!handle || handle === "");
     });

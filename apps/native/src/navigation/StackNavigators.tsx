@@ -506,6 +506,24 @@ function ProfileStackScreen() {
         />
         {__DEV__ ? (
           <ProfileStack.Screen
+            name="TradeBallotPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .TradeBallotPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
+            name="TradeBuzzPreview"
+            getComponent={() =>
+              require("../features/profile/screens/ProfileStackWrappers")
+                .TradeBuzzPreviewScreenWrapper
+            }
+          />
+        ) : null}
+        {__DEV__ ? (
+          <ProfileStack.Screen
             name="SquadBattlePreview"
             getComponent={() =>
               require("../features/squads/SquadBattleScreenNative").default

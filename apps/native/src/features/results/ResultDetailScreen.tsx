@@ -138,10 +138,11 @@ export default function ResultDetailScreen({
         nav.push("TeamDetailPreview", { teamId: id });
         return;
       }
-      navigation.navigate(
-        "TeamDetailPreview" as never,
-        { teamId: id } as never
-      );
+      (
+        navigation as unknown as NavigationProp<{
+          TeamDetailPreview: { teamId: string };
+        }>
+      ).navigate("TeamDetailPreview", { teamId: id });
     },
     [navigation]
   );
@@ -157,10 +158,11 @@ export default function ResultDetailScreen({
         nav.push("PlayerDetailPreview", { playerId: id });
         return;
       }
-      navigation.navigate(
-        "PlayerDetailPreview" as never,
-        { playerId: id } as never
-      );
+      (
+        navigation as unknown as NavigationProp<{
+          PlayerDetailPreview: { playerId: string };
+        }>
+      ).navigate("PlayerDetailPreview", { playerId: id });
     },
     [navigation]
   );

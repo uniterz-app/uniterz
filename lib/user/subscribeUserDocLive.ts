@@ -4,12 +4,19 @@
 import { doc, onSnapshot, type DocumentData, type Unsubscribe } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-type Listener = (data: DocumentData | null) => void;
+/**
+ * `fromCache`: サーバー未確認のローカル結果（オフライン起動など）。
+ * `error`: 購読エラー。どちらも data が null でも「doc が無い」とは限らない
+ */
+export type UserDocLiveMeta = { fromCache: boolean; error: boolean };
+
+type Listener = (data: DocumentData | null, meta: UserDocLiveMeta) => void;
 
 type Hub = {
   listeners: Set<Listener>;
   unsub: Unsubscribe | null;
   last: DocumentData | null | undefined;
+  lastMeta: UserDocLiveMeta;
 };
 
 const hubs = new Map<string, Hub>();
@@ -20,13 +27,18 @@ export function subscribeUserDocLive(
 ): () => void {
   let hub = hubs.get(uid);
   if (!hub) {
-    hub = { listeners: new Set(), unsub: null, last: undefined };
+    hub = {
+      listeners: new Set(),
+      unsub: null,
+      last: undefined,
+      lastMeta: { fromCache: false, error: false },
+    };
     hubs.set(uid, hub);
   }
 
   hub.listeners.add(listener);
   if (hub.last !== undefined) {
-    listener(hub.last);
+    listener(hub.last, hub.lastMeta);
   }
 
   if (!hub.unsub) {
@@ -38,13 +50,15 @@ export function subscribeUserDocLive(
         const h = hubs.get(uid);
         if (!h) return;
         h.last = data;
-        for (const l of h.listeners) l(data);
+        h.lastMeta = { fromCache: snap.metadata.fromCache, error: false };
+        for (const l of h.listeners) l(data, h.lastMeta);
       },
       () => {
         const h = hubs.get(uid);
         if (!h) return;
         h.last = null;
-        for (const l of h.listeners) l(null);
+        h.lastMeta = { fromCache: false, error: true };
+        for (const l of h.listeners) l(null, h.lastMeta);
       }
     );
   }

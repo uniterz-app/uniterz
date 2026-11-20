@@ -278,12 +278,16 @@ export default function RasterizeOnceNative({
 
   if (uri) {
     return (
-      <Image
-        source={{ uri }}
-        style={{ position: "absolute", top: 0, left: 0, width, height }}
-        resizeMode="stretch"
+      <View
         pointerEvents="none"
-      />
+        style={{ position: "absolute", top: 0, left: 0, width, height }}
+      >
+        <Image
+          source={{ uri }}
+          style={{ width, height }}
+          resizeMode="stretch"
+        />
+      </View>
     );
   }
 

@@ -548,6 +548,62 @@ export async function fetchNbaSeasonRankTrendFirestore(
   return fetchNbaSeasonRankTrendFirestoreShared(uid, division);
 }
 
+/**
+ * Ranking Progress の WEEKLY / MONTHLY（期間ごとの総合得点順位）。
+ * weekly は dateKey = 週初めの月曜、monthly は dateKey = YYYY-MM-01。
+ * PRO LEAGUE（open）は Bearer + Pro のみ（取れなければ空）。
+ */
+export async function fetchProfilePeriodRankTrend(
+  uid: string,
+  period: "weekly" | "monthly",
+  division: "pickup" | "open"
+): Promise<RankPlayoffTrendPointNative[]> {
+  const base = getUniterzApiBaseUrl();
+  if (!base || !uid.trim()) return [];
+  const params = new URLSearchParams({ uid, period });
+  const headers: Record<string, string> = {};
+  if (division === "open") {
+    params.set("division", "open");
+    const token = await auth.currentUser?.getIdToken().catch(() => null);
+    if (!token) return [];
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const res = await fetch(
+    `${base}/api/profile/period-rank-trend?${params.toString()}`,
+    { method: "GET", headers }
+  );
+  if (!res.ok) return [];
+  const json = (await res.json()) as {
+    ok?: boolean;
+    points?: Array<{ label?: unknown; rank?: unknown }>;
+  };
+  if (json.ok !== true || !Array.isArray(json.points)) return [];
+
+  const out: RankPlayoffTrendPointNative[] = [];
+  for (const p of json.points) {
+    const label = typeof p.label === "string" ? p.label : "";
+    const rank = safeInt(p.rank);
+    if (rank < 1) continue;
+    const parts = label.split("-");
+    if (period === "weekly" && parts.length === 3) {
+      out.push({
+        dateKey: label,
+        rank,
+        labelShort: `${Number(parts[1])}/${Number(parts[2])}`,
+        date: label,
+      });
+    } else if (period === "monthly" && parts.length === 2) {
+      out.push({
+        dateKey: `${label}-01`,
+        rank,
+        labelShort: String(Number(parts[1])),
+        date: `${label}-01`,
+      });
+    }
+  }
+  return out;
+}
+
 /** NBA は cumulative_stats / rankSnapshotHistory 公開読取（本番 API 不要） */
 export async function fetchRankPlayoffTrend(
   uid: string,

@@ -287,7 +287,6 @@ function RectShell({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Open result detail"
-      delayPressIn={0}
       onPress={onOpenDetail}
       style={({ pressed }) => [
         styles.rectShellWrap,
