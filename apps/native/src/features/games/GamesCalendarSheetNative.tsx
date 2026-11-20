@@ -1,11 +1,17 @@
 /**
  * Games 日付ストリップ用の月カレンダー。試合のある日だけ押せて、選ぶとその日へ飛ぶ。
+ * NBA Cup ノックアウト期間は試合未登録の日でも印を出す。
  */
 import { useEffect, useMemo, useState } from "react";
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, FadeOut, ZoomIn } from "react-native-reanimated";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { L, resolveLocalizedLang } from "../../../../../lib/i18n/localize";
+import { GAME_SCHEDULE_SEASON } from "../../../../../lib/games/gameScheduleSeason";
+import {
+  formatNbaCupKnockoutRangeLabel,
+  nbaCupKnockoutDateKeySet,
+} from "../../../../../lib/nba/nbaCupKnockoutPeriod";
 
 const OX = Platform.select({
   ios: "Oxanium_700Bold",
@@ -14,11 +20,15 @@ const OX = Platform.select({
 }) as string;
 
 const ACCENT = "#22d3ee";
+/** NBA Cup 期間のアクセント（シアンの試合日と区別） */
+const CUP = "#FBBF24";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   language: string;
+  /** 日付キーの基準タイムゾーン（日付ストリップと同じ） */
+  timeZone: string;
   /** 試合のある日（YYYY-MM-DD、日付ストリップと同じタイムゾーン） */
   gameDayKeys: readonly string[];
   /** 日付キー → その日の試合数。未取得なら null（数は出さない） */
@@ -29,6 +39,8 @@ type Props = {
   /** お気に入りチームが試合する日（日付キー）と印の色 */
   markedKeys?: ReadonlySet<string> | null;
   markColor?: string | null;
+  /** 省略時は今のスケジュール季 */
+  season?: string;
 };
 
 function monthOf(key: string): string {
@@ -69,6 +81,7 @@ export default function GamesCalendarSheetNative({
   visible,
   onClose,
   language,
+  timeZone,
   gameDayKeys,
   gameCountByKey,
   selectedKey,
@@ -76,6 +89,7 @@ export default function GamesCalendarSheetNative({
   onSelectKey,
   markedKeys,
   markColor,
+  season = GAME_SCHEDULE_SEASON,
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const [month, setMonth] = useState(() => monthOf(selectedKey));
@@ -85,6 +99,10 @@ export default function GamesCalendarSheetNative({
   }, [visible, selectedKey]);
 
   const gameSet = useMemo(() => new Set(gameDayKeys), [gameDayKeys]);
+  const cupSet = useMemo(
+    () => nbaCupKnockoutDateKeySet(timeZone, season),
+    [timeZone, season]
+  );
   const [minMonth, maxMonth] = useMemo(() => {
     if (gameDayKeys.length === 0) return [month, month];
     const sorted = [...gameDayKeys].sort();
@@ -94,6 +112,14 @@ export default function GamesCalendarSheetNative({
   const cells = useMemo(() => monthGrid(month), [month]);
   const canPrev = month > minMonth;
   const canNext = month < maxMonth;
+  const cupRangeLabel = useMemo(
+    () => formatNbaCupKnockoutRangeLabel(timeZone, lang, season),
+    [timeZone, lang, season]
+  );
+  const showCupBanner = useMemo(
+    () => [...cupSet].some((k) => k.startsWith(month)),
+    [cupSet, month]
+  );
 
   const weekdays =
     lang === "ja"
@@ -121,6 +147,24 @@ export default function GamesCalendarSheetNative({
     es: "HOY",
     pt: "HOJE",
     fr: "AUJ.",
+  });
+  const cupBannerTitle = L(lang, {
+    ja: "NBA CUP トーナメント",
+    en: "NBA CUP KNOCKOUT",
+    ko: "NBA CUP 토너먼트",
+    zh: "NBA CUP 淘汰赛",
+    es: "NBA CUP KO",
+    pt: "NBA CUP MATA-MATA",
+    fr: "NBA CUP KO",
+  });
+  const cupCellLabel = L(lang, {
+    ja: "CUP",
+    en: "CUP",
+    ko: "CUP",
+    zh: "CUP",
+    es: "CUP",
+    pt: "CUP",
+    fr: "CUP",
   });
 
   const countLabel = (n: number) =>
@@ -201,10 +245,20 @@ export default function GamesCalendarSheetNative({
               ))}
             </View>
 
+            {showCupBanner ? (
+              <View style={styles.cupBanner} accessibilityRole="text">
+                <Text style={styles.cupBannerTitle}>{cupBannerTitle}</Text>
+                {cupRangeLabel ? (
+                  <Text style={styles.cupBannerRange}>{cupRangeLabel}</Text>
+                ) : null}
+              </View>
+            ) : null}
+
             <View style={styles.grid}>
               {cells.map((key, i) => {
                 if (!key) return <View key={`empty-${i}`} style={styles.cell} />;
                 const hasGame = gameSet.has(key);
+                const isCup = cupSet.has(key);
                 const selected = key === selectedKey;
                 const isToday = key === todayKey;
                 const count = hasGame ? (gameCountByKey?.[key] ?? 0) : 0;
@@ -220,6 +274,7 @@ export default function GamesCalendarSheetNative({
                       style={({ pressed }) => [
                         styles.day,
                         hasGame ? styles.dayGame : null,
+                        !hasGame && isCup ? styles.dayCup : null,
                         isToday ? styles.dayToday : null,
                         selected ? styles.daySelected : null,
                         pressed ? styles.dayPressed : null,
@@ -228,7 +283,11 @@ export default function GamesCalendarSheetNative({
                       <Text
                         style={[
                           styles.dayText,
-                          hasGame ? styles.dayTextGame : styles.dayTextOff,
+                          hasGame
+                            ? styles.dayTextGame
+                            : isCup
+                              ? styles.dayTextCup
+                              : styles.dayTextOff,
                           selected ? styles.dayTextSelected : null,
                         ]}
                       >
@@ -244,12 +303,25 @@ export default function GamesCalendarSheetNative({
                         >
                           {countLabel(count)}
                         </Text>
+                      ) : isCup ? (
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.cupCellText,
+                            selected ? styles.countTextSelected : null,
+                          ]}
+                        >
+                          {cupCellLabel}
+                        </Text>
                       ) : null}
                       {marked ? (
                         <View
                           pointerEvents="none"
                           style={[styles.mark, { backgroundColor: markColor }]}
                         />
+                      ) : null}
+                      {hasGame && isCup ? (
+                        <View pointerEvents="none" style={styles.cupDot} />
                       ) : null}
                     </Pressable>
                   </View>
@@ -350,6 +422,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(34,211,238,0.35)",
     backgroundColor: "rgba(34,211,238,0.06)",
   },
+  dayCup: {
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.45)",
+    backgroundColor: "rgba(251,191,36,0.08)",
+  },
   dayToday: {
     borderWidth: 1.5,
     borderColor: "#FBBF24",
@@ -367,6 +444,7 @@ const styles = StyleSheet.create({
     transform: [{ skewX: "-8deg" }],
   },
   dayTextGame: { color: "#fff" },
+  dayTextCup: { color: "rgba(253,230,138,0.92)" },
   dayTextOff: { color: "rgba(255,255,255,0.22)" },
   dayTextSelected: { color: "#fff" },
   countText: {
@@ -375,6 +453,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     transform: [{ skewX: "-8deg" }],
     color: ACCENT,
+  },
+  cupCellText: {
+    fontFamily: OX,
+    fontSize: 9,
+    letterSpacing: 0.4,
+    transform: [{ skewX: "-8deg" }],
+    color: CUP,
   },
   countTextSelected: { color: "#F3E8FF" },
   mark: {
@@ -386,6 +471,42 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.7)",
+  },
+  cupDot: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: CUP,
+  },
+  cupBanner: {
+    marginTop: 10,
+    marginBottom: 2,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.4)",
+    backgroundColor: "rgba(251,191,36,0.07)",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cupBannerTitle: {
+    flexShrink: 1,
+    fontFamily: OX,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: "#FDE68A",
+  },
+  cupBannerRange: {
+    fontFamily: OX,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    color: CUP,
   },
   todayBtn: {
     marginTop: 10,

@@ -15,8 +15,21 @@ if (!assetExts.includes("glb")) {
 }
 config.resolver.sourceExts = sourceExts.filter((ext) => ext !== "glb");
 
-// monorepo 配下の packages を解決できるようにする
-config.watchFolders = [workspaceRoot];
+// monorepo の共有ソースだけ監視する（ルート全体だと複製ファイルや uniterz-native で起動が止まる）
+config.watchFolders = [
+  path.resolve(workspaceRoot, "packages"),
+  path.resolve(workspaceRoot, "lib"),
+  path.resolve(workspaceRoot, "app"),
+  path.resolve(workspaceRoot, "hooks"),
+  path.resolve(workspaceRoot, "messages"),
+  path.resolve(workspaceRoot, "type"),
+  path.resolve(workspaceRoot, "types"),
+];
+// iCloud の「foo 2.tsx」類と別コピーをクロールしない
+config.resolver.blockList = [
+  /(^|[/\\])[^/\\]+ \d+\.[^/\\]+$/,
+  /[/\\]uniterz-native[/\\].*/,
+];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),

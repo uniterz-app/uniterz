@@ -1,0 +1,10 @@
+---
+description: 動画の字幕・テロップ作業は Desktop/動画編集。このリポではやらない。
+alwaysApply: true
+---
+
+# 動画制作は別プロジェクト
+
+字幕・テロップ・図解は **`/Users/kamiyaritsuki/Desktop/動画編集`** で行う。
+
+このリポジトリ（UNITERZ）では作らない・置かない。Cursor で `Desktop/動画編集` を開いて続ける。

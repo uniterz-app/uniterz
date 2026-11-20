@@ -12,6 +12,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Device from "expo-device";
 import { buildPushNotificationCopy } from "@/lib/notifications/pushNotificationCopy";
+import {
+  buildHitResultPushCopy,
+  buildStreakNudgePushCopy,
+  type DayResultPushCopy,
+} from "@/lib/notifications/dayResultPushCopy";
 import type { PushNotificationType } from "@/lib/notifications/pushPayloadTypes";
 import MobilePageShell from "../features/profile/mobileScreens/MobilePageShell";
 import NotificationProGateModalNative from "../features/profile/screens/NotificationProGateModalNative";
@@ -26,6 +31,19 @@ import {
 } from "./registerPushTokenNative";
 import { loadExpoNotificationsModule } from "./expoNotificationsModuleNative";
 import PushPermissionPrimerModalNative from "./PushPermissionPrimerModalNative";
+import WhatsNewSheetModalNative, {
+  type WhatsNewLayoutVariant,
+} from "./WhatsNewSheetModalNative";
+import {
+  WHATS_NEW_BULK_UPDATE_MOCK_NOTES,
+  WHATS_NEW_EVENT_PREVIEW_NOTES,
+  WHATS_NEW_PREVIEW_NOTES,
+  type WhatsNewNote,
+  type WhatsNewNoteAction,
+} from "../../../../lib/launch/whatsNewNotes";
+import { handleWhatsNewAction } from "./whatsNewNavigationNative";
+import { openProSubscribeNative } from "../navigation/navigationRef";
+import { useNativeUserPlan } from "../hooks/useNativeUserPlan";
 import { copyTextNative } from "../features/leaderboards/copyTextNative";
 import { colors, fonts, spacing } from "../theme/tokens";
 
@@ -111,6 +129,7 @@ export default function NotificationDevScreenNative() {
   const { language } = useNativeUserLanguage(fUser?.uid);
   const pushLang = resolveLocalizedLang(language);
   const uid = fUser?.uid ?? null;
+  const { isPro } = useNativeUserPlan(uid);
 
   const badges = useNativeNavTabNotificationBadges();
 
@@ -121,6 +140,21 @@ export default function NotificationDevScreenNative() {
   const [busy, setBusy] = useState(false);
   const [primerOpen, setPrimerOpen] = useState(false);
   const [proGateOpen, setProGateOpen] = useState(false);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [whatsNewNotes, setWhatsNewNotes] = useState<readonly WhatsNewNote[]>(
+    WHATS_NEW_PREVIEW_NOTES
+  );
+  const [whatsNewLayout, setWhatsNewLayout] =
+    useState<WhatsNewLayoutVariant>("a");
+
+  const openWhatsNew = (
+    layout: WhatsNewLayoutVariant,
+    notes: readonly WhatsNewNote[]
+  ) => {
+    setWhatsNewLayout(layout);
+    setWhatsNewNotes(notes);
+    setWhatsNewOpen(true);
+  };
 
   const refreshStatus = useCallback(async () => {
     const Notifications = await loadExpoNotificationsModule();
@@ -175,6 +209,39 @@ export default function NotificationDevScreenNative() {
       );
     } catch (e) {
       cyberAlert("エラー", String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fireCopy = async (copy: DayResultPushCopy) => {
+    setBusy(true);
+    try {
+      const Notifications = await loadExpoNotificationsModule();
+      if (!Notifications) {
+        cyberAlert("通知モジュールなし", `${copy.title}\n${copy.body}`);
+        return;
+      }
+      const granted = await ensureNotificationPermission();
+      if (!granted) {
+        cyberAlert(
+          "通知がオフです",
+          `${copy.title}\n${copy.body}\n\n設定 → 通知 → native →「通知を許可」を ON にしてください。`
+        );
+        return;
+      }
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: copy.title,
+          body: copy.body,
+          data: { type: "day_result_preview" },
+          sound: "default",
+        },
+        trigger: null,
+      });
+      cyberAlert(copy.title, `${copy.body}\n\n画面上部のバナーも確認してください。`);
+    } catch (e) {
+      cyberAlert("送信失敗", String(e));
     } finally {
       setBusy(false);
     }
@@ -301,6 +368,96 @@ export default function NotificationDevScreenNative() {
           </View>
         </Section>
 
+        <Section title="起動時のお知らせ">
+          <Text style={styles.hint}>
+            本番レイアウトは案A。展開後の各行タップで該当画面へ。角・ボタンはまだ仮。
+          </Text>
+          <View style={styles.rowBtns}>
+            <DevButton
+              label="案A（通常）"
+              onPress={() => openWhatsNew("a", WHATS_NEW_PREVIEW_NOTES)}
+            />
+            <DevButton
+              label="新イベント"
+              onPress={() => openWhatsNew("event", WHATS_NEW_EVENT_PREVIEW_NOTES)}
+            />
+          </View>
+          <DevButton
+            label="大量アップデート（モック）"
+            onPress={() => openWhatsNew("a", WHATS_NEW_BULK_UPDATE_MOCK_NOTES)}
+          />
+        </Section>
+
+        <Section title="結果通知プレビュー（未配信）">
+          <Text style={styles.hint}>
+            16:00 に送る予定の文面。言語はプロフィール設定。日本と米国で「今日 / 昨日」が変わります。本番の送信はまだありません。
+          </Text>
+          <DevButton
+            label="日本・的中（5試合中4）"
+            onPress={() =>
+              void fireCopy(
+                buildHitResultPushCopy(pushLang, {
+                  day: "today",
+                  posts: 5,
+                  wins: 4,
+                })
+              )
+            }
+            disabled={busy}
+          />
+          <DevButton
+            label="米国・的中（5試合中4）"
+            onPress={() =>
+              void fireCopy(
+                buildHitResultPushCopy(pushLang, {
+                  day: "yesterday",
+                  posts: 5,
+                  wins: 4,
+                })
+              )
+            }
+            disabled={busy}
+          />
+          <DevButton
+            label="日本・7日連続"
+            onPress={() =>
+              void fireCopy(
+                buildStreakNudgePushCopy(pushLang, {
+                  streakDays: 7,
+                  nextPick: "tomorrow",
+                })
+              )
+            }
+            disabled={busy}
+          />
+          <DevButton
+            label="日本・7日連続＋的中"
+            onPress={() =>
+              void fireCopy(
+                buildStreakNudgePushCopy(pushLang, {
+                  streakDays: 7,
+                  nextPick: "tomorrow",
+                  hits: { day: "today", posts: 4, wins: 3 },
+                })
+              )
+            }
+            disabled={busy}
+          />
+          <DevButton
+            label="米国・7日連続＋的中"
+            onPress={() =>
+              void fireCopy(
+                buildStreakNudgePushCopy(pushLang, {
+                  streakDays: 7,
+                  nextPick: "today",
+                  hits: { day: "yesterday", posts: 4, wins: 3 },
+                })
+              )
+            }
+            disabled={busy}
+          />
+        </Section>
+
         <Section title="OS プッシュ（ローカル即時表示）">
           <Text style={styles.hint}>
             アプリ前面 → 画面上部バナー（ロック画面には出ません）。{"\n"}
@@ -388,11 +545,28 @@ export default function NotificationDevScreenNative() {
         onAllow={() => setPrimerOpen(false)}
         onLater={() => setPrimerOpen(false)}
       />
+      <WhatsNewSheetModalNative
+        open={whatsNewOpen}
+        language={pushLang}
+        notes={whatsNewNotes}
+        layout={whatsNewLayout}
+        onClose={() => setWhatsNewOpen(false)}
+        onAction={(action: WhatsNewNoteAction) => {
+          setWhatsNewOpen(false);
+          handleWhatsNewAction(action, {
+            isPro,
+            onProGate: () => setProGateOpen(true),
+          });
+        }}
+      />
       <NotificationProGateModalNative
         visible={proGateOpen}
         language={language}
         onClose={() => setProGateOpen(false)}
-        onSeePro={() => setProGateOpen(false)}
+        onSeePro={() => {
+          setProGateOpen(false);
+          openProSubscribeNative();
+        }}
       />
     </MobilePageShell>
   );

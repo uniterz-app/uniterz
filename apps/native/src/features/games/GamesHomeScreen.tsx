@@ -3668,6 +3668,7 @@ export default function GamesHomeScreen({
         visible={calendarOpen}
         onClose={() => setCalendarOpen(false)}
         language={String(language ?? "en")}
+        timeZone={dayTimeZone}
         gameDayKeys={dateKeysForDayStrip}
         gameCountByKey={gameCountByKey}
         selectedKey={selectedDayKey}
