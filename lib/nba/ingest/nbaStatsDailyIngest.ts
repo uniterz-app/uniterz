@@ -25,6 +25,7 @@ import { ingestNbaShotChartsFromBdl } from "@/lib/nba/ingest/nbaShotChartsIngest
 import { ingestNbaCleanRatingsFromBdl } from "@/lib/nba/ingest/nbaCleanRatingsIngest";
 import { ingestNbaMatchupsFromBdl } from "@/lib/nba/ingest/nbaMatchupIngest";
 import { runPredictAudits } from "@/lib/nba/insights/predictKit/runPredictAudits";
+import { ensureNbaPlayerKanaNames } from "@/lib/nba/ask/nbaPlayerKanaNames";
 import {
   loadNbaSeasonGameRows,
   type NbaSeasonGameRow,
@@ -180,6 +181,12 @@ export async function runNbaStatsDailyIngest(
   steps.push(
     await runStep("team-rosters", () =>
       ingestNbaTeamRostersFromBdl(db, { seasonKey })
+    )
+  );
+  /** ASK 用。AI が落ちても日次の成否には数えない */
+  steps.push(
+    await runStep("player-kana-names", () =>
+      ensureNbaPlayerKanaNames(db).catch((e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : String(e) }))
     )
   );
   steps.push(

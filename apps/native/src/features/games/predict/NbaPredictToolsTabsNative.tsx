@@ -1,7 +1,7 @@
 /** Web `NbaPredictToolsTabs` 相当 */
 import { useEffect, useRef, useState } from "react";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NavigationProp } from "@react-navigation/native";
 import {
@@ -13,6 +13,11 @@ import TutorialTargetNative from "../../tutorial/TutorialTargetNative";
 import { registerTutorialPredictToolsListener } from "../../tutorial/tutorialPredictToolsBridgeNative";
 import PredictProBriefPanelNative from "./PredictProBriefPanelNative";
 import ProPickAdMockModalNative from "./ProPickAdMockModalNative";
+import ProPickFirstFreeNoticeModalNative from "./ProPickFirstFreeNoticeModalNative";
+import {
+  markProPickFirstFreeNoticeSeenNative,
+  readProPickFirstFreeNoticeSeenNative,
+} from "./proPickFirstFreeNoticeNative";
 import { requestProPickUnlock } from "../../../../../../lib/nba/predict/proPickUnlockApi";
 import { proPickAdCopy } from "../../../../../../lib/predict/proPickAdCopy";
 import { cyberAlert } from "../../../components/cyberAlert";
@@ -191,16 +196,50 @@ export default function NbaPredictToolsTabsNative({
   } = useNbaMatchupInsightTeaser({
     gameId,
     apiBaseUrl,
-    enabled: !isPro && !preseason && visited.has("insight"),
+    enabled: !isPro && !preseason,
   });
   const { fUser } = useFirebaseUser();
   /** Free でも、この試合を解除済み（広告 / 初回の無料）なら Pro と同じ中身を出す */
   const [proPickUnlockedGameId, setProPickUnlockedGameId] = useState<string | null>(null);
   const [proPickAdOpen, setProPickAdOpen] = useState(false);
   const [proPickUnlockBusy, setProPickUnlockBusy] = useState(false);
+  const [firstFreeModalOpen, setFirstFreeModalOpen] = useState(false);
   const proPickUnlockedHere =
     !!gameId && (teaserUnlocked || proPickUnlockedGameId === gameId);
   const proPickAccess = isPro || proPickUnlockedHere;
+  const showFirstFreeNotice =
+    PRO_PICK_AD_UI_ENABLED &&
+    !isPro &&
+    !preseason &&
+    firstFreeAvailable &&
+    !proPickAccess;
+  const firstFreeCopy = proPickAdCopy(language);
+
+  useEffect(() => {
+    const uid = fUser?.uid;
+    if (!showFirstFreeNotice || !uid) {
+      setFirstFreeModalOpen(false);
+      return;
+    }
+    let cancelled = false;
+    void readProPickFirstFreeNoticeSeenNative(uid).then((seen) => {
+      if (!cancelled && !seen) setFirstFreeModalOpen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showFirstFreeNotice, fUser?.uid]);
+
+  const dismissFirstFreeModal = () => {
+    const uid = fUser?.uid;
+    if (uid) void markProPickFirstFreeNoticeSeenNative(uid);
+    setFirstFreeModalOpen(false);
+  };
+
+  const openFirstFreeProPick = () => {
+    dismissFirstFreeModal();
+    selectTab("insight");
+  };
 
   const insightAvailable = proPickAccess && !preseason;
   const {
@@ -451,6 +490,26 @@ export default function NbaPredictToolsTabsNative({
         </View>
         <TutorialTargetNative id="predict-tools-tabs">
           <View style={styles.tabShell}>
+            {showFirstFreeNotice ? (
+              <Pressable
+                onPress={() => selectTab("insight")}
+                accessibilityRole="button"
+                accessibilityLabel={firstFreeCopy.firstFreeNoticeTitle}
+                style={({ pressed }) => [
+                  styles.firstFreeBanner,
+                  pressed ? styles.firstFreeBannerPressed : null,
+                ]}
+              >
+                <Text style={styles.firstFreeBannerKicker}>PRO PICK</Text>
+                <Text style={styles.firstFreeBannerTitle}>
+                  {firstFreeCopy.firstFreeNoticeTitle}
+                </Text>
+                <Text style={styles.firstFreeBannerBody}>
+                  {firstFreeCopy.firstFreeNoticeBody}
+                </Text>
+                <Text style={styles.firstFreeBannerCta}>{firstFreeCopy.firstFreeNoticeCta}</Text>
+              </Pressable>
+            ) : null}
             <CyberSlantedTabBarNative fill>
               <CyberSlantedTabNative
                 label="PRO PICK"
@@ -481,7 +540,17 @@ export default function NbaPredictToolsTabsNative({
                 accessibilityState={{ selected: tab === "trend" }}
               />
             </CyberSlantedTabBarNative>
-            {insightUnread ? (
+            {showFirstFreeNotice ? (
+              <View pointerEvents="none" style={styles.dotRow}>
+                <View style={styles.dotCell}>
+                  <View style={styles.freeMark}>
+                    <Text style={styles.freeMarkText}>{firstFreeCopy.firstFreeTabMark}</Text>
+                  </View>
+                </View>
+                <View style={styles.dotCell} />
+                <View style={styles.dotCell} />
+              </View>
+            ) : insightUnread ? (
               <View pointerEvents="none" style={styles.dotRow}>
                 <View style={styles.dotCell}>
                   <View
@@ -510,6 +579,12 @@ export default function NbaPredictToolsTabsNative({
           void runProPickUnlock(true);
         }}
       />
+      <ProPickFirstFreeNoticeModalNative
+        visible={firstFreeModalOpen}
+        language={language}
+        onSee={openFirstFreeProPick}
+        onLater={dismissFirstFreeModal}
+      />
     </TutorialTargetNative>
   );
 }
@@ -529,6 +604,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 0,
     paddingBottom: 6,
+  },
+  firstFreeBanner: {
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "rgba(246,195,68,0.55)",
+    backgroundColor: "rgba(246,195,68,0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  firstFreeBannerPressed: {
+    opacity: 0.85,
+  },
+  firstFreeBannerKicker: {
+    color: "#F6C344",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+  },
+  firstFreeBannerTitle: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+  firstFreeBannerBody: {
+    color: "rgba(255,255,255,0.68)",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  firstFreeBannerCta: {
+    marginTop: 2,
+    color: "#F6C344",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  freeMark: {
+    position: "absolute",
+    top: -7,
+    right: -2,
+    backgroundColor: "#F6C344",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    minHeight: 14,
+    justifyContent: "center",
+  },
+  freeMarkText: {
+    color: "#050508",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
   /** INJURY から STATS までを一つの枠にする */
   infoFrame: {

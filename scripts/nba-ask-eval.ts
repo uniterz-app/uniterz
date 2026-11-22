@@ -236,6 +236,11 @@ const CASES: Case[] = [
 
 /** 指名権・状況別・最高記録・年俸・レーティング・オン/オフ・マッチアップ・スタイルマップなど後から足した種類 */
 const NEW_CASES: Case[] = [
+  // HOW THEY PLAY のジャンル
+  { q: "カリーのドライブに関するスタッツを教えて", expect: { kind: "nba", query: "player_season", player: "curry" } },
+  { q: "ヨキッチのパスについて教えて", expect: { kind: "nba", query: "player_season", player: "jokic" } },
+  { q: "ウェンバンヤマのディフェンスはどう", expect: { kind: "nba", query: "player_season", player: "wembanyama" } },
+  { q: "カリーのドライブの数は", expect: { kind: "nba", query: "player_season", player: "curry" } },
   // 指名権
   { q: "サンダーの指名権いくつ持ってる？", expect: { kind: "nba", query: "team_draft_picks", team: "nba-thunder" } },
   { q: "ネッツのドラフト指名権", expect: { kind: "nba", query: "team_draft_picks", team: "nba-nets" } },
