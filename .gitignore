@@ -68,3 +68,7 @@ scripts/.tmp-*
 
 # Local EAS builds
 .local-builds/
+
+# 作業コピー・一時スクショ（EAS アーカイブにも載せない）
+.worktrees/
+.local-tmp/
