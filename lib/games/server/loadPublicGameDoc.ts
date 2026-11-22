@@ -45,12 +45,11 @@ export function isPublicGameDocId(id: string): boolean {
 }
 
 function fieldMaskFor(view: PublicGameDocView): string[] {
+  const base: readonly string[] = NBA_GAMES_WINDOW_FIELDS;
   if (view === "full") {
-    return NBA_GAMES_WINDOW_FIELDS.filter((f) => f !== "pointsSummary.n").concat(
-      FULL_EXTRA
-    );
+    return base.filter((f) => f !== "pointsSummary.n").concat(FULL_EXTRA);
   }
-  return [...NBA_GAMES_WINDOW_FIELDS, ...SLIM_EXTRA];
+  return [...base, ...SLIM_EXTRA];
 }
 
 function slimPublicGame(data: Record<string, unknown>): Record<string, unknown> {
