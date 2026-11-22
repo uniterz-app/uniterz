@@ -1,21 +1,11 @@
 import { Modal, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLiveGameStats } from "../../../../../../lib/games/useLiveGameStats";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
-import { getCachedGameDocForResult } from "../../../../../../lib/result/resultDetailFirestoreCache";
-import { db } from "../../../lib/firebase";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import ProfileBackEdgeHandleNative from "../../profile/ProfileBackEdgeHandleNative";
 import LiveGameStatsPanelNative from "./LiveGameStatsPanelNative";
 
 const OXANIUM = "Oxanium_700Bold";
-
-async function loadGameDocForLiveStats(
-  gameId: string
-): Promise<Record<string, unknown> | null> {
-  const { exists, data } = await getCachedGameDocForResult(gameId, db);
-  if (!exists || !data) return null;
-  return { id: gameId, ...data };
-}
 
 type Props = {
   gameId: string;
@@ -35,7 +25,6 @@ export default function NbaGameBoxScoreModalNative({
   const lang = resolveLocalizedLang(language);
   const { report, loading } = useLiveGameStats(gameId, true, {
     apiBaseUrl: getUniterzApiBaseUrl(),
-    loadGameDoc: loadGameDocForLiveStats,
   });
   return (
     <Modal

@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { requireAdminUid } from "@/lib/admin/requireAdminUid";
@@ -47,6 +48,12 @@ export async function POST(req: Request) {
     });
 
     revalidateNbaDocCache();
+    try {
+      revalidateTag("nba-league-team-stats", {});
+      revalidateTag("nba-league-player-stats", {});
+    } catch {
+      /* Next 外 */
+    }
     return NextResponse.json({
       ...result,
       defaultLookback: NBA_LEAGUE_STATS_SEASON_LOOKBACK,

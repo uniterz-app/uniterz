@@ -8,8 +8,11 @@ import type {
 } from "../../../../../../lib/nba/predict/buildMatchupTrend";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
+import { matchupTeamUiAccent } from "../../../../../../lib/team-colors";
+import type { NbaTeamFormGame } from "../../../../../../lib/predict/nbaTeamStatsPreviewMocks";
 import type { GamesLanguage } from "../gamesI18n";
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
+import PredictMatchLast5GridNative from "./PredictMatchLast5GridNative";
 
 const OXANIUM = "Oxanium_700Bold";
 const WIN = "#F5C518";
@@ -21,6 +24,8 @@ type Props = {
   homeTeamId: string;
   awayTeamId: string;
   language: GamesLanguage;
+  homeForm?: NbaTeamFormGame[];
+  awayForm?: NbaTeamFormGame[];
 };
 
 function teamLabel(teamId: string): string {
@@ -104,9 +109,13 @@ export default function NbaMatchupTrendPanelNative({
   homeTeamId,
   awayTeamId,
   language,
+  homeForm = [],
+  awayForm = [],
 }: Props) {
   const ja = language === "ja";
   const { home, away } = trend;
+  const homeAccent = matchupTeamUiAccent("nba", homeTeamId, homeTeamId, awayTeamId);
+  const awayAccent = matchupTeamUiAccent("nba", awayTeamId, homeTeamId, awayTeamId);
   return (
     <View style={styles.root}>
       <View style={styles.header}>
@@ -169,6 +178,12 @@ export default function NbaMatchupTrendPanelNative({
         />
       </Section>
 
+      <PredictMatchLast5GridNative
+        home={homeForm}
+        away={awayForm}
+        homeAccent={homeAccent}
+        awayAccent={awayAccent}
+      />
     </View>
   );
 }

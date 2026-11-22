@@ -42,7 +42,7 @@ const GAMES_WINDOW_OMIT_FIELDS = [
  * 一覧で使わないのに 1 件の 9 割を占め、読むたびにインターネット転送量として課金される。
  * 一覧のカードで新しい games 項目を使うときはここに足す（足さないとレスポンスに載らない）。
  */
-const NBA_GAMES_WINDOW_FIELDS = [
+export const NBA_GAMES_WINDOW_FIELDS = [
   "league",
   "season",
   "seasonPhase",

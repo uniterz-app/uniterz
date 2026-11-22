@@ -1,15 +1,22 @@
 /** 確定トレード — 公式発表のみ。受付前の移籍は表示だけ（採点に入らない） */
+import { LinearGradient } from "expo-linear-gradient";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import {
   NBA_CONFIRMED_TRADES_2026_27,
   nbaConfirmedTradeCountsForBallot,
   type NbaConfirmedTrade,
 } from "../../../../../../../lib/predict/nbaTradeConfirmed";
+import { nbaConfirmedTradeMatchesTeam } from "../../../../../../../lib/predict/nbaTradeBuzzTeamFilter";
 import TeamAbbrBadgeNative from "../../TeamAbbrBadgeNative";
 import { nbaTeamIdFromBracketCode } from "../../../../../../../lib/nba-bracket-code";
+import {
+  getTeamAbbrBadgeColor,
+  teamColorRgba,
+} from "../../../../../../../lib/team-colors";
 
 type Props = {
   trades?: readonly NbaConfirmedTrade[];
+  teamAbbr?: string | null;
 };
 
 const OX = "Oxanium_700Bold";
@@ -17,7 +24,7 @@ const OX = "Oxanium_700Bold";
 function formatWhen(t: NbaConfirmedTrade): string {
   const [, m, d] = t.day.split("-");
   const md = `${Number(m)}/${Number(d)}`;
-  return t.time ? `${md} ${t.time} JST` : `${md} JST`;
+  return t.time ? `${md} ${t.time}` : md;
 }
 
 function openSource(url: string) {
@@ -28,19 +35,48 @@ function TradeCard({ trade }: { trade: NbaConfirmedTrade }) {
   const counts = nbaConfirmedTradeCountsForBallot(trade);
   const fromId = nbaTeamIdFromBracketCode(trade.fromTeamAbbr);
   const toId = nbaTeamIdFromBracketCode(trade.toTeamAbbr);
+  const fromTint = fromId ? getTeamAbbrBadgeColor(fromId) : "#ffffff";
+  const toTint = toId ? getTeamAbbrBadgeColor(toId) : "#ffffff";
   return (
+    <LinearGradient
+      colors={[
+        teamColorRgba(fromTint, 0.42),
+        teamColorRgba(toTint, 0.42),
+      ]}
+      start={{ x: 0, y: 0.5 }}
+      end={{ x: 1, y: 0.5 }}
+      style={styles.cardEdge}
+    >
     <View style={styles.card}>
-      <View style={styles.cardHead}>
-        <Text style={styles.when}>{formatWhen(trade)}</Text>
-        <View style={styles.spacer} />
+      <LinearGradient
+        colors={[
+          teamColorRgba(fromTint, 0.12),
+          teamColorRgba(toTint, 0.12),
+        ]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        pointerEvents="none"
+        style={styles.cardWash}
+      />
+
+      <View style={styles.topRow}>
         <Text style={counts ? styles.tagOn : styles.tagOff}>
-          {counts ? "採点対象" : "受付前 · 表示のみ"}
+          {counts ? "公式" : "受付前"}
         </Text>
+        <View style={styles.rightRail}>
+          <Text style={styles.age} numberOfLines={1}>
+            {formatWhen(trade)}
+          </Text>
+        </View>
       </View>
 
-      <Text style={styles.name} numberOfLines={2}>
-        {trade.playerName}
-      </Text>
+      <View style={styles.nameRow}>
+        <View style={styles.nameSlant}>
+          <Text style={styles.name} numberOfLines={1}>
+            {trade.playerName}
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.route}>
         <TeamAbbrBadgeNative
@@ -61,32 +97,41 @@ function TradeCard({ trade }: { trade: NbaConfirmedTrade }) {
         accessibilityRole="link"
         hitSlop={6}
       >
-        <Text style={styles.source}>SOURCE · {trade.sourceLabel} →</Text>
+        <Text style={styles.source}>
+          {trade.sourceLabel}
+          {" →"}
+        </Text>
       </Pressable>
     </View>
+    </LinearGradient>
   );
 }
 
 export default function NbaTradeConfirmedFeedNative({
   trades = NBA_CONFIRMED_TRADES_2026_27,
+  teamAbbr = null,
 }: Props) {
-  const sorted = [...trades].sort((a, b) => {
-    const ta = Date.parse(`${a.day}T${a.time ?? "00:00"}:00+09:00`);
-    const tb = Date.parse(`${b.day}T${b.time ?? "00:00"}:00+09:00`);
-    return tb - ta;
-  });
+  const sorted = [...trades]
+    .filter((t) => nbaConfirmedTradeMatchesTeam(t, teamAbbr))
+    .sort((a, b) => {
+      const ta = Date.parse(`${a.day}T${a.time ?? "00:00"}:00+09:00`);
+      const tb = Date.parse(`${b.day}T${b.time ?? "00:00"}:00+09:00`);
+      return tb - ta;
+    });
 
   return (
-    <View style={{ gap: 10 }}>
-      <View style={styles.intro}>
-        <Text style={styles.introTitle}>CONFIRMED</Text>
-        <Text style={styles.introBody}>
-          球団・リーグが公式に発表したトレードだけを載せています。受付開始（12/15）より前の移籍は表示のみで、採点には入りません。
-        </Text>
-      </View>
+    <View style={{ gap: 16 }}>
+      <Text style={styles.intro}>
+        新しい順 · 公式発表のみ · 12/15前は表示だけ
+        {teamAbbr ? ` · ${teamAbbr}` : ""}
+      </Text>
 
       {sorted.length === 0 ? (
-        <Text style={styles.empty}>今季の公式トレードはまだありません。</Text>
+        <Text style={styles.empty}>
+          {teamAbbr
+            ? `${teamAbbr} の公式トレードはまだない`
+            : "今季の公式トレードはまだない"}
+        </Text>
       ) : (
         sorted.map((t) => <TradeCard key={t.id} trade={t} />)
       )}
@@ -96,81 +141,92 @@ export default function NbaTradeConfirmedFeedNative({
 
 const styles = StyleSheet.create({
   intro: {
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.2)",
-    backgroundColor: "rgba(0,245,255,0.05)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  introTitle: {
-    fontFamily: OX,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.6,
-    color: "rgba(0,245,255,0.9)",
-  },
-  introBody: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.5)",
-  },
-  empty: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.5)",
-    paddingVertical: 12,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(6,10,16,0.96)",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
-  },
-  cardHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  when: {
     fontFamily: OX,
     fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    color: "rgba(255,255,255,0.6)",
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.42)",
+    marginBottom: 4,
   },
-  spacer: {
-    flex: 1,
+  empty: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: "rgba(255,255,255,0.48)",
+    paddingVertical: 12,
+  },
+  cardEdge: {
+    padding: 1,
+  },
+  card: {
+    overflow: "hidden",
+    backgroundColor: "rgba(6,10,16,0.96)",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  cardWash: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 16,
+    marginBottom: 6,
+  },
+  rightRail: {
+    width: 76,
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
   tagOn: {
+    flex: 1,
     fontFamily: OX,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
     color: "rgba(252,211,77,0.9)",
     textTransform: "uppercase",
   },
   tagOff: {
+    flex: 1,
     fontFamily: OX,
-    fontSize: 9,
-    fontWeight: "700",
+    fontSize: 10,
+    fontWeight: "800",
     letterSpacing: 1,
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(255,255,255,0.45)",
     textTransform: "uppercase",
+  },
+  age: {
+    fontFamily: OX,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    color: "rgba(255,255,255,0.45)",
+    textAlign: "right",
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 24,
+  },
+  nameSlant: {
+    flex: 1,
+    minWidth: 0,
+    transform: [{ skewX: "-6deg" }],
   },
   name: {
     fontFamily: "Oxanium_600SemiBold",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     letterSpacing: 0.4,
     color: "#fff",
     textTransform: "uppercase",
+    lineHeight: 22,
   },
   route: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   arrow: {
     fontFamily: OX,
@@ -178,16 +234,13 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.5)",
   },
   summary: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    lineHeight: 19,
+    color: "rgba(255,255,255,0.78)",
   },
   source: {
-    fontFamily: OX,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-    color: "rgba(0,245,255,0.8)",
-    textTransform: "uppercase",
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(0,245,255,0.85)",
   },
 });

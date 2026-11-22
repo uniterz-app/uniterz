@@ -1,5 +1,5 @@
 /**
- * 予想画面 TREND の中身を `/api/nba/team-detail`（両チーム）から組み立てる。
+ * 予想画面 TREND の中身。`/api/nba/matchup-detail` がサーバーで組み立てる。
  * 今季の成績・日程・状況別・勢い。
  *
  * 休み / 4日で3試合目は B2B・3IN4 と同じく米国東部の暦日で数える。
@@ -9,6 +9,11 @@
 import type { NbaTeamDetailApiPayload } from "@/lib/nba/teamDetail/loadTeamDetailBundle";
 import type { NbaTeamGameLogDetailGame } from "@/lib/nba/teamGameLog/teamGameLogDetail";
 import type { NbaTeamRecentGame, NbaTeamStreak } from "@/lib/predict/nbaTeamDetailPreviewMocks";
+
+export type NbaMatchupTrendSource = Pick<
+  NbaTeamDetailApiPayload,
+  "season" | "gameLog" | "gameLogDetail" | "standingsRow"
+>;
 
 export type NbaTrendWl = { wins: number; losses: number };
 
@@ -104,7 +109,7 @@ function gameKey(g: Pick<NbaTeamRecentGame, "gameId" | "dateLabel" | "oppTeamId"
  * 同じ試合は detail 側（b2b / threeInFour / startMs）を優先。
  */
 function gamesForSchedule(
-  detail: NbaTeamDetailApiPayload | null
+  detail: NbaMatchupTrendSource | null
 ): NbaTeamGameLogDetailGame[] {
   const fromDetail = detail?.gameLogDetail?.games ?? [];
   const fromRecent = detail?.gameLog?.recentGames ?? [];
@@ -140,7 +145,7 @@ function wl(games: NbaTeamGameLogDetailGame[]): NbaTrendWl {
 }
 
 function schedule(
-  detail: NbaTeamDetailApiPayload | null,
+  detail: NbaMatchupTrendSource | null,
   tipAtMs: number | null
 ): NbaTrendSchedule {
   const seasonKey = detail?.gameLogDetail?.season ?? detail?.season ?? "";
@@ -170,8 +175,8 @@ function schedule(
 }
 
 function side(
-  detail: NbaTeamDetailApiPayload | null,
-  opp: NbaTeamDetailApiPayload | null,
+  detail: NbaMatchupTrendSource | null,
+  opp: NbaMatchupTrendSource | null,
   isHome: boolean,
   tipAtMs: number | null
 ): NbaTrendSide {
@@ -207,8 +212,8 @@ function side(
 }
 
 export function buildMatchupTrend(input: {
-  home: NbaTeamDetailApiPayload | null;
-  away: NbaTeamDetailApiPayload | null;
+  home: NbaMatchupTrendSource | null;
+  away: NbaMatchupTrendSource | null;
   tipAtMs: number | null;
 }): NbaMatchupTrend {
   return {

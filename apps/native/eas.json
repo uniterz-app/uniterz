@@ -63,7 +63,6 @@
         "EXPO_PUBLIC_APP_URL": "https://uniterz.app",
         "EXPO_PUBLIC_UNITERZ_API_BASE_URL": "https://www.uniterz.app",
         "EXPO_PUBLIC_GA4_MEASUREMENT_ID": "G-Y0KLCCS94C",
-        "EXPO_PUBLIC_GA4_API_SECRET": "FESgAJASQMmfByXoTPex4A",
         "ADMOB_ANDROID_APP_ID": "ca-app-pub-8832864372815461~5211302252",
         "ADMOB_IOS_APP_ID": "ca-app-pub-8832864372815461~3898879729"
       }

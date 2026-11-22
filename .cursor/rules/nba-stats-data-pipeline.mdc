@@ -102,7 +102,7 @@ Vercel（hnd1）が Firestore から受け取るバイトはすべてインタ�
 - ingest（`/api/admin/nba-*`）は本物の `getAdminDb()` で読み書きし、成功後に `revalidateNbaDocCache()`（全部）か `revalidateNbaDocCache(["コレクション"])` を呼ぶ。書いたのに呼ばないと最大 24 時間古いまま（`scripts/` から書いたときも同じ。必要なら管理 API を叩くかデプロイで捨てる）
 - ASK のクォータ・favorite-counts・daily-leaders など書き込みやクエリ中心のものは素の db のまま
 - `games` を読むときは必要な項目だけ（Admin は `.select()` / `getAll(..., { fieldMask })`）。`liveStats`（約 6KB）・`pointsSummary`（約 11KB）・`pointsDistribution`・`predictorUids` が 1 件の 9 割。試合一覧（`loadGamesWindow`）は `NBA_GAMES_WINDOW_FIELDS` にある項目しか返さないので、カードで新しい games 項目を使うならそこに足す
-- アプリ（Native）から `games` を Firestore クライアントで一覧クエリしない（select が無く全項目を受け取る）。`/api/games/window` を使う
+- アプリ（Native）から `games` を Firestore クライアントで get / クエリしない（select が無く全項目を受け取る）。一覧は `/api/games/window`、1 試合は `/api/games/doc?id=`、リザルト一覧の market / PK は `/api/games/docs?ids=`
 
 ## 日次定時（試合後スタッツ）
 

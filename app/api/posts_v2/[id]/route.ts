@@ -116,9 +116,12 @@ export async function GET(req: NextRequest, ctx: any) {
 
     const data = snap.data() || {};
     const mine = data.authorUid === uid;
+    if (!mine) {
+      return NextResponse.json({ ok: true, exists: false });
+    }
 
     let editable = false;
-    if (mine && Number(data.schemaVersion) === 2) {
+    if (Number(data.schemaVersion) === 2) {
       try {
         await assertPostUnlockedByLiveGame(data.gameId, data.startAtMillis);
         editable = true;
@@ -130,13 +133,11 @@ export async function GET(req: NextRequest, ctx: any) {
     const payload: Record<string, unknown> = {
       ok: true,
       exists: true,
-      mine,
+      mine: true,
       editable,
     };
-    if (mine) {
-      if (data.prediction) payload.prediction = data.prediction;
-      if (typeof data.comment === "string") payload.comment = data.comment;
-    }
+    if (data.prediction) payload.prediction = data.prediction;
+    if (typeof data.comment === "string") payload.comment = data.comment;
     return NextResponse.json(payload);
   } catch (e: any) {
     return clientErrorResponse(e);

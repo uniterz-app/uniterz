@@ -5,12 +5,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { db } from "../../lib/firebase";
 import { ResultCardDesignFaceNative } from "./ResultCardDesignPreviewScreenNative";
 import { useLiveGameStats } from "../../../../../lib/games/useLiveGameStats";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
-import PredictMatchLast5PagerNative from "../games/predict/PredictMatchLast5PagerNative";
-import { resolveMatchupUiAccents } from "../games/teamColors";
 import { useScreenActiveNative } from "../../hooks/useScreenActiveNative";
 import LiveGameStatsPanelNative from "../games/live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "../games/live/LiveGameStatsPlaceholderNative";
@@ -39,17 +36,7 @@ import {
 import { profilePathKeyFromRow } from "../../../../../lib/profile/profilePathKey";
 import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
-import { getCachedGameDocForResult } from "../../../../../lib/result/resultDetailFirestoreCache";
-
 const ACCENT = "#00F5FF";
-
-async function loadGameDocForLiveStats(
-  gameId: string
-): Promise<Record<string, unknown> | null> {
-  const { exists, data } = await getCachedGameDocForResult(gameId, db);
-  if (!exists || !data) return null;
-  return { id: gameId, ...data };
-}
 
 const TOP_SCORER_SLICE_COLORS = [
   "#00F5FF",
@@ -612,18 +599,12 @@ export default function ResultDetailBodyNative({
     if (!hit?.name) return view.card;
     return { ...view.card, topScorer: hit.name };
   }, [topScorerCandidates, view.card]);
-  const matchAccents = resolveMatchupUiAccents(
-    "nba",
-    cardFace.homeTeamId,
-    cardFace.awayTeamId
-  );
   const screenActive = useScreenActiveNative();
   const { report: liveStatsReport, loading: liveStatsLoading } = useLiveGameStats(
     nbaGameId,
     Boolean(nbaGameId),
     {
       apiBaseUrl: getUniterzApiBaseUrl(),
-      loadGameDoc: loadGameDocForLiveStats,
       paused: !screenActive,
     }
   );
@@ -706,25 +687,6 @@ export default function ResultDetailBodyNative({
                 : null
             }
             tutorialMetricsTargetId="result-detail-metrics"
-            wrapMatch={
-              /** 試合カードから開いたときだけ LAST 5 / H2H（リザルト一覧からは出さない） */
-              cardAndLiveStats && nbaGameId && cardFace.homeTeamId && cardFace.awayTeamId
-                ? (match) => (
-                    <PredictMatchLast5PagerNative
-                      homeTeamId={cardFace.homeTeamId!}
-                      awayTeamId={cardFace.awayTeamId!}
-                      homeAccent={matchAccents.homeAccent}
-                      awayAccent={matchAccents.awayAccent}
-                      apiBaseUrl={getUniterzApiBaseUrl()}
-                      homeName={cardFace.homeName}
-                      awayName={cardFace.awayName}
-                      jerseyAnchor={{ top: 26, size: 42, sideWidth: 92, inset: 14 }}
-                    >
-                      {match}
-                    </PredictMatchLast5PagerNative>
-                  )
-                : undefined
-            }
           />
         </WeeklyReportCardShell>
       </View>

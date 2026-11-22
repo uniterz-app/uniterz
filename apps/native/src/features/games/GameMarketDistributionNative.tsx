@@ -1,11 +1,12 @@
 import { StyleSheet, Text, View } from "react-native";
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { fetchPublicGameDoc } from "../../../../../lib/games/fetchPublicGameDoc";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import {
   parseGamePointsDistributionV1,
   rawPointsDistributionFromGameDoc,
 } from "../../../../../lib/results/gamePointsDistribution";
+import { resolveGamePointsSummary } from "../../../../../lib/results/gamePointsSummary";
 import { colors, radius } from "../../theme/tokens";
 import type { GamesLanguage, GamesTexts } from "./gamesI18n";
 
@@ -43,21 +44,25 @@ export default function GameMarketDistributionNative({
     setReady(false);
     void (async () => {
       try {
-        const snap = await getDoc(doc(db, "games", gameId));
+        const { game } = await fetchPublicGameDoc({
+          gameId,
+          view: "slim",
+          includePeers: false,
+          apiBaseUrl: getUniterzApiBaseUrl(),
+        });
         if (cancelled) return;
         const dist = parseGamePointsDistributionV1(
-          rawPointsDistributionFromGameDoc(
-            snap.exists() ? (snap.data() as Record<string, unknown>) : null
-          )
+          rawPointsDistributionFromGameDoc(game)
         );
+        const summary = resolveGamePointsSummary(game);
         setMean(dist?.mean ?? null);
-        setMedian(dist?.median ?? null);
+        setMedian(dist?.median ?? summary?.median ?? null);
         setMax(
           typeof dist?.max === "number" && Number.isFinite(dist.max)
             ? dist.max
-            : null
+            : summary?.max ?? null
         );
-        setN(dist?.n ?? 0);
+        setN(dist?.n ?? summary?.n ?? 0);
       } catch {
         if (!cancelled) {
           setMean(null);

@@ -34,6 +34,14 @@ function matchupDetailHasRosterPlayers(
   );
 }
 
+function matchupDetailReady(payload: NbaMatchupDetailApiPayload): boolean {
+  return (
+    matchupDetailHasRosterPlayers(payload) &&
+    payload.trendHome != null &&
+    payload.trendAway != null
+  );
+}
+
 export function matchupDetailCacheKey(
   apiBaseUrl: string | null | undefined,
   season: string,
@@ -87,11 +95,11 @@ export async function fetchMatchupDetailBundle(
     awayTeamId
   );
   const existing = cache.peek(key);
-  if (existing && !matchupDetailHasRosterPlayers(existing)) {
+  if (existing && !matchupDetailReady(existing)) {
     cache.invalidate(key);
   }
   const value = await cache.load(key, () => fetchOnce(options));
-  if (!matchupDetailHasRosterPlayers(value)) {
+  if (!matchupDetailReady(value)) {
     cache.invalidate(key);
   }
   return value;
@@ -121,6 +129,6 @@ export function peekMatchupDetailBundle(
       awayTeamId
     )
   );
-  if (hit && !matchupDetailHasRosterPlayers(hit)) return null;
+  if (hit && !matchupDetailReady(hit)) return null;
   return hit;
 }

@@ -19,6 +19,7 @@ export function revalidateNbaDisciplineApiCache(): void {
   revalidateNbaDocCache(["nbaDiscipline"]);
   try {
     revalidateTag("nba-league-team-stats", {});
+    revalidateTag("nba-league-player-stats", {});
     revalidateTag(NBA_DISCIPLINE_CDN_TAG, "max");
   } catch {
     // スクリプト（Next 外）から呼ばれたときは無視

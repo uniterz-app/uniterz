@@ -7,6 +7,8 @@ import { normalizeLeague, type League } from "@/lib/leagues";
 
 export function revalidateGamesWindowCache(league: League): void {
   revalidateTag(`games-window:${normalizeLeague(league)}`, {});
+  revalidateTag("games-window", {});
+  revalidateTag("games-doc", {});
 }
 
 /** ライブ中のスコアだけ。窓全体は試合終了時に別途捨てる */

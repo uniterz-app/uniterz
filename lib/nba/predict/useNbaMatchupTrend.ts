@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
-import { fetchTeamDetailBundle } from "@/lib/nba/teamDetail/fetchTeamDetailClient";
+import {
+  fetchMatchupDetailBundle,
+  peekMatchupDetailBundle,
+} from "@/lib/nba/predict/fetchMatchupDetailClient";
 import {
   buildMatchupTrend,
   type NbaMatchupTrend,
@@ -19,7 +22,7 @@ type Options = {
   enabled?: boolean;
 };
 
-/** 予想 TREND: 両チームの `/api/nba/team-detail`（チーム詳細と共有キャッシュ） */
+/** 予想 TREND: `/api/nba/matchup-detail`（STATS と共有。team-detail×2 はしない） */
 export function useNbaMatchupTrend(options: Options): {
   trend: NbaMatchupTrend | null;
   loading: boolean;
@@ -31,24 +34,53 @@ export function useNbaMatchupTrend(options: Options): {
   const tipAtMs = options.tipAtMs ?? null;
   const enabled = options.enabled ?? true;
   const want = enabled && !!homeTeamId && !!awayTeamId;
-  const [trend, setTrend] = useState<NbaMatchupTrend | null>(null);
-  const [loading, setLoading] = useState(want);
+  const fetchOpts = { homeTeamId, awayTeamId, season, apiBaseUrl };
+  const peeked = want ? peekMatchupDetailBundle(fetchOpts) : null;
+  const peekedTrend =
+    peeked?.trendHome || peeked?.trendAway
+      ? buildMatchupTrend({
+          home: peeked.trendHome ?? null,
+          away: peeked.trendAway ?? null,
+          tipAtMs,
+        })
+      : null;
+  const [trend, setTrend] = useState<NbaMatchupTrend | null>(peekedTrend);
+  const [loading, setLoading] = useState(want && !peekedTrend);
 
   useEffect(() => {
     if (!want) {
       setLoading(false);
       return;
     }
+    const hit = peekMatchupDetailBundle(fetchOpts);
+    if (hit?.trendHome || hit?.trendAway) {
+      setTrend(
+        buildMatchupTrend({
+          home: hit.trendHome ?? null,
+          away: hit.trendAway ?? null,
+          tipAtMs,
+        })
+      );
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
-    const load = (teamId: string) =>
-      fetchTeamDetailBundle({ teamId, season, apiBaseUrl }).catch(() => null);
-    Promise.all([load(homeTeamId), load(awayTeamId)])
-      .then(([home, away]) => {
+    fetchMatchupDetailBundle(fetchOpts)
+      .then((payload) => {
         if (cancelled) return;
         setTrend(
-          home || away ? buildMatchupTrend({ home, away, tipAtMs }) : null
+          payload.trendHome || payload.trendAway
+            ? buildMatchupTrend({
+                home: payload.trendHome ?? null,
+                away: payload.trendAway ?? null,
+                tipAtMs,
+              })
+            : null
         );
+      })
+      .catch(() => {
+        if (!cancelled) setTrend(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -58,5 +90,5 @@ export function useNbaMatchupTrend(options: Options): {
     };
   }, [want, homeTeamId, awayTeamId, season, apiBaseUrl, tipAtMs]);
 
-  return { trend, loading };
+  return { trend: trend ?? peekedTrend, loading };
 }

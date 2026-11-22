@@ -279,7 +279,7 @@ export default function NbaPredictToolsTabsNative({
     awayTeamId,
     override: teamStats,
     apiBaseUrl,
-    enabled: visited.has("info"),
+    enabled: visited.has("info") || visited.has("trend"),
   });
   const { roster: liveRoster } = useNbaMatchupRoster({
     homeTeamId,
@@ -439,6 +439,16 @@ export default function NbaPredictToolsTabsNative({
                   homeTeamId={homeTeamId}
                   awayTeamId={awayTeamId}
                   language={language}
+                  homeForm={
+                    resolvedStats?.season.home.recentFormGames ??
+                    resolvedStats?.last10.home.recentFormGames ??
+                    []
+                  }
+                  awayForm={
+                    resolvedStats?.season.away.recentFormGames ??
+                    resolvedStats?.last10.away.recentFormGames ??
+                    []
+                  }
                 />
               </View>
             ) : trendLoading ? (

@@ -57,7 +57,7 @@ function isSamePlayoffSeriesMatchup(
   return setA.has(hb) && setA.has(ab);
 }
 
-async function fetchPlayoffSeriesPeerGamesAdmin(
+export async function fetchPlayoffSeriesPeerGamesAdmin(
   db: Firestore,
   subject: Record<string, unknown> & { id?: string },
   selectFields?: readonly string[]

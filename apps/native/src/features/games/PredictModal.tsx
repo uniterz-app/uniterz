@@ -58,8 +58,6 @@ import MatchListLineFrameNative from "./MatchListLineFrameNative";
 import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import { toDateOrNull } from "@/lib/games/transform";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
-import PredictMatchLast5PagerNative from "./predict/PredictMatchLast5PagerNative";
-import { normalizeLeague } from "../../../../../lib/leagues";
 import { isProInsightPreseasonPhase } from "../../../../../lib/predict/proInsightGateCopy";
 import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
@@ -244,7 +242,6 @@ export function PredictMatchPreview({
   resultFace = null,
   resultFaceLive = false,
   resultFaceLiveScore = null,
-  h2hSource = null,
 }: {
   data: PredictModalMatchPreview;
   onClose: () => void;
@@ -270,8 +267,6 @@ export function PredictMatchPreview({
   /** WC 以外・予想済み：リザルト一覧・詳細と同じカード面 */
   resultFace?: ResultCardFaceModel | null;
   resultFaceLive?: boolean;
-  /** 横スライドの H2H 用（H2H タブと同じ元データ） */
-  h2hSource?: { subject: NativeGameRow; peers: ReadonlyArray<NativeGameRow> } | null;
   /** LIVE 中の実スコア（liveStats） */
   resultFaceLiveScore?: {
     home: number;
@@ -363,13 +358,6 @@ export function PredictMatchPreview({
   );
   const wcBroadcastSep = language === "ja" ? "：" : ": ";
 
-  /** NBA の両チーム表示はボタンで LAST 5 / H2H へ（チュートリアル・WC は対象外） */
-  const showLast5Pager =
-    !isWcLeague &&
-    !tutorialMode &&
-    normalizeLeague(leagueRaw) === "nba" &&
-    Boolean(homeTeamId) &&
-    Boolean(awayTeamId);
   const sidesBlock = (
         <TutorialTargetNative id="predict-sides">
         <View style={s.matchPreviewGrid}>
@@ -616,20 +604,7 @@ export function PredictMatchPreview({
 
   const previewBody = (
       <View pointerEvents="box-none" style={s.matchPreviewPaddedContent}>
-        {showLast5Pager ? (
-          <PredictMatchLast5PagerNative
-            homeTeamId={homeTeamId ?? ""}
-            awayTeamId={awayTeamId ?? ""}
-            homeAccent={overlayMarketBar?.homeColor ?? data.homePalette.primary}
-            awayAccent={overlayMarketBar?.awayColor ?? data.awayPalette.primary}
-            apiBaseUrl={getUniterzApiBaseUrl()}
-            h2hSource={h2hSource}
-          >
-            {sidesBlock}
-          </PredictMatchLast5PagerNative>
-        ) : (
-          sidesBlock
-        )}
+        {sidesBlock}
         {scheduleMeta &&
         !mergedFinal &&
         scheduleMeta.broadcastLabels.length > 0 ? (
@@ -743,23 +718,6 @@ export function PredictMatchPreview({
           live={resultFaceLive}
           liveScore={resultFaceLiveScore}
           tutorialMetricsTargetId="result-detail-metrics"
-          wrapMatch={
-            showLast5Pager
-              ? (match) => (
-                  <PredictMatchLast5PagerNative
-                    homeTeamId={homeTeamId ?? ""}
-                    awayTeamId={awayTeamId ?? ""}
-                    homeAccent={overlayMarketBar?.homeColor ?? data.homePalette.primary}
-                    awayAccent={overlayMarketBar?.awayColor ?? data.awayPalette.primary}
-                    apiBaseUrl={getUniterzApiBaseUrl()}
-                    h2hSource={h2hSource}
-                    jerseyAnchor={{ top: 26, size: 42, sideWidth: 92, inset: 14 }}
-                  >
-                    {match}
-                  </PredictMatchLast5PagerNative>
-                )
-              : undefined
-          }
         />
       ) : (
       <TutorialTargetNative id="predict-round">
@@ -2039,11 +1997,6 @@ export default function PredictModal({
                         myPostId={myPostId}
                         resultFace={overlayResultFace}
                         resultFaceLive={overlayResultFaceLive}
-                        h2hSource={
-                          predictData
-                            ? { subject: predictData.subjectGame, peers: predictData.peerGames }
-                            : null
-                        }
                         resultFaceLiveScore={
                           liveStatsReport
                             ? {

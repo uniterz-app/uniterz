@@ -32,6 +32,7 @@ const ROUTE_PAGES: Record<string, { title: string; path: string }> = {
   GamePredictions: { title: "Predictions", path: "games/predictions" },
   Standings: { title: "Standings", path: "games/standings" },
   DailyLeaders: { title: "Today Leaders", path: "games/today" },
+  TradeBuzz: { title: "Trade Buzz", path: "games/buzz" },
   NbaAsk: { title: "Ask", path: "games/ask" },
   TeamDetail: { title: "Team Detail", path: "team" },
   TeamDetailPreview: { title: "Team Detail", path: "team" },

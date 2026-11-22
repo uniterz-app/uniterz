@@ -1,7 +1,8 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
+import { unstable_cache } from "next/cache";
+import { getNbaPublicReadDb, nbaDocCacheTags } from "@/lib/nba/nbaPublicReadDb";
 import { playerStatLeadersCacheControl } from "@/lib/nba/playerStatLeaders/playerStatLeadersCacheControl";
 import {
   loadPlayerStatLeadersSnapshot,
@@ -30,14 +31,27 @@ export async function GET(req: Request) {
       ? normalizePlayerStatLeadersSeasonKey(rawSeason)
       : (await resolveNbaStatsDisplaySeasonKey(db, null)).seasonKey;
 
-    const [base, discipline] = await Promise.all([
-      loadPlayerStatLeadersSnapshot(db, season),
-      loadNbaDisciplineSnapshot(db, season),
-    ]);
-    const payload = {
-      ...base,
-      bundle: applyDisciplineToPlayerLeadersBundle(base.bundle, discipline),
-    };
+    const payload = await unstable_cache(
+      async () => {
+        const adminDb = getNbaPublicReadDb();
+        const [base, discipline] = await Promise.all([
+          loadPlayerStatLeadersSnapshot(adminDb, season),
+          loadNbaDisciplineSnapshot(adminDb, season),
+        ]);
+        return {
+          ...base,
+          bundle: applyDisciplineToPlayerLeadersBundle(base.bundle, discipline),
+        };
+      },
+      ["nba-league-player-stats", season],
+      {
+        revalidate: 300,
+        tags: [
+          "nba-league-player-stats",
+          ...nbaDocCacheTags(["nbaLeaguePlayerStats", "nbaDiscipline"]),
+        ],
+      }
+    )();
     return NextResponse.json(payload, {
       headers: {
         ...NBA_DISCIPLINE_CDN_TAG_HEADER,

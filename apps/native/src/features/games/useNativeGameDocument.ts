@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import { fetchPlayoffSeriesPeerGames } from "../../../../../lib/games/fetchPlayoffSeriesPeerGames";
+import { fetchPublicGameDoc } from "../../../../../lib/games/fetchPublicGameDoc";
+import { getUniterzApiBaseUrl } from "./submitPredictionApi";
 import type { NativeGameRow } from "./useTodayGames";
 
 export function useNativeGameDocument(gameId: string | undefined) {
@@ -25,18 +24,20 @@ export function useNativeGameDocument(gameId: string | undefined) {
 
     void (async () => {
       try {
-        const snap = await getDoc(doc(db, "games", gameId));
+        const { exists, game: raw, peers } = await fetchPublicGameDoc({
+          gameId,
+          view: "slim",
+          includePeers: true,
+          apiBaseUrl: getUniterzApiBaseUrl(),
+        });
         if (cancelled) return;
-        if (!snap.exists()) {
+        if (!exists || !raw) {
           setGame(null);
           setPeerGames([]);
           setNotFound(true);
           return;
         }
-        const raw = { id: snap.id, ...snap.data() } as NativeGameRow;
-        const peers = await fetchPlayoffSeriesPeerGames(raw as Record<string, unknown>);
-        if (cancelled) return;
-        setGame(raw);
+        setGame(raw as NativeGameRow);
         setPeerGames(peers as NativeGameRow[]);
       } catch {
         if (cancelled) return;

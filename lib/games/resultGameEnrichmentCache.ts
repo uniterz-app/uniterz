@@ -1,18 +1,11 @@
 /**
  * Result list enrichment: games をまとめて取り、market / pk / detail 用にキャッシュする。
  */
-import {
-  collection,
-  documentId,
-  getDocs,
-  query,
-  where,
-  type Firestore,
-} from "firebase/firestore";
+import { type Firestore } from "firebase/firestore";
 import { resolvePkScore, type PkScore } from "@/lib/games/pkScore";
+import { fetchPublicGameDocs } from "@/lib/games/fetchPublicGameDoc";
 import { primeGameDocCacheForResult } from "@/lib/result/resultDetailFirestoreCache";
 
-const CHUNK = 30;
 const ENRICH_TTL_MS = 2 * 60 * 1000;
 
 export type GameMarketRates = {
@@ -157,7 +150,7 @@ function primeEnrichmentCaches(
 }
 
 async function fetchMissingGameDocs(
-  db: Firestore,
+  _db: Firestore,
   gameIds: readonly string[]
 ): Promise<Record<string, Record<string, unknown>>> {
   const ids = [...new Set(gameIds.filter(Boolean))].sort();
@@ -168,38 +161,13 @@ async function fetchMissingGameDocs(
   if (pending) return pending;
 
   const promise = (async () => {
-    const out: Record<string, Record<string, unknown>> = {};
-    const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      chunks.push(ids.slice(i, i + CHUNK));
+    const games = await fetchPublicGameDocs({ gameIds: ids });
+    for (const id of ids) {
+      const data = games[id] ?? null;
+      primeGameDocCacheForResult(id, data, data != null);
+      primeEnrichmentCaches(id, data);
     }
-
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        try {
-          const snap = await getDocs(
-            query(collection(db, "games"), where(documentId(), "in", chunk))
-          );
-          const found = new Set<string>();
-          for (const docSnap of snap.docs) {
-            found.add(docSnap.id);
-            const data = docSnap.data() as Record<string, unknown>;
-            out[docSnap.id] = data;
-            primeGameDocCacheForResult(docSnap.id, data, true);
-            primeEnrichmentCaches(docSnap.id, data);
-          }
-          for (const id of chunk) {
-            if (!found.has(id)) {
-              primeGameDocCacheForResult(id, null, false);
-              primeEnrichmentCaches(id, null);
-            }
-          }
-        } catch {
-          /* 呼び出し側フォールバック */
-        }
-      })
-    );
-    return out;
+    return games;
   })().finally(() => {
     docsInflight.delete(key);
   });

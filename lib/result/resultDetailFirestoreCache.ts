@@ -9,6 +9,10 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import {
+  fetchPublicGameDoc,
+  primePublicGameDocCache,
+} from "@/lib/games/fetchPublicGameDoc";
+import {
   nbaRegularSeasonWinsLosses,
   type NbaTeamRecordFields,
 } from "@/lib/nbaRegularSeasonRecord";
@@ -37,6 +41,7 @@ export function primeGameDocCacheForResult(
   const safeId = gameId.trim();
   if (!safeId) return;
   gameDocCache.set(safeId, { at: Date.now(), exists, data });
+  primePublicGameDocCache(safeId, data, exists);
 }
 
 /** 同期 peek（TTL 内）。一覧カードの名前解決用。未ヒットは null */
@@ -53,7 +58,8 @@ export function peekGameDocCacheForResult(
 
 export async function getCachedGameDocForResult(
   gameId: string,
-  firestore: Firestore
+  _firestore: Firestore,
+  apiBaseUrl?: string | null
 ): Promise<{ exists: boolean; data: Record<string, unknown> | null }> {
   const safeId = gameId.trim();
   if (!safeId) return { exists: false, data: null };
@@ -67,12 +73,15 @@ export async function getCachedGameDocForResult(
   const pending = gameDocInflight.get(safeId);
   if (pending) return pending;
 
-  const promise = getDoc(doc(firestore, "games", safeId))
-    .then((snap) => {
-      const exists = snap.exists();
-      const data = exists ? (snap.data() as Record<string, unknown>) : null;
-      gameDocCache.set(safeId, { at: Date.now(), exists, data });
-      return { exists, data };
+  const promise = fetchPublicGameDoc({
+    gameId: safeId,
+    view: "full",
+    includePeers: false,
+    apiBaseUrl,
+  })
+    .then(({ exists, game }) => {
+      gameDocCache.set(safeId, { at: Date.now(), exists, data: game });
+      return { exists, data: game };
     })
     .finally(() => {
       gameDocInflight.delete(safeId);

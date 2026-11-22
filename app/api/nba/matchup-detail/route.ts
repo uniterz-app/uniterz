@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
-import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
+import { getNbaPublicReadDb, nbaDocCacheTags } from "@/lib/nba/nbaPublicReadDb";
 import { nbaInjurySnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadMatchupDetailBundle } from "@/lib/nba/predict/loadMatchupDetailBundle";
 import {
@@ -43,7 +43,16 @@ export async function GET(req: Request) {
       ["nba-matchup-detail", season, home, away],
       {
         revalidate: NBA_INJURY_API_CACHE_REVALIDATE_SEC,
-        tags: [NBA_INJURY_API_CACHE_TAG],
+        tags: [
+          NBA_INJURY_API_CACHE_TAG,
+          ...nbaDocCacheTags([
+            "nbaTeamInjuries",
+            "nbaTeamRosters",
+            "nbaLeagueTeamStats",
+            "nbaTeamGameLogs",
+            "nbaStandings",
+          ]),
+        ],
       }
     )();
 

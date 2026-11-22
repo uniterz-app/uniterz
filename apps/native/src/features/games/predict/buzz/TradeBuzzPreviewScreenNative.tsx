@@ -1,11 +1,13 @@
 /**
- * __DEV__ — トレード Buzz / 確定トレードの UI モック。
- * Buzz を見るとき Free は本物のリワード広告（サーバーで解除を確認・日本時間 0 時まで有効）、Pro はスキップ。確定タブは広告なし。
+ * トレード Buzz / 確定トレード。
+ * Buzz を見るとき Free はリワード広告（サーバーで解除を確認・日本時間 0 時まで有効）、Pro はスキップ。確定タブは広告なし。
  */
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MobilePageShell from "../../../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../../../auth/FirebaseUserProvider";
+import { useNativeUserPlan } from "../../../../hooks/useNativeUserPlan";
+import { openProSubscribeNative } from "../../../../navigation/navigationRef";
 import { showTradeBuzzRewardedAdNative } from "../../../ads/proPickRewardedAdNative";
 import { fetchTradeBuzzUnlockNative } from "./tradeBuzzUnlockApiNative";
 import NbaTradeBuzzFeedNative from "./NbaTradeBuzzFeedNative";
@@ -14,12 +16,19 @@ import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
 } from "../../../rankings/CyberSlantedTabNative";
-import {
-  NBA_TRADE_BUZZ_AS_OF_JST,
-  NBA_TRADE_BUZZ_CURATED,
-} from "../../../../../../../lib/predict/nbaTradeBuzzCurated";
 import { cyberAlert } from "../../../../components/cyberAlert";
 import { useBottomTabBarInsets } from "../../../../navigation/useBottomTabBarInsets";
+import { useTradeBuzzUnreadNative } from "./useTradeBuzzUnreadNative";
+import BuzzTeamFilterRowNative from "./BuzzTeamFilterRowNative";
+import { useMyNbaFavoritesNative } from "../../../profile/useMyNbaFavoritesNative";
+import {
+  nbaConfirmedTradeTeamAbbrs,
+  nbaFavoriteTeamAbbr,
+  nbaTradeBuzzItemTeamAbbrs,
+  sortNbaTeamFilterAbbrs,
+  uniqueNbaTeamAbbrs,
+} from "../../../../../../../lib/predict/nbaTradeBuzzTeamFilter";
+
 type Mode = "buzz" | "confirmed";
 
 type Props = {
@@ -31,16 +40,39 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
+  const { isPro: planPro } = useNativeUserPlan(fUser?.uid);
   const [mode, setMode] = useState<Mode>("buzz");
-  /** DEV: Free / Pro 切替 */
-  const [isPro, setIsPro] = useState(false);
+  const [teamAbbr, setTeamAbbr] = useState<string | null>(null);
+  /** DEV だけ Free / Pro を切り替えてゲートを確認する */
+  const [devPro, setDevPro] = useState(false);
+  const isPro = planPro || (__DEV__ && devPro);
   /** 今日（日本時間）の解除があるか（サーバーの判定） */
   const [buzzUnlocked, setBuzzUnlocked] = useState(false);
   const [adPlaying, setAdPlaying] = useState(false);
 
   const nowMs = useMemo(() => Date.now(), []);
+  const { markSeen, items, confirmed, asOfJst } = useTradeBuzzUnreadNative({
+    body: true,
+  });
+  const { favorites } = useMyNbaFavoritesNative();
+  const favoriteAbbr = nbaFavoriteTeamAbbr(favorites.favoriteNbaTeamId);
+  const teamAbbrs = useMemo(
+    () =>
+      sortNbaTeamFilterAbbrs(
+        uniqueNbaTeamAbbrs([
+          ...items.map(nbaTradeBuzzItemTeamAbbrs),
+          ...confirmed.map(nbaConfirmedTradeTeamAbbrs),
+        ]),
+        favoriteAbbr
+      ),
+    [items, confirmed, favoriteAbbr]
+  );
 
   const canSeeBuzz = isPro || buzzUnlocked;
+
+  useEffect(() => {
+    if (canSeeBuzz) markSeen();
+  }, [canSeeBuzz, markSeen]);
 
   // 開いたとき、サーバーに今日の解除があるか確認する（前に見ていれば広告は出さない）
   useEffect(() => {
@@ -89,30 +121,24 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
   };
 
   return (
-    <MobilePageShell title="トレード Buzz（DEV）" appBackground onClose={onClose}>
+    <MobilePageShell title="トレード Buzz" appBackground onClose={onClose}>
       <ScrollView
         contentContainerStyle={[
           styles.pad,
           { paddingBottom: bottomContentReserveY + 24 },
         ]}
       >
-        <View style={styles.banner}>
-          <Text style={styles.bannerTitle}>DEV</Text>
-          <Text style={styles.bannerBody}>
-            Buzz を見たいとき、Free は先に広告（本物のリワード広告・サーバーで確認）。Pro は広告なしでそのまま。確定タブは広告なし。一度解除すれば日本時間 0 時まで再表示しない。Buzz は取材メモ（手入力）、確定は公式発表のみ。
-          </Text>
+        {__DEV__ ? (
           <Pressable
-            onPress={() => {
-                setIsPro((v) => !v);
-            }}
-            style={styles.toggleBtn}
+            onPress={() => setDevPro((v) => !v)}
+            style={styles.banner}
             accessibilityRole="button"
           >
             <Text style={styles.toggle}>
-              {isPro ? "いま: Pro（広告なし） · tap" : "いま: Free（広告あり） · tap"}
+              {isPro ? "DEV · Pro" : "DEV · Free"}
             </Text>
           </Pressable>
-        </View>
+        ) : null}
 
         <View style={{ marginBottom: 14 }}>
           <CyberSlantedTabBarNative fill>
@@ -133,12 +159,24 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
           </CyberSlantedTabBarNative>
         </View>
 
+        {canSeeBuzz || mode === "confirmed" ? (
+          <View style={{ marginBottom: 14 }}>
+            <BuzzTeamFilterRowNative
+              abbrs={teamAbbrs}
+              selected={teamAbbr}
+              favoriteAbbr={favoriteAbbr}
+              onSelect={setTeamAbbr}
+            />
+          </View>
+        ) : null}
+
         {mode === "buzz" ? (
           canSeeBuzz ? (
             <NbaTradeBuzzFeedNative
-              items={NBA_TRADE_BUZZ_CURATED}
+              items={items}
+              teamAbbr={teamAbbr}
               nowMs={nowMs}
-              asOfLabel={NBA_TRADE_BUZZ_AS_OF_JST}
+              asOfLabel={asOfJst}
               showAdSlot={false}
             />
           ) : (
@@ -160,17 +198,22 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
               </Pressable>
               <Pressable
                 onPress={() => {
-                  setIsPro(true);
+                  if (__DEV__) setDevPro(true);
+                  else openProSubscribeNative("trade_buzz");
                 }}
                 style={styles.gateProLink}
               >
-                <Text style={styles.gateProText}>Pro にする（広告スキップ）</Text>
+                <Text style={styles.gateProText}>
+                  {__DEV__ ? "Pro にする（広告スキップ）" : "Pro で広告なし"}
+                </Text>
               </Pressable>
             </View>
           )
         ) : null}
 
-        {mode === "confirmed" ? <NbaTradeConfirmedFeedNative /> : null}
+        {mode === "confirmed" ? (
+          <NbaTradeConfirmedFeedNative trades={confirmed} teamAbbr={teamAbbr} />
+        ) : null}
       </ScrollView>
     </MobilePageShell>
   );
@@ -184,45 +227,16 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   banner: {
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(0,245,255,0.25)",
-    backgroundColor: "rgba(0,245,255,0.06)",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  bannerTitle: {
-    fontFamily: OX,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.4,
-    color: "rgba(0,245,255,0.9)",
-    textTransform: "uppercase",
-  },
-  bannerBody: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: "rgba(255,255,255,0.5)",
-  },
-  toggleBtn: {
     alignSelf: "flex-start",
-    paddingVertical: 2,
+    marginBottom: 12,
+    paddingVertical: 4,
   },
   toggle: {
     fontFamily: OX,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.8,
-    color: "rgba(165,243,252,0.95)",
-    textTransform: "uppercase",
-  },
-  toggleMuted: {
-    fontFamily: OX,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(165,243,252,0.85)",
     textTransform: "uppercase",
   },
   gate: {

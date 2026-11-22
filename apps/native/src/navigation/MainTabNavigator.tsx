@@ -68,6 +68,7 @@ import StoreReviewLaunchHostNative from "../features/games/StoreReviewLaunchHost
 import UnitEarnLaunchHostNative from "../features/units/UnitEarnLaunchHostNative";
 import SeasonPredictCrowdLaunchHostNative from "../features/games/predict/season/SeasonPredictCrowdLaunchHostNative";
 import AppAnalyticsUserHostNative from "../analytics/AppAnalyticsUserHostNative";
+import AskFabNative from "../features/games/ask/AskFabNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -258,6 +259,7 @@ export default function MainTabNavigator() {
             <Tab.Screen name="ProfileTab" component={ProfileStackScreen} />
           </Tab.Navigator>
         </View>
+        <AskFabNative />
         {shelfRendered ? (
           <View
             pointerEvents="none"

@@ -82,7 +82,8 @@ export async function loadResultPostDoc(
 /** posts + games（キャッシュ付き）。追加 BDL なし */
 export async function loadResultPostDetail(
   postId: string,
-  firestore: Firestore
+  firestore: Firestore,
+  apiBaseUrl?: string | null
 ): Promise<LoadResultPostDetailResult> {
   const post = await loadResultPostDoc(postId, firestore);
   if (!post) {
@@ -103,7 +104,8 @@ export async function loadResultPostDetail(
 
   const { exists: gameExists, data: gameData } = await getCachedGameDocForResult(
     gid,
-    firestore
+    firestore,
+    apiBaseUrl
   );
 
   if (!gameExists || !gameData) {

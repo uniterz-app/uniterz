@@ -38,7 +38,9 @@ export type GamesStackParamList = {
   Standings: undefined;
   /** 今日の試合のスタッツリーダー（Games 右端 TODAY） */
   DailyLeaders: undefined;
-  /** NBA スタッツを AI に質問するチャット（Games ヘッダー右上） */
+  /** トレード Buzz / 確定トレード（Games 右端 BUZZ） */
+  TradeBuzz: undefined;
+  /** NBA スタッツを AI に質問するチャット（Games 右下 ASK） */
   NbaAsk: undefined;
   TeamDetail: { teamId: string };
   PlayoffBracket: undefined;
@@ -223,7 +225,6 @@ export type ProfileStackParamList = {
   Help: undefined;
   Privacy: undefined;
   Terms: undefined;
-  RefundPolicy: undefined;
   CommercialLaw: undefined;
   ElectronicNotice: undefined;
   Contact: undefined;

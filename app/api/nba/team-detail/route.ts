@@ -1,10 +1,15 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { getNbaPublicReadDb } from "@/lib/nba/nbaPublicReadDb";
+import { unstable_cache } from "next/cache";
+import { getNbaPublicReadDb, nbaDocCacheTags } from "@/lib/nba/nbaPublicReadDb";
 import { nbaStatsSnapshotCacheControl } from "@/lib/nba/nbaStatsSnapshotCacheControl";
 import { loadTeamDetailBundle } from "@/lib/nba/teamDetail/loadTeamDetailBundle";
 import { NBA_DISCIPLINE_CDN_TAG_HEADER } from "@/lib/nba/discipline/nbaDisciplineApiCache";
+import {
+  NBA_INJURY_API_CACHE_REVALIDATE_SEC,
+  NBA_INJURY_API_CACHE_TAG,
+} from "@/lib/nba/teamInjuries/nbaInjuryApiCache";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 /**
@@ -29,10 +34,32 @@ export async function GET(req: Request) {
       );
     }
 
-    const payload = await loadTeamDetailBundle(getNbaPublicReadDb(), {
-      teamId,
-      seasonKey: season,
-    });
+    const payload = await unstable_cache(
+      () =>
+        loadTeamDetailBundle(getNbaPublicReadDb(), {
+          teamId,
+          seasonKey: season,
+        }),
+      ["nba-team-detail", season, teamId],
+      {
+        revalidate: NBA_INJURY_API_CACHE_REVALIDATE_SEC,
+        tags: [
+          ...nbaDocCacheTags([
+            "nbaTeamRosters",
+            "nbaTeamPayrolls",
+            "nbaTeamInjuries",
+            "nbaTeamGameLogs",
+            "nbaStandings",
+            "nbaTeamSeasonRecords",
+            "nbaTeamShapeRecords",
+            "nbaTeamAceOutRecords",
+            "nbaTeamOffseasonMoves",
+            "nbaDiscipline",
+          ]),
+          NBA_INJURY_API_CACHE_TAG,
+        ],
+      }
+    )();
 
     return NextResponse.json(payload, {
       headers: {

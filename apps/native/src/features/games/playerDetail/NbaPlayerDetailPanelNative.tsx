@@ -1814,6 +1814,13 @@ export default function NbaPlayerDetailPanelNative({
           regular={detail.careerSeasons.regular}
           playoffs={detail.careerSeasons.playoffs}
           accent={accent}
+          currentSeasonStart={Number.parseInt(
+            (
+              detail.asOfLabel?.match(/(\d{4}-\d{2})/)?.[1] ??
+              CURRENT_NBA_SEASON_KEY
+            ).slice(0, 4),
+            10
+          )}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />

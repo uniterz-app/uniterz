@@ -1,6 +1,6 @@
 /**
- * 画面表示を GA4（Measurement Protocol・Web ストリーム）へ送る。
- * 開発ビルドと、計測 ID / API シークレットが無いビルドでは何もしない。
+ * 画面表示を GA4 へ送る。API secret はクライアントに載せず `/api/analytics/ga4` 経由。
+ * 開発ビルドと API ベース URL が無いビルドでは何もしない。
  * Web ストリームでは screen_view が使えないため page_view で送る。
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,10 +8,11 @@ import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { AppState, Dimensions, PixelRatio, Platform, type AppStateStatus } from "react-native";
 
-const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GA4_MEASUREMENT_ID ?? "";
-const API_SECRET = process.env.EXPO_PUBLIC_GA4_API_SECRET ?? "";
-const ENDPOINT = "https://www.google-analytics.com/mp/collect";
 const PAGE_ORIGIN = "https://app.uniterz.app";
+const API_BASE = (process.env.EXPO_PUBLIC_UNITERZ_API_BASE_URL ?? "").replace(
+  /\/$/,
+  ""
+);
 const CLIENT_ID_KEY = "uniterz.ga4.clientId.v1";
 /** GA4 の既定と同じ。これより長くバックグラウンドにいたら次の表示から新しいセッション */
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
@@ -19,7 +20,7 @@ const FLUSH_DELAY_MS = 10_000;
 /** Measurement Protocol の 1 リクエスト上限 */
 const MAX_BATCH = 25;
 
-const enabled = !__DEV__ && MEASUREMENT_ID !== "" && API_SECRET !== "";
+const enabled = !__DEV__ && API_BASE !== "";
 
 type QueuedEvent = { name: string; params: Record<string, string | number> };
 
@@ -139,7 +140,7 @@ async function flush(): Promise<void> {
   };
   if (userId) base.user_id = userId;
   if (plan) base.user_properties = { plan: { value: plan } };
-  const url = `${ENDPOINT}?measurement_id=${encodeURIComponent(MEASUREMENT_ID)}&api_secret=${encodeURIComponent(API_SECRET)}`;
+  const url = `${API_BASE}/api/analytics/ga4`;
   for (const events of batches) {
     try {
       await fetch(url, {

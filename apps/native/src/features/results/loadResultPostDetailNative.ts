@@ -2,6 +2,7 @@
  * Native 向けラッパ — 実体は `loadResultPostDetail`（Firestore 共用）。
  */
 import { db } from "../../lib/firebase";
+import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import {
   buildResultDetailViewFromLoad,
   buildWarmResultDetailViewFromPost,
@@ -23,5 +24,5 @@ export {
 export async function loadResultPostDetailNative(
   postId: string
 ): Promise<LoadResultPostDetailNativeResult> {
-  return loadResultPostDetail(postId, db);
+  return loadResultPostDetail(postId, db, getUniterzApiBaseUrl());
 }

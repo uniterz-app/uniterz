@@ -13,6 +13,10 @@ import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey
 import { loadMatchupRosters } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { loadTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { loadTeamGameLog } from "@/lib/nba/teamGameLog/loadTeamGameLog";
+import { loadTeamGameLogDetail } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
+import { loadNbaConferenceStandings } from "@/lib/nba/standings/loadNbaConferenceStandings";
+import { findNbaConferenceStandingsRow } from "@/lib/nba/standings/findNbaConferenceStandingsRow";
+import type { NbaMatchupTrendSource } from "@/lib/nba/predict/buildMatchupTrend";
 import { loadLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { enrichLeagueTeamStatsBundle } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 import { buildMatchupTeamStatsBundle } from "@/lib/nba/predict/buildMatchupTeamStatsBundle";
@@ -41,6 +45,9 @@ export type NbaMatchupDetailApiPayload = {
   injuryAway: NbaTeamInjuryEntry[];
   injuryUpdatedAt: string | null;
   stats: NbaTeamStatsBundle;
+  /** 予想 TREND の材料。tipAtMs はクライアントで当てる */
+  trendHome?: NbaMatchupTrendSource;
+  trendAway?: NbaMatchupTrendSource;
   source: NbaStatsSnapshotSource;
   updatedAt: string | null;
 };
@@ -82,13 +89,24 @@ export async function loadMatchupDetailBundle(
     ? statsDisplay.calendarSeasonKey
     : statsSeason;
 
-  const [rosterPayload, injurySnap, leaguePayload, homeLogPayload, awayLogPayload] =
-    await Promise.all([
+  const [
+    rosterPayload,
+    injurySnap,
+    leaguePayload,
+    homeLogPayload,
+    awayLogPayload,
+    homeLogDetail,
+    awayLogDetail,
+    standingsPayload,
+  ] = await Promise.all([
       loadMatchupRosters(db, liveSeason, homeTeamId, awayTeamId),
       loadTeamInjuriesSnapshot(db, liveSeason),
       loadLeagueTeamStatsSnapshot(db, statsSeason),
       loadTeamGameLog(db, formSeason, homeTeamId),
       loadTeamGameLog(db, formSeason, awayTeamId),
+      loadTeamGameLogDetail(db, formSeason, homeTeamId),
+      loadTeamGameLogDetail(db, formSeason, awayTeamId),
+      loadNbaConferenceStandings(db, statsDisplay.calendarSeasonKey),
     ]);
 
   const roster = buildMatchupRosterReport(
@@ -138,10 +156,38 @@ export async function loadMatchupDetailBundle(
     leaguePayload.source,
     homeLogPayload.source,
     awayLogPayload.source,
+    standingsPayload.source === "firestore" ? "firestore" : "empty",
   ];
   const source: NbaStatsSnapshotSource = sources.some((s) => s === "firestore")
     ? "firestore"
     : "empty";
+
+  const stripDetail = (
+    detail: (typeof homeLogDetail)["detail"]
+  ): NbaMatchupTrendSource["gameLogDetail"] => {
+    if (!detail) return null;
+    const { positionDefense: _omit, ...rest } = detail;
+    return rest;
+  };
+
+  const trendHome: NbaMatchupTrendSource = {
+    season: formSeason,
+    gameLog: homeLogPayload.log,
+    gameLogDetail: stripDetail(homeLogDetail.detail),
+    standingsRow: findNbaConferenceStandingsRow(
+      standingsPayload.board,
+      homeTeamId
+    ),
+  };
+  const trendAway: NbaMatchupTrendSource = {
+    season: formSeason,
+    gameLog: awayLogPayload.log,
+    gameLogDetail: stripDetail(awayLogDetail.detail),
+    standingsRow: findNbaConferenceStandingsRow(
+      standingsPayload.board,
+      awayTeamId
+    ),
+  };
 
   return {
     ok: true,
@@ -155,13 +201,18 @@ export async function loadMatchupDetailBundle(
     injuryAway,
     injuryUpdatedAt: injurySnap.updatedAt,
     stats,
+    trendHome,
+    trendAway,
     source,
     updatedAt: newestIso(
       rosterPayload.updatedAt,
       injurySnap.updatedAt,
       leaguePayload.updatedAt,
       homeLogPayload.updatedAt,
-      awayLogPayload.updatedAt
+      awayLogPayload.updatedAt,
+      homeLogDetail.updatedAt,
+      awayLogDetail.updatedAt,
+      standingsPayload.updatedAt
     ),
   };
 }

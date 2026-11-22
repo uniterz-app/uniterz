@@ -1,4 +1,4 @@
-/** Web `GamesRightEdgeTabs` 相当 — STANDING / STATS / TODAY の縦タブ */
+/** Web `GamesRightEdgeTabs` 相当 — STANDING / STATS / TODAY / BUZZ の縦タブ */
 import { useEffect, useRef } from "react";
 import { PanResponder, StyleSheet, View } from "react-native";
 import Animated, {
@@ -46,8 +46,12 @@ type Props = {
   onOpenStanding: () => void;
   onOpenStats: () => void;
   onOpenToday?: () => void;
+  /** トレード Buzz（TODAY の下） */
+  onOpenBuzz?: () => void;
   /** TODAY UNITERZ に未読の更新あり（黄色の点） */
   todayUnread?: boolean;
+  /** トレード Buzz に未読の更新あり（黄色の点） */
+  buzzUnread?: boolean;
   hidden?: boolean;
   fadeIn?: boolean;
   /** STANDING + STATS まとめてチュートリアル穴 */
@@ -58,7 +62,9 @@ export default function GamesRightEdgeTabsNative({
   onOpenStanding,
   onOpenStats,
   onOpenToday,
+  onOpenBuzz,
   todayUnread = false,
+  buzzUnread = false,
   hidden = false,
   fadeIn = false,
   statsTutorialTargetId,
@@ -144,14 +150,29 @@ export default function GamesRightEdgeTabsNative({
             onOpen={onOpenStats}
           />
         </View>
-        {onOpenToday ? (
+        {onOpenToday || onOpenBuzz ? (
           <View style={styles.today} pointerEvents="box-none">
-            <ProfileMenuEdgeHandleNative
-              inline
-              label="TODAY"
-              onOpen={onOpenToday}
-              dotColor={todayUnread ? TODAY_UNITERZ_DOT_COLOR : null}
-            />
+            {onOpenToday ? (
+              <ProfileMenuEdgeHandleNative
+                inline
+                label="TODAY"
+                onOpen={onOpenToday}
+                dotColor={todayUnread ? TODAY_UNITERZ_DOT_COLOR : null}
+              />
+            ) : null}
+            {onOpenBuzz ? (
+              <View
+                style={onOpenToday ? styles.buzz : undefined}
+                pointerEvents="box-none"
+              >
+                <ProfileMenuEdgeHandleNative
+                  inline
+                  label="BUZZ"
+                  onOpen={onOpenBuzz}
+                  dotColor={buzzUnread ? TODAY_UNITERZ_DOT_COLOR : null}
+                />
+              </View>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -190,6 +211,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   today: {
+    position: "absolute",
+    right: 0,
+    top: "100%",
+    marginTop: 8,
+    zIndex: 1,
+  },
+  buzz: {
     position: "absolute",
     right: 0,
     top: "100%",

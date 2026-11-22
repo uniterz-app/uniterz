@@ -286,6 +286,8 @@ import GamesRightEdgeTabsNative from "./GamesRightEdgeTabsNative";
 import ProfileMenuEdgeHandleNative from "../profile/ProfileMenuEdgeHandleNative";
 import { useTodayUniterzUnreadNative } from "./stats/useTodayUniterzUnreadNative";
 import { TODAY_UNITERZ_POLL_MS } from "../../../../../lib/rankings/dailyScoreLeaders/todayUniterzUnread";
+import { useTradeBuzzUnreadNative } from "./predict/buzz/useTradeBuzzUnreadNative";
+import { fetchPublicGameDoc } from "../../../../../lib/games/fetchPublicGameDoc";
 import UniterzBrandShelfNative from "../UniterzBrandShelfNative";
 import GamesHeaderFilterButtonNative from "./GamesHeaderFilterButtonNative";
 import GamesCalendarSheetNative from "./GamesCalendarSheetNative";
@@ -660,6 +662,7 @@ export default function GamesHomeScreen({
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
   const { unread: todayUniterzUnread } = useTodayUniterzUnreadNative(TODAY_UNITERZ_POLL_MS);
+  const { unread: tradeBuzzUnread } = useTradeBuzzUnreadNative();
   const { topContentPadY } = useBottomTabBarInsets();
   const { fUser, status: authStatus } = useFirebaseUser();
   const { isPro: isProUser, loading: planLoading } = useNativeUserPlan(fUser?.uid);
@@ -2621,7 +2624,12 @@ export default function GamesHomeScreen({
 
     void (async () => {
       try {
-        const snap = await getDoc(doc(db, "games", gameId));
+        const loaded = await fetchPublicGameDoc({
+          gameId,
+          view: "slim",
+          includePeers: false,
+          apiBaseUrl: getUniterzApiBaseUrl(),
+        });
         if (cancelled) return;
         const postId = routeParams?.openPredictPostId?.trim();
         const seed = routeParams?.openPredictSeed;
@@ -2634,8 +2642,8 @@ export default function GamesHomeScreen({
           openPredictSeed: undefined,
           openPredictNbaToolsTab: undefined,
         });
-        if (!snap.exists()) return;
-        const raw = { id: gameId, ...snap.data() } as Record<string, unknown>;
+        if (!loaded.exists || !loaded.game) return;
+        const raw = loaded.game;
         if (expandScoreForm) {
           setExpandScoreFormWhenEditing(true);
         }
@@ -3721,7 +3729,9 @@ export default function GamesHomeScreen({
         onOpenStanding={() => navigation.navigate("Standings")}
         onOpenStats={() => navigation.navigate("LeagueStats", { tab: "team" })}
         onOpenToday={() => navigation.navigate("DailyLeaders")}
+        onOpenBuzz={() => navigation.navigate("TradeBuzz")}
         todayUnread={todayUniterzUnread}
+        buzzUnread={tradeBuzzUnread}
         statsTutorialTargetId="games-stats-edge"
         hidden={tutorialPhase === "welcome" || (batchMode && isProUser)}
         fadeIn
