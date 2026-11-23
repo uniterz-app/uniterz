@@ -102,6 +102,8 @@ type Props = {
   /** @deprecated use language */
   isJa?: boolean;
   bundle?: NbaLeagueTeamStatsBundle;
+  initialTab?: TeamHowTheyPlayTab;
+  initialTrackGroup?: (typeof TEAM_TRACK_GROUPS)[number]["id"];
 };
 
 export default function NbaTeamHowTheyPlayNative({
@@ -110,6 +112,8 @@ export default function NbaTeamHowTheyPlayNative({
   language,
   isJa,
   bundle,
+  initialTab,
+  initialTrackGroup,
 }: Props) {
   const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
   const { lang } = chrome;
@@ -117,11 +121,15 @@ export default function NbaTeamHowTheyPlayNative({
     () => (bundle ? getTeamHowTheyPlay(teamId, bundle) : null),
     [teamId, bundle]
   );
-  const [tab, setTab] = useState<TeamHowTheyPlayTab>("fourFactors");
+  const [tab, setTab] = useState<TeamHowTheyPlayTab>(
+    initialTab && TEAM_HOW_THEY_PLAY_TABS.some((t) => t.id === initialTab) ? initialTab : "fourFactors"
+  );
   const [factorId, setFactorId] = useState("efg");
   const [hustleId, setHustleId] = useState("deflections");
   const [trackId, setTrackId] = useState("drives");
-  const [trackGroup, setTrackGroup] = useState<(typeof TEAM_TRACK_GROUPS)[number]["id"]>("drive");
+  const [trackGroup, setTrackGroup] = useState<(typeof TEAM_TRACK_GROUPS)[number]["id"]>(
+    initialTrackGroup && TEAM_TRACK_GROUPS.some((g) => g.id === initialTrackGroup) ? initialTrackGroup : "drive"
+  );
   const [rebId, setRebId] = useState("boxOuts");
   if (!board) return null;
 

@@ -2045,6 +2045,10 @@ export default function ProfileHomeScreen({
           navigation.navigate("RankingCommentDesignPreview");
         else if (page === "monthlyBadgePreview" && __DEV__)
           navigation.navigate("MonthlyBadgePreview");
+        else if (page === "eventModalPreview" && __DEV__)
+          navigation.navigate("EventModalPreview");
+        else if (page === "proLabPreview" && __DEV__)
+          navigation.navigate("ProLabPreview");
       }}
     />
     <ProfileBadgeDetailModal

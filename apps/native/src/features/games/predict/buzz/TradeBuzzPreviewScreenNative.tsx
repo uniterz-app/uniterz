@@ -6,7 +6,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MobilePageShell from "../../../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../../../auth/FirebaseUserProvider";
+import { useNativeLanguage } from "../../../../i18n/NativeLanguageProvider";
 import { useNativeUserPlan } from "../../../../hooks/useNativeUserPlan";
+import TradeBuzzIntroModalNative from "./TradeBuzzIntroModalNative";
+import {
+  hasSeenTradeBuzzIntroNative,
+  markTradeBuzzIntroSeenNative,
+} from "./tradeBuzzIntroSeenNative";
 import { openProSubscribeNative } from "../../../../navigation/navigationRef";
 import { showTradeBuzzRewardedAdNative } from "../../../ads/proPickRewardedAdNative";
 import { fetchTradeBuzzUnlockNative } from "./tradeBuzzUnlockApiNative";
@@ -40,7 +46,9 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { fUser } = useFirebaseUser();
+  const { language } = useNativeLanguage();
   const { isPro: planPro } = useNativeUserPlan(fUser?.uid);
+  const [introOpen, setIntroOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("buzz");
   const [teamAbbr, setTeamAbbr] = useState<string | null>(null);
   /** DEV だけ Free / Pro を切り替えてゲートを確認する */
@@ -69,6 +77,21 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
   );
 
   const canSeeBuzz = isPro || buzzUnlocked;
+
+  useEffect(() => {
+    let cancelled = false;
+    void hasSeenTradeBuzzIntroNative().then((seen) => {
+      if (!cancelled && !seen) setIntroOpen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissIntro = () => {
+    setIntroOpen(false);
+    void markTradeBuzzIntroSeenNative();
+  };
 
   useEffect(() => {
     if (canSeeBuzz) markSeen();
@@ -122,6 +145,7 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
 
   return (
     <MobilePageShell title="トレード Buzz" appBackground onClose={onClose}>
+      <TradeBuzzIntroModalNative open={introOpen} language={language} onClose={dismissIntro} />
       <ScrollView
         contentContainerStyle={[
           styles.pad,
@@ -129,15 +153,24 @@ export default function TradeBuzzPreviewScreenNative({ onClose }: Props) {
         ]}
       >
         {__DEV__ ? (
-          <Pressable
-            onPress={() => setDevPro((v) => !v)}
-            style={styles.banner}
-            accessibilityRole="button"
-          >
-            <Text style={styles.toggle}>
-              {isPro ? "DEV · Pro" : "DEV · Free"}
-            </Text>
-          </Pressable>
+          <View style={styles.devRow}>
+            <Pressable
+              onPress={() => setDevPro((v) => !v)}
+              style={styles.banner}
+              accessibilityRole="button"
+            >
+              <Text style={styles.toggle}>
+                {isPro ? "DEV · Pro" : "DEV · Free"}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setIntroOpen(true)}
+              style={styles.banner}
+              accessibilityRole="button"
+            >
+              <Text style={styles.toggle}>DEV · 説明</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         <View style={{ marginBottom: 14 }}>
@@ -226,9 +259,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 8,
   },
+  devRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 12,
+  },
   banner: {
     alignSelf: "flex-start",
-    marginBottom: 12,
     paddingVertical: 4,
   },
   toggle: {

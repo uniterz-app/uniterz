@@ -262,7 +262,7 @@ function IdMetaCell({
   );
 }
 
-function PlayerIdCard({
+export function PlayerIdCard({
   detail,
   language,
 }: {
@@ -478,7 +478,7 @@ function ZoneStatLabel({
   );
 }
 
-function ShotZoneHeatmap({
+export function ShotZoneHeatmap({
   zones,
   accent,
   seasonLabel,
@@ -1066,7 +1066,7 @@ const CAREER_COLS_NATIVE: Array<{
 ];
 
 /** Web `SeasonHistoryTable` 相当 — BRef 風シーズン平均 */
-function SeasonHistorySection({
+export function SeasonHistorySection({
   playerId,
   regular,
   playoffs,
@@ -1324,7 +1324,7 @@ function SeasonHistorySection({
   );
 }
 
-function PlayerGameSplitsSectionNative({
+export function PlayerGameSplitsSectionNative({
   logs,
   seasonKey,
   accent,

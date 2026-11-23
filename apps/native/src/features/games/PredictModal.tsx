@@ -825,6 +825,8 @@ type PredictModalProps = {
   ) => void;
   /** Free の PRO INSIGHT ゲートから Get Pro へ（親で Modal を閉じてから遷移） */
   onOpenProSubscribe?: () => void;
+  /** この試合で初回無料が使える（送信後の案内用） */
+  onFirstFreeOffer?: (available: boolean) => void;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -933,6 +935,7 @@ export default function PredictModal({
   onOpenTeamDetail,
   onOpenPlayerDetail,
   onOpenProSubscribe,
+  onFirstFreeOffer,
 }: PredictModalProps) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
@@ -2082,6 +2085,8 @@ export default function PredictModal({
                       preseason={isProInsightPreseasonPhase(
                         predictData?.subjectGame?.seasonPhase
                       )}
+                      tutorialMode={tutorialMode}
+                      onFirstFreeOffer={onFirstFreeOffer}
                       crowd={
                         overlayMarketBar?.fallbackMarketBias &&
                         overlayMarketBar.predictionCount != null

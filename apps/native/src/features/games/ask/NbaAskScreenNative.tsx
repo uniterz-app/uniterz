@@ -3,7 +3,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Animated,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Linking,
   Pressable,
@@ -30,6 +29,9 @@ import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { nbaAskCopy } from "../../../../../../lib/nba/ask/nbaAskCopy";
 import { type NbaAskBoard } from "../../../../../../lib/nba/ask/nbaAskBoard";
 import AskGameCardNative from "./AskGameCardNative";
+import AskDetailViewNative from "./AskDetailViewNative";
+import { NbaTeamOffseasonMovesNative } from "../teamDetail/NbaTeamOffseasonMovesNative";
+import { getTeamUiAccentColor } from "../../../../../../lib/team-colors";
 import {
   nbaAskDestinationLabel,
   type NbaAskDestinationId,
@@ -40,6 +42,11 @@ import type {
   NbaAskTurnClient,
 } from "../../../../../../lib/nba/ask/nbaAskClient";
 import { askNbaStatsNative, loadNbaAskStatusNative } from "./nbaAskApi";
+import NbaAskIntroModalNative from "./NbaAskIntroModalNative";
+import {
+  hasSeenNbaAskIntroNative,
+  markNbaAskIntroSeenNative,
+} from "./nbaAskIntroSeenNative";
 
 const MAX_QUESTION_CHARS = 300;
 
@@ -130,14 +137,34 @@ export default function NbaAskScreenNative() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const [introOpen, setIntroOpen] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
-    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    let cancelled = false;
+    void hasSeenNbaAskIntroNative().then((seen) => {
+      if (!cancelled && !seen) setIntroOpen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissIntro = () => {
+    setIntroOpen(false);
+    void markNbaAskIntroSeenNative();
+  };
+
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow";
     const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const a = Keyboard.addListener(showEvt, () => setKeyboardOpen(true));
-    const b = Keyboard.addListener(hideEvt, () => setKeyboardOpen(false));
+    const a = Keyboard.addListener(showEvt, (e) => {
+      setKeyboardInset(e.endCoordinates.height);
+    });
+    const b = Keyboard.addListener(hideEvt, () => {
+      setKeyboardInset(0);
+    });
     return () => {
       a.remove();
       b.remove();
@@ -158,7 +185,7 @@ export default function NbaAskScreenNative() {
   useEffect(() => {
     const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     return () => clearTimeout(id);
-  }, [turns, busy, notice]);
+  }, [turns, busy, notice, keyboardInset]);
 
   const unavailable = status != null && !status.available;
   /** 無料のスタッツ枠を使い切った（アプリの質問は続けられる） */
@@ -187,6 +214,8 @@ export default function NbaAskScreenNative() {
           opens: result.opens,
           board: result.board,
           games: result.games,
+          moves: result.moves,
+          view: result.view,
         },
       ]);
       setStatus((prev) =>
@@ -218,6 +247,7 @@ export default function NbaAskScreenNative() {
 
   return (
     <View style={styles.flex}>
+      <NbaAskIntroModalNative open={introOpen} language={lang} onClose={dismissIntro} />
       <LinearGradient
         pointerEvents="none"
         colors={["rgba(0,245,255,0.18)", "rgba(0,245,255,0.18)", "transparent"]}
@@ -232,12 +262,22 @@ export default function NbaAskScreenNative() {
         headerTransparent
         rootStyle={{ paddingTop: shelfSpace }}
         contentStyle={styles.shell}
+        headerTrailing={
+          __DEV__ ? (
+            <Pressable
+              onPress={() => setIntroOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="説明"
+              style={({ pressed }) => [{ paddingHorizontal: 8, paddingVertical: 10 }, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={{ color: CYBER_TAB_CYAN, fontFamily: METRIC_FONT, fontSize: 11, fontWeight: "800" }}>
+                説明
+              </Text>
+            </Pressable>
+          ) : undefined
+        }
       >
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
+      <View style={styles.flex}>
         <ScrollView
           ref={scrollRef}
           style={styles.flex}
@@ -284,6 +324,38 @@ export default function NbaAskScreenNative() {
                       }
                     />
                   ))}
+                  {t.opens?.map((id) => (
+                    <Pressable
+                      key={id}
+                      onPress={() => openNbaAskDestination(navigation, id)}
+                      accessibilityRole="button"
+                      style={({ pressed }) => [styles.openBtn, pressed && styles.chipPressed]}
+                    >
+                      <Text style={styles.openBtnText}>{nbaAskDestinationLabel(id, lang)}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              );
+            }
+            if (t.moves || t.view) {
+              return (
+                <View key={i} style={styles.boardWrap}>
+                  {t.content ? <Text style={styles.boardTitle}>{t.content}</Text> : null}
+                  {t.moves ? (
+                    <NbaTeamOffseasonMovesNative
+                      moves={t.moves.moves}
+                      accent={getTeamUiAccentColor("nba", t.moves.teamId)}
+                      language={lang}
+                      onSelectPlayer={(playerId) => navigation.navigate("PlayerDetailPreview", { playerId })}
+                    />
+                  ) : t.view ? (
+                    <AskDetailViewNative
+                      view={t.view}
+                      language={lang}
+                      onSelectPlayer={(playerId) => navigation.navigate("PlayerDetailPreview", { playerId })}
+                      onSelectTeam={(teamId) => navigation.navigate("TeamDetailPreview", { teamId })}
+                    />
+                  ) : null}
                   {t.opens?.map((id) => (
                     <Pressable
                       key={id}
@@ -365,7 +437,10 @@ export default function NbaAskScreenNative() {
           <View
             style={[
               styles.inputBar,
-              { paddingBottom: keyboardOpen ? 8 : bottomContentReserveY },
+              {
+                paddingBottom:
+                  keyboardInset > 0 ? keyboardInset : bottomContentReserveY,
+              },
             ]}
           >
             {statsUsedUp ? (
@@ -415,7 +490,7 @@ export default function NbaAskScreenNative() {
             </View>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </GamesNbaSubpageShellNative>
     </View>
   );
@@ -526,16 +601,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   boardLabel: {
-    width: 92,
+    width: 128,
+    paddingRight: 8,
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
+    lineHeight: 16,
   },
   boardCell: {
     flex: 1,
     textAlign: "center",
     fontFamily: METRIC_FONT,
     color: "#fff",
-    fontSize: 18,
+    fontSize: 15,
   },
   bubbleBot: {
     backgroundColor: "rgba(255,255,255,0.06)",

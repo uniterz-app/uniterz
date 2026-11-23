@@ -4,6 +4,7 @@
  */
 import type { NbaTeamRosterDocTeam } from "@/lib/nba/teamRosters/teamRosterTypes";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
+import { englishNameKey, hasKana, kanaNameKey, kanaToRomaji } from "./nbaAskKana";
 
 export type NbaAskPlayerHit = {
   playerId: string;
@@ -145,6 +146,12 @@ function resolveAnyTeam(
   teamId: string | null,
   opts: { fuzzy?: boolean } = {}
 ): NbaAskPlayerResolution {
+  /** AI のチームは移籍前のことがある（LeBron James + LAL → 同じチームの Bronny James に寄る）。フルネームが当たる選手を先に取る */
+  if (teamId) {
+    const q = norm(query).replace(/ /g, "");
+    const exact = allPlayers(rosters).filter((h) => norm(h.name).replace(/ /g, "") === q);
+    if (exact.length === 1) return { kind: "one", hit: exact[0]! };
+  }
   const found = resolveNbaAskPlayer(rosters, query, teamId, opts);
   return found.kind === "none" && teamId ? resolveNbaAskPlayer(rosters, query, null, opts) : found;
 }
@@ -154,6 +161,86 @@ function resolveAnyTeam(
  * AI は知らない選手（新人など）を似た別人に置き換えることがあるので、書かれた名前が
  * ロスターでそのまま当たるならそちらを信じる（綴り違いの吸収はしない）。
  */
+/**
+ * かなの名前と選手の音の近さ。`s` はフルネーム・縮めた名前 + 名字・名字・名前の順に信じる並べ替え用
+ * （「アレックスサー」は Alex Caruso の名前とも一致するが、Alexandre Sarr を取る）。
+ * `d` は名前だけの一致を除いた子音の差。
+ */
+function kanaScore(key: string, h: NbaAskPlayerHit): { s: number; d: number } {
+  const d = (en: string) => distance(key, englishNameKey(en));
+  const firstKey = englishNameKey(h.player.firstName ?? "");
+  const lastKey = englishNameKey(h.player.lastName ?? "");
+  /** 名前を縮めた呼び方（Alexandre Sarr → アレックスサー） */
+  const rest = lastKey && key.endsWith(lastKey) ? key.slice(0, -lastKey.length) : "";
+  const shortFirst = rest.length >= 2 && firstKey.startsWith(rest);
+  const full = d(h.name);
+  const last = d(h.player.lastName ?? "");
+  return {
+    s: Math.min(full, shortFirst ? 0.25 : Infinity, last + 0.5, d(h.player.firstName ?? "") + 1),
+    d: Math.min(full, shortFirst ? 0 : Infinity, last),
+  };
+}
+
+/** 子音の並びが同じ選手どうし（マッケイン → McCain / Markkanen）は母音も入れて比べる */
+function breakKanaTie(romaji: string, hits: NbaAskPlayerHit[]): NbaAskPlayerHit[] {
+  const loose = (h: NbaAskPlayerHit) =>
+    Math.min(
+      distance(romaji, norm(h.name).replace(/\s+/g, "")),
+      distance(romaji, norm(h.player.lastName ?? "").replace(/\s+/g, ""))
+    );
+  const ranked = hits.map((h) => ({ h, d: loose(h) })).sort((a, b) => a.d - b.d);
+  return ranked.length > 1 && ranked[0]!.d + 2 <= ranked[1]!.d ? [ranked[0]!.h] : hits;
+}
+
+function bestByKana(key: string, romaji: string, hits: NbaAskPlayerHit[]): NbaAskPlayerHit[] {
+  const scored = hits.map((h) => ({ h, s: kanaScore(key, h).s }));
+  const best = Math.min(...scored.map((x) => x.s));
+  return breakKanaTie(
+    romaji,
+    scored.filter((x) => x.s === best).map((x) => x.h)
+  );
+}
+
+/**
+ * AI の選んだ選手が書かれたかなの名前と合わないときだけ、音がぴったり合う選手に差し替える。
+ * 子音の並びは偶然の一致が多い（スミス ≒ Sam Hauser）ので、AI の答えが名字かフルネームでほぼ合えばそのまま。
+ */
+function pickByKana(
+  rosters: Record<string, NbaTeamRosterDocTeam>,
+  byAi: NbaAskPlayerResolution,
+  written: string,
+  teamId: string | null
+): NbaAskPlayerResolution {
+  const key = kanaNameKey(written);
+  /** 1 文字（あ → ）は当てにならない */
+  if (key.length < 2) return byAi;
+  const romaji = kanaToRomaji(written).replace(/\s+/g, "");
+  if (byAi.kind === "one" && kanaScore(key, byAi.hit).d <= 1) return byAi;
+  if (byAi.kind === "many") return decide(bestByKana(key, romaji, byAi.hits)) ?? byAi;
+  const pool = allPlayers(rosters).filter((p) => !teamId || p.teamId === teamId);
+  const players = pool.length > 0 ? pool : allPlayers(rosters);
+  /**
+   * テイタム → tm のように子音が短いときも、名字の子音が一致する選手から選ぶ
+   * （Timme / Tatum は出場の多いほう・母音の近さで絞る）。
+   */
+  const exact =
+    key.length < 3
+      ? players.filter((h) => englishNameKey(h.player.lastName ?? "") === key)
+      : players.filter((h) => kanaScore(key, h).s < 1);
+  if (exact.length > 0) {
+    const picked = bestByKana(key, romaji, exact);
+    const decided = decide(picked.length > 0 ? picked : exact);
+    if (decided?.kind === "one") return decided;
+    if (byAi.kind === "one") return byAi;
+    return decided ?? byAi;
+  }
+  /** AI が誰も当てられなかったときだけ、1 音違い（ホームグレン → Holmgren）を母音まで比べて 1 人に絞れたら答える */
+  if (byAi.kind !== "none" || key.length < 4) return byAi;
+  const near = players.filter((h) => kanaScore(key, h).d <= 1);
+  const picked = breakKanaTie(romaji, near);
+  return picked.length === 1 ? { kind: "one", hit: picked[0]! } : byAi;
+}
+
 export function pickNbaAskPlayer(
   rosters: Record<string, NbaTeamRosterDocTeam>,
   player: string,
@@ -162,6 +249,7 @@ export function pickNbaAskPlayer(
 ): NbaAskPlayerResolution {
   const byAi = resolveAnyTeam(rosters, player, teamId);
   if (!written) return byAi;
+  if (hasKana(written)) return pickByKana(rosters, byAi, written, teamId);
   const byWritten = resolveAnyTeam(rosters, written, teamId, { fuzzy: false });
   if (byWritten.kind === "one") return byWritten;
   if (byWritten.kind === "many") {
@@ -174,14 +262,22 @@ export function pickNbaAskPlayer(
 /** 日本でよく使う呼び名。読み取りの AI が落とすことがあるので、質問の文から直接拾う */
 const NICKNAMES: ReadonlyArray<[RegExp, string]> = [
   [/アントマン|(?<![ァ-ヶー])アント(?![ァ-ヶー])/, "Anthony Edwards"],
-  [/ギリシャの怪人|グリークフリーク|ヤニス/, "Giannis Antetokounmpo"],
+  [/ギリシャの怪人|グリークフリーク|(?<![ァ-ヶー])ヤニス(?![ァ-ヶー])/, "Giannis Antetokounmpo"],
+  [/レブロンジェームズ|(?<![ァ-ヶー])レブロン(?![ァ-ヶー])|れぶろん/, "LeBron James"],
   [/(?<![ァ-ヶー])キング(?![ァ-ヶー])/, "LeBron James"],
+  [/(?<![ァ-ヶー])(?:ブロニー|ブロンニー)(?![ァ-ヶー])/, "Bronny James"],
   [/ジョーカー/, "Nikola Jokic"],
   [/ウェンビー|ウェンバン(?!ヤマ)/, "Victor Wembanyama"],
   [/(?<![ァ-ヶー])シャイ(?![ァ-ヶー])|\bSGA\b/, "Shai Gilgeous-Alexander"],
   [/(?<![ァ-ヶー])ステフ(?![ァ-ヶー])/, "Stephen Curry"],
   [/(?<![ァ-ヶー])ルカ(?![ァ-ヶー])/, "Luka Doncic"],
   [/(?<![ァ-ヶー])カワイ(?![ァ-ヶー])/, "Kawhi Leonard"],
+  [/(?<![ァ-ヶー])ザイオン(?![ァ-ヶー])/, "Zion Williamson"],
+  [/(?<![ァ-ヶー])カイリー(?![ァ-ヶー])/, "Kyrie Irving"],
+  [/(?<![ァ-ヶー])ラメロ(?![ァ-ヶー])/, "LaMelo Ball"],
+  [/(?<![ァ-ヶー])エンビード(?![ァ-ヶー])/, "Joel Embiid"],
+  [/(?<![ァ-ヶー])テイタム(?![ァ-ヶー])/, "Jayson Tatum"],
+  [/(?<![ァ-ヶー])デュラント(?![ァ-ヶー])/, "Kevin Durant"],
   [/\bKD\b/, "Kevin Durant"],
   [/\bAD\b/, "Anthony Davis"],
   [/\bCP3\b/, "Chris Paul"],

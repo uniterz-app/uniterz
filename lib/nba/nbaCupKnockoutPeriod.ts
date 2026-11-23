@@ -3,6 +3,7 @@
  * カレンダー表示用に、閲覧 TZ の日付キーへ落とす。
  *
  * 2026: QF 12/4–5 · SF 12/8–9 · Championship 12/11（ET）
+ * ノックアウトステージは全7試合（QF 4 + SF 2 + 決勝 1）。5暦日に乗る。
  * @see https://www.nba.com/news/emirates-nba-cup-key-dates-schedule
  */
 
@@ -15,13 +16,31 @@ import {
 
 /** シーズンごとのノックアウト公式日（東部） */
 export const NBA_CUP_KNOCKOUT_BY_SEASON: Readonly<
-  Record<string, { etStartDate: string; etEndDate: string }>
+  Record<
+    string,
+    { etStartDate: string; etEndDate: string; etGameDates: readonly string[] }
+  >
 > = {
   "2026-27": {
     etStartDate: "2026-12-04",
     etEndDate: "2026-12-11",
+    /** 全7試合が乗る東部暦日。QF 12/4–5 · SF 12/8–9 · Championship 12/11。間のレギュラー日は含めない */
+    etGameDates: [
+      "2026-12-04",
+      "2026-12-05",
+      "2026-12-08",
+      "2026-12-09",
+      "2026-12-11",
+    ],
   },
 };
+
+/** ノックアウト試合がある東部の暦日（間のレギュラー日は含まない） */
+export function nbaCupKnockoutEtGameDates(
+  season: string = GAME_SCHEDULE_SEASON
+): readonly string[] {
+  return NBA_CUP_KNOCKOUT_BY_SEASON[season]?.etGameDates ?? [];
+}
 
 function parseYmd(key: string): { y: number; m: number; d: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);

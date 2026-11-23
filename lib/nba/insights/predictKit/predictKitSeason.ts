@@ -27,6 +27,7 @@ import {
   PREDICT_KIT_SCORER_PLAY_PROB,
   predictKitScorerSeasonMu,
   type PredictKitScorerPlayer,
+  type PredictKitScorerPos,
 } from "@/lib/nba/insights/predictKit/predictKitScorers";
 
 export const PREDICT_KIT_GAME_FIELDS = [
@@ -205,7 +206,10 @@ export async function loadPredictKitScorerPlayers(
   db: Firestore,
   seasonKey: string,
   teamIds: string[],
-  rosters: Record<string, Array<{ id: string; name: string; gp: number; ppg: number; priorPpg: number | null }>>,
+  rosters: Record<
+    string,
+    Array<{ id: string; name: string; gp: number; ppg: number; priorPpg: number | null; pos?: PredictKitScorerPos }>
+  >,
   injuryTeams: Record<string, NbaTeamInjuryEntry[]>
 ): Promise<Record<string, PredictKitScorerPlayer[]>> {
   const teams = [...new Set(teamIds)];
@@ -231,6 +235,7 @@ export async function loadPredictKitScorerPlayers(
       priorPpg: Number.isFinite(priorPts) ? priorPts : p.priorPpg,
       recentPts: [],
       playProb: st ? (PREDICT_KIT_SCORER_PLAY_PROB[st] ?? 1) : 1,
+      ...(p.pos === "G" || p.pos === "F" || p.pos === "C" ? { pos: p.pos } : {}),
     };
   });
   const picked = teams.flatMap((teamId) =>

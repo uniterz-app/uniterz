@@ -21,15 +21,15 @@ export function proPickAdCopy(language: string | null | undefined): {
   const lang = resolveLocalizedLang(language);
   return {
     firstFreeCta: L(lang, {
-      ja: "この試合の PRO PICK を無料で見る",
-      en: "See this game's PRO PICK for free",
-      zh: "免费查看本场 PRO PICK",
-      ko: "이 경기의 PRO PICK 무료로 보기",
-      es: "Ver el PRO PICK de este partido gratis",
-      de: "PRO PICK dieses Spiels kostenlos ansehen",
-      fr: "Voir le PRO PICK de ce match gratuitement",
-      ar: "عرض PRO PICK لهذه المباراة مجانًا",
-      pt: "Ver o PRO PICK deste jogo grátis",
+      ja: "無料で見る",
+      en: "See it free",
+      zh: "免费查看",
+      ko: "무료로 보기",
+      es: "Ver gratis",
+      de: "Kostenlos ansehen",
+      fr: "Voir gratuitement",
+      ar: "عرض مجانًا",
+      pt: "Ver grátis",
     }),
     adCta: L(lang, {
       ja: "広告を見てこの試合の PRO PICK を見る",

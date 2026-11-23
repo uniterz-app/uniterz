@@ -554,10 +554,20 @@ export default function PredictProBriefPanelNative({
                     <ProCyberBadgeNative premium />
                   </View>
                 </View>
-                <TitleWithBrandFontsNative title={gate.title} />
+                {firstFreeAvailable ? (
+                  <View style={styles.gateKicker}>
+                    <Text style={styles.gateKickerLabel}>{gate.firstFreeKicker}</Text>
+                  </View>
+                ) : null}
+                <TitleWithBrandFontsNative
+                  title={firstFreeAvailable ? gate.firstFreeTitle : gate.title}
+                />
+                {firstFreeAvailable ? (
+                  <Text style={styles.gateBody}>{gate.firstFreeBody}</Text>
+                ) : null}
                 {kitRecord ? (
                   <PredictKitAccuracyHeroNative record={kitRecord} language={language} />
-                ) : (
+                ) : firstFreeAvailable ? null : (
                   <Text style={styles.gateBody}>{gate.body}</Text>
                 )}
                 {onPressProPickUnlock ? (
@@ -566,7 +576,12 @@ export default function PredictProBriefPanelNative({
                     disabled={unlockBusy}
                     style={({ pressed }) => [
                       styles.cta,
-                      pressed || unlockBusy ? styles.ctaPressed : null,
+                      firstFreeAvailable ? styles.ctaFilled : null,
+                      pressed || unlockBusy
+                        ? firstFreeAvailable
+                          ? styles.ctaFilledPressed
+                          : styles.ctaPressed
+                        : null,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={
@@ -577,7 +592,12 @@ export default function PredictProBriefPanelNative({
                       <Text
                         style={[
                           styles.ctaLabel,
-                          pressed ? styles.ctaLabelPressed : null,
+                          firstFreeAvailable ? styles.ctaFilledLabel : null,
+                          pressed
+                            ? firstFreeAvailable
+                              ? styles.ctaFilledLabelPressed
+                              : styles.ctaLabelPressed
+                            : null,
                         ]}
                       >
                         {firstFreeAvailable ? unlockCopy.firstFreeCta : unlockCopy.adCta}
@@ -589,8 +609,12 @@ export default function PredictProBriefPanelNative({
                   <Pressable
                     onPress={onPressUpgrade}
                     style={({ pressed }) => [
-                      styles.cta,
-                      pressed ? styles.ctaPressed : null,
+                      firstFreeAvailable ? styles.ctaGhost : styles.cta,
+                      pressed
+                        ? firstFreeAvailable
+                          ? styles.ctaGhostPressed
+                          : styles.ctaPressed
+                        : null,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={gate.trialCta}
@@ -598,8 +622,12 @@ export default function PredictProBriefPanelNative({
                     {({ pressed }) => (
                       <Text
                         style={[
-                          styles.ctaLabel,
-                          pressed ? styles.ctaLabelPressed : null,
+                          firstFreeAvailable ? styles.ctaGhostLabel : styles.ctaLabel,
+                          pressed
+                            ? firstFreeAvailable
+                              ? styles.ctaGhostLabelPressed
+                              : styles.ctaLabelPressed
+                            : null,
                         ]}
                       >
                         {gate.trialCta}
@@ -825,6 +853,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  gateKicker: {
+    borderWidth: 1,
+    borderColor: "rgba(252,211,77,0.55)",
+    backgroundColor: "rgba(252,211,77,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  gateKickerLabel: {
+    fontFamily: OXANIUM_800,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    textTransform: "uppercase",
+    color: "#fde68a",
+  },
   gateTitle: {
     fontSize: 17,
     fontWeight: "700",
@@ -875,6 +917,49 @@ const styles = StyleSheet.create({
   },
   ctaLabelPressed: {
     color: "#fffbeb",
+  },
+  ctaFilled: {
+    borderColor: "rgba(252,211,77,0.45)",
+    backgroundColor: "#fcd34d",
+    shadowColor: "#fbbf24",
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+  },
+  ctaFilledPressed: {
+    transform: [{ scale: 0.94 }],
+    backgroundColor: "#fde68a",
+  },
+  ctaFilledLabel: {
+    color: "#120e08",
+  },
+  ctaFilledLabelPressed: {
+    color: "#120e08",
+  },
+  ctaGhost: {
+    minHeight: 44,
+    minWidth: 168,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "transparent",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  ctaGhostPressed: {
+    transform: [{ scale: 0.94 }],
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+  ctaGhostLabel: {
+    fontFamily: OXANIUM_800,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.72)",
+  },
+  ctaGhostLabelPressed: {
+    color: "#fff",
   },
   exampleBlock: {
     gap: 8,

@@ -79,7 +79,10 @@ import {
   resolvePkScore,
 } from "@uniterz/shared";
 import { splitTeamNameByLeague, getTeamAlias } from "../../utils/teamName";
-import { compactNbaCardNickname } from "../../../../../lib/nba-team-names";
+import {
+  compactNbaCardNickname,
+  NBA_TEAM_NAME_BY_ID,
+} from "../../../../../lib/nba-team-names";
 import { auth, db } from "../../lib/firebase";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import { useNativeUserLanguageFromAuth } from "../../hooks/useNativeUserLanguage";
@@ -188,6 +191,12 @@ import {
   markFirstPostUnitPendingNative,
   takeFirstPostUnitPendingNative,
 } from "../tutorial/firstPostUnitNative";
+import ProPickFirstFreeModalNative from "./predict/ProPickFirstFreeModalNative";
+import {
+  hasProPickFirstFreeNoticeSeenNative,
+  markProPickFirstFreeNoticeSeenNative,
+} from "./predict/proPickFirstFreeNoticeNative";
+import { requestProPickUnlock } from "../../../../../lib/nba/predict/proPickUnlockApi";
 import { subscribeTutorialRestartNative, consumeTutorialRestartTokenNative, subscribeTutorialClearedNative, requestTutorialClearedNative } from "../tutorial/tutorialRestartEventsNative";
 import { setTutorialHorizonSubstepNative } from "../tutorial/tutorialHorizonSubstepNative";
 import {
@@ -809,6 +818,18 @@ export default function GamesHomeScreen({
   const [postPromptOpen, setPostPromptOpen] = useState<PostPrompt | null>(null);
   /** 新規登録後の最初の予想の直後に出す UNIT 案内 */
   const [firstPostUnitOpen, setFirstPostUnitOpen] = useState(false);
+  /** 予想送信直後：次の試合案内の代わりに出す PRO PICK 初回無料 */
+  const [proPickFirstFreeAfterPost, setProPickFirstFreeAfterPost] = useState<
+    Record<string, unknown> | null
+  >(null);
+  const proPickFirstFreeOfferRef = useRef(false);
+  const pendingAfterFirstFreeRef = useRef<{
+    nextGame: Record<string, unknown> | null;
+    postPrompt: PostPrompt | null;
+  } | null>(null);
+  const onFirstFreeOffer = useCallback((available: boolean) => {
+    proPickFirstFreeOfferRef.current = available;
+  }, []);
   /** 起動時モーダル（Unit 獲得・スクワッド等）と重ねないための枠の空き通知 */
   const [launchSlotTick, setLaunchSlotTick] = useState(0);
   useEffect(() => {
@@ -1728,6 +1749,32 @@ export default function GamesHomeScreen({
       seriesAwayWins: showSeriesRow && seriesStanding ? seriesStanding.awayWins : null,
     };
   }, [nextGameAfterPost, language, formatSideRecord, scorePrefs.showTeamRecord]);
+
+  const firstFreeAfterPostDisplay = useMemo(() => {
+    if (!proPickFirstFreeAfterPost) return null;
+    const g = proPickFirstFreeAfterPost;
+    const homeId =
+      typeof (g.home as { teamId?: unknown } | undefined)?.teamId === "string"
+        ? String((g.home as { teamId: string }).teamId)
+        : "";
+    const awayId =
+      typeof (g.away as { teamId?: unknown } | undefined)?.teamId === "string"
+        ? String((g.away as { teamId: string }).teamId)
+        : "";
+    const homeN =
+      NBA_TEAM_NAME_BY_ID[homeId] ||
+      resolveGameTeamName(g.home, g.homeTeamName, "HOME");
+    const awayN =
+      NBA_TEAM_NAME_BY_ID[awayId] ||
+      resolveGameTeamName(g.away, g.awayTeamName, "AWAY");
+    return {
+      homeTitle: scoreboardTeamLabelForNextModal(g.league, homeN, "en"),
+      awayTitle: scoreboardTeamLabelForNextModal(g.league, awayN, "en"),
+      kickoff: formatKickoffTime(resolveGameStartAt(g), dayTimeZone),
+      homePalette: resolveTeamJerseyPalette(g.league, g.home, "#ff6b8a"),
+      awayPalette: resolveTeamJerseyPalette(g.league, g.away, "#5aa4ff"),
+    };
+  }, [proPickFirstFreeAfterPost, dayTimeZone]);
 
   useEffect(() => {
     if (!isPredictModalOpen) return;
@@ -2706,6 +2753,50 @@ export default function GamesHomeScreen({
     setNextGameAfterPost(null);
   }
 
+  function continueAfterFirstFreeLater() {
+    const follow = pendingAfterFirstFreeRef.current;
+    pendingAfterFirstFreeRef.current = null;
+    if (follow?.nextGame) {
+      setNextGameAfterPost(follow.nextGame);
+      return;
+    }
+    if (follow?.postPrompt) {
+      cyberAlert(t.postDone, t.postDoneOnly, [
+        { text: "OK", onPress: () => setPostPromptWanted(follow.postPrompt) },
+      ]);
+      return;
+    }
+    cyberAlert(t.postDone, t.postDoneOnly);
+  }
+
+  async function handleProPickFirstFreeLater() {
+    const uid = fUser?.uid;
+    if (uid) await markProPickFirstFreeNoticeSeenNative(uid);
+    setProPickFirstFreeAfterPost(null);
+    continueAfterFirstFreeLater();
+  }
+
+  async function handleProPickFirstFreeOpen() {
+    const game = proPickFirstFreeAfterPost;
+    const uid = fUser?.uid;
+    const openedId = String(game?.id ?? "");
+    pendingAfterFirstFreeRef.current = null;
+    setProPickFirstFreeAfterPost(null);
+    if (uid) await markProPickFirstFreeNoticeSeenNative(uid);
+    if (openedId) {
+      await requestProPickUnlock({
+        apiBase: getUniterzApiBaseUrl(),
+        gameId: openedId,
+        adWatched: false,
+      });
+    }
+    if (!game) return;
+    await openPredictModal(game);
+    requestAnimationFrame(() => {
+      tutorialSelectPredictToolsTab("insight");
+    });
+  }
+
   async function handleSubmitPrediction() {
     if (!selectedGame) {
       return;
@@ -2890,6 +2981,9 @@ export default function GamesHomeScreen({
         await AsyncStorage.removeItem(draftStorageKey(fUser.uid, gameId));
       }
 
+      const submittedGame = selectedGame;
+      const firstFreeOfferReady = proPickFirstFreeOfferRef.current;
+
       setWinner(null);
       setPkWinner(null);
       setScoreHome("");
@@ -2907,6 +3001,17 @@ export default function GamesHomeScreen({
         gameId !== TUTORIAL_NBA_GAME_ID &&
         fUser?.uid != null &&
         (await takeFirstPostUnitPendingNative(fUser.uid));
+      const showProPickFirstFree =
+        !showFirstPostUnit &&
+        !isEditing &&
+        !tutorialActive &&
+        gameId !== TUTORIAL_NBA_GAME_ID &&
+        !isProUser &&
+        currentLeague.toLowerCase() === "nba" &&
+        String(submittedGame.seasonPhase ?? "") !== "preseason" &&
+        firstFreeOfferReady &&
+        fUser?.uid != null &&
+        !(await hasProPickFirstFreeNoticeSeenNative(fUser.uid));
 
       scheduleAfterPredictModalDismissed(() => {
         const continueAfterPostUi = () => {
@@ -2916,6 +3021,12 @@ export default function GamesHomeScreen({
           }
           if (isEditing) {
             cyberAlert(t.updateDone, t.updateDoneOnly);
+          } else if (showProPickFirstFree) {
+            pendingAfterFirstFreeRef.current = {
+              nextGame: nextGame && !skipNextModal ? nextGame : null,
+              postPrompt,
+            };
+            setProPickFirstFreeAfterPost(submittedGame);
           } else if (nextGame && !skipNextModal) {
             setNextGameAfterPost(nextGame);
           } else if (postPrompt) {
@@ -2965,6 +3076,8 @@ export default function GamesHomeScreen({
   const postFlowModalActive =
     isPredictModalOpen ||
     nextGameAfterPost != null ||
+    proPickFirstFreeAfterPost != null ||
+    firstPostUnitOpen ||
     preseasonNoticeGame != null ||
     postPromptWanted != null ||
     postPromptOpen != null;
@@ -3022,6 +3135,8 @@ export default function GamesHomeScreen({
     tutorialActive ||
     isPredictModalOpen ||
     nextGameAfterPost != null ||
+    proPickFirstFreeAfterPost != null ||
+    firstPostUnitOpen ||
     preseasonNoticeGame != null ||
     seasonInviteOpen ||
     isGameDetailModalVisible ||
@@ -3515,6 +3630,7 @@ export default function GamesHomeScreen({
         }
         myPostId={selectedGameId ? myPostIdByGameId[selectedGameId] ?? null : null}
         isProUser={isProUser}
+        onFirstFreeOffer={onFirstFreeOffer}
       />
       <ResultDetailScreen
         visible={resultDetailPostId != null}
@@ -3618,6 +3734,20 @@ export default function GamesHomeScreen({
         onClose={closePreseasonNotice}
         onConfirm={confirmPreseasonNotice}
       />
+      {proPickFirstFreeAfterPost && firstFreeAfterPostDisplay ? (
+        <ProPickFirstFreeModalNative
+          visible
+          language={language}
+          match={{
+            ...firstFreeAfterPostDisplay,
+            leagueRaw: proPickFirstFreeAfterPost.league,
+            homeSide: proPickFirstFreeAfterPost.home,
+            awaySide: proPickFirstFreeAfterPost.away,
+          }}
+          onLater={() => void handleProPickFirstFreeLater()}
+          onOpenFree={() => void handleProPickFirstFreeOpen()}
+        />
+      ) : null}
       {nextGameAfterPost && nextGameAfterPostDisplay ? (
         <PredictNextGameNativeModal
           visible

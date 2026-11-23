@@ -217,6 +217,10 @@ export type ProfileStackParamList = {
   /** __DEV__ PRO LEAGUE ひとことの見せ方案 */
   RankingCommentDesignPreview: undefined;
   MonthlyBadgePreview: undefined;
+  /** __DEV__ 12月イベントモーダル（月間 / カップ / クリスマス） */
+  EventModalPreview: undefined;
+  /** __DEV__ PRO LAB（自分の予想の傾向） */
+  ProLabPreview: undefined;
   ProSuccess: { plan?: "weekly" | "monthly" | "season" } | undefined;
   PlanChange: undefined;
   PlanChangeComplete: undefined;

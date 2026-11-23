@@ -20,7 +20,7 @@ import type { LegalLang } from "@/lib/legal/unitRedemptionLegalCopy";
 
 export type { LegalLang };
 
-export const PRIVACY_UPDATED_AT = "2026-09-09";
+export const PRIVACY_UPDATED_AT = "2026-11-23";
 
 export const PRIVACY_INTRO = {
   ja: "Uniterz におけるユーザー情報の取り扱いについて説明するページです。",
@@ -46,14 +46,14 @@ export const PRIVACY_PREAMBLE = {
 
 export const PRIVACY_FOOTER = {
   ja: [
-    `${PRIVACY_UPDATED_AT} 制定`,
+    `2026-09-09 制定　${PRIVACY_UPDATED_AT} 改定`,
     COMPANY_LEGAL_NAME,
     COMPANY_ADDRESS_FULL,
     `E-Mail：${SUPPORT_EMAIL}`,
     "TEL：請求があった場合に遅滞なく開示します",
   ],
   en: [
-    `Adopted ${PRIVACY_UPDATED_AT}`,
+    `Adopted 2026-09-09; updated ${PRIVACY_UPDATED_AT}`,
     companyLegalName("en"),
     companyAddressFull("en"),
     `Email: ${SUPPORT_EMAIL}`,
@@ -180,6 +180,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         "当社サービスへの登録及びサービス利用時の本人認証並びにユーザーの管理のため",
         "当社サービスのご提供（予想、ランキング、リザルト、レポート、通知等）、アフターサービスのため",
         "Pro利用権の確認、購入状態の検証、対価のご請求及びサポートのため",
+        "無料機能の対価としての広告配信のため",
         "Unitの管理および商品交換の審査・購入・配送・連絡のため",
         "不正行為等の防止及び対応のため",
         "当社サービスの保守、管理、障害対応、セキュリティの調査のため",
@@ -196,6 +197,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         "Registration, authentication, and user administration",
         "Providing the Service (predictions, rankings, results, reports, notices, etc.) and support",
         "Verifying Pro access and purchases, billing-related support",
+        "Serving ads as consideration for free features",
         "Administering Units and reviewing, purchasing, shipping, and communicating about product exchanges",
         "Preventing and responding to abuse",
         "Maintenance, operations, incident response, and security investigations",
@@ -281,6 +283,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         "認証、データベース、ファイル保存：Google Firebase 等のクラウド",
         "決済：App Store、Google Play その他、提供時点で対応するストア",
         "プッシュ通知：Expo その他の通知基盤",
+        "広告配信：Google AdMob およびメディエーション先（Meta Audience Network を含む）",
         "障害解析、メール配信、カスタマーサポート（利用する場合）",
         "商品の販売店および配送会社",
       ],
@@ -288,6 +291,7 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
         "Authentication, database, and file storage: cloud services such as Google Firebase",
         "Payments: the App Store, Google Play, or another store we support",
         "Push notifications: Expo or similar",
+        "Ads: Google AdMob and mediation partners (including Meta Audience Network)",
         "Crash analytics, email, and customer support when we use them",
         "Product retailers and carriers",
       ],
@@ -498,12 +502,14 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
             "Cookieとは、任意の文字が書かれた小さなファイルのことで、ユーザーがウェブサイトを閲覧した際に、ウェブサーバとユーザーのブラウザとの間でやりとりされ、ユーザーの端末に保存されるものです。これにより、閲覧履歴、サービス利用履歴等の情報を取得することがあります。",
             "ユーザーは、ブラウザの設定により、Cookieの無効化及び保存済みCookieの削除をすることができます。Cookieの利用を拒否した場合、ウェブサイトでご利用いただける機能が制限される可能性があります。",
             "Web版では、ログイン状態の維持、セキュリティ、必要な機能の提供のためにCookie等を使用することがあります。広告目的のトラッキングCookieを、現時点では埋め込みません。",
+            "アプリでは、無料機能の対価としてリワード広告を表示するため、Google AdMob およびそのメディエーションパートナー（Meta Audience Network を含みます）のSDKを使用します。広告識別子その他の端末情報は、ユーザーがトラッキングを許可した場合に、広告の配信および効果測定のために当該事業者へ送信されることがあります。許可しない場合でも、個人向けでない広告は表示されることがあります。",
           ],
           en: [
             "Our website may use cookies and similar technologies (\"Cookies\") to provide a better Service.",
             "Cookies are small files stored on your device when you browse. They may collect browsing and usage information.",
             "You can disable or delete Cookies in your browser; some site features may then be limited.",
             "The web version may use Cookies to keep you signed in, protect security, and provide required features. We do not currently embed advertising tracking cookies.",
+            "In the app we show rewarded ads as consideration for free features, using Google AdMob and its mediation partners (including Meta Audience Network). Advertising identifiers and similar device data may be sent to those providers for ad delivery and measurement if you allow tracking. If you decline, non-personalized ads may still appear.",
           ],
         },
       },

@@ -145,6 +145,19 @@ export function periodRankingUnitMetricsForPeriod(
   ];
 }
 
+function sumUnits(table: readonly number[]): number {
+  return table.reduce((s, n) => s + n, 0);
+}
+
+/** 月間の枠がすべて埋まったときの Unit 総額（総合 + 部門。勝率は対象外） */
+export function plannedMonthlyRankingUnitsIfFull(): number {
+  return (
+    sumUnits(MONTHLY_OVERALL_BY_RANK) +
+    PERIOD_RANKING_UNIT_DEPARTMENT_METRICS.length *
+      sumUnits(MONTHLY_DEPARTMENT_BY_RANK)
+  );
+}
+
 export function periodRankingUnitIdempotencyKey(input: {
   period: PeriodRankingUnitPeriod;
   label: string;

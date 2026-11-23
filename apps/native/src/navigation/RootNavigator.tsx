@@ -10,6 +10,7 @@ import ResetPasswordScreenNative from "../features/auth/ResetPasswordScreenNativ
 import OnboardingScreenNative from "../features/auth/OnboardingScreenNative";
 import AuthEntryScreen from "../features/auth/AuthEntryScreen";
 import AuthLandingFlyShellNative from "../features/auth/AuthLandingFlyShellNative";
+import EventGateNative from "../features/events/EventGateNative";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -86,37 +87,42 @@ export default function RootNavigator() {
   }
 
   return (
-    <RootStack.Navigator screenOptions={transparentStack}>
-      {!isAuthed ? (
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
-      ) : needsOnboarding ? (
-        <RootStack.Screen name="Auth">
-          {() => (
-            <NativeStackBackdrop>
-              <AuthStack.Navigator screenOptions={{ ...transparentStack, animation: "fade" }}>
-                <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
-              </AuthStack.Navigator>
-            </NativeStackBackdrop>
-          )}
-        </RootStack.Screen>
-      ) : (
-        <>
-          <RootStack.Screen name="Main" component={MainTabNavigator} />
-          <RootStack.Screen
-            name="ProSubscribeModal"
-            options={{
-              presentation: "modal",
-              animation: "slide_from_bottom",
-              freezeOnBlur: false,
-              contentStyle: { backgroundColor: "#000" },
-            }}
-            getComponent={() =>
-              require("../features/profile/screens/ProfileStackWrappers")
-                .ProSubscribeModalScreenWrapper
-            }
-          />
-        </>
-      )}
-    </RootStack.Navigator>
+    <>
+      <RootStack.Navigator screenOptions={transparentStack}>
+        {!isAuthed ? (
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        ) : needsOnboarding ? (
+          <RootStack.Screen name="Auth">
+            {() => (
+              <NativeStackBackdrop>
+                <AuthStack.Navigator screenOptions={{ ...transparentStack, animation: "fade" }}>
+                  <AuthStack.Screen name="Onboarding" component={OnboardingScreenNative} />
+                </AuthStack.Navigator>
+              </NativeStackBackdrop>
+            )}
+          </RootStack.Screen>
+        ) : (
+          <>
+            <RootStack.Screen name="Main" component={MainTabNavigator} />
+            <RootStack.Screen
+              name="ProSubscribeModal"
+              options={{
+                presentation: "modal",
+                animation: "slide_from_bottom",
+                freezeOnBlur: false,
+                contentStyle: { backgroundColor: "#000" },
+              }}
+              getComponent={() =>
+                require("../features/profile/screens/ProfileStackWrappers")
+                  .ProSubscribeModalScreenWrapper
+              }
+            />
+          </>
+        )}
+      </RootStack.Navigator>
+      {isAuthed && !needsOnboarding && fUser ? (
+        <EventGateNative uid={fUser.uid} />
+      ) : null}
+    </>
   );
 }

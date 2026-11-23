@@ -59,8 +59,8 @@ const styles = StyleSheet.create({
   handle: {
     position: "absolute",
     right: 0,
-    /** 中央付近だと誤タップしやすい。下寄り（上から約 80%・中心合わせ） */
-    top: "80%",
+    /** 中央付近だと誤タップしやすい。下寄りだが ASK FAB より上（上から約 68%） */
+    top: "68%",
     transform: [{ translateY: -42 }],
     width: 28,
     paddingVertical: 9,

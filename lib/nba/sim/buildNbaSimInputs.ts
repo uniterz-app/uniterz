@@ -8,6 +8,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { NBA_LEAGUE_TEAM_STATS_COLLECTION } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import type { SimLineup, SimOutPlayer, SimPlayer, SimPos, SimTeamInput } from "@/lib/nba/sim/nbaPossessionSim";
+import type { PredictKitScorerOppDefense } from "@/lib/nba/insights/predictKit/predictKitScorers";
 
 type TeamStatRow = { pace: number; ortg: number; drtg: number; tovPct: number };
 type RosterPlayer = {
@@ -36,6 +37,8 @@ export type NbaSimContext = {
   lineups: Record<string, SimLineup[]>;
   rosters: Record<string, RosterPlayer[]>;
   posPtsVsAvg: Record<string, Record<SimPos, number>>;
+  /** 得点王の相手失点補正用（1 試合平均） */
+  posDefense: Record<string, PredictKitScorerOppDefense>;
 };
 
 const num = (x: unknown, fallback = 0) => (typeof x === "number" && Number.isFinite(x) ? x : fallback);
@@ -112,17 +115,35 @@ export async function loadNbaSimContext(db: Firestore, seasonKey: string): Promi
   }
 
   const posPtsVsAvg: NbaSimContext["posPtsVsAvg"] = {};
+  const posDefense: NbaSimContext["posDefense"] = {};
   for (const d of logSnap.docs) {
-    const groups = (d.data().positionDefense?.groups ?? null) as Record<
-      string,
-      { pts?: { value?: number; leagueAvg?: number } }
-    > | null;
+    const raw = d.data().positionDefense as
+      | {
+          games?: number;
+          groups?: Record<string, { pts?: { value?: number; leagueAvg?: number } }>;
+        }
+      | null
+      | undefined;
+    const groups = raw?.groups ?? null;
     if (!groups) continue;
     const vs = (g: SimPos) => num(groups[g]?.pts?.value) - num(groups[g]?.pts?.leagueAvg);
     posPtsVsAvg[d.id] = { G: vs("G"), F: vs("F"), C: vs("C") };
+    const cell = (g: SimPos) => ({
+      value: num(groups[g]?.pts?.value),
+      leagueAvg: num(groups[g]?.pts?.leagueAvg),
+    });
+    const G = cell("G");
+    const F = cell("F");
+    const C = cell("C");
+    posDefense[d.id] = {
+      games: num(raw?.games),
+      overall: G.value + F.value + C.value,
+      overallLeague: G.leagueAvg + F.leagueAvg + C.leagueAvg,
+      groups: { G, F, C },
+    };
   }
 
-  return { seasonKey, leagueOrtg, stats, lineups, rosters, posPtsVsAvg };
+  return { seasonKey, leagueOrtg, stats, lineups, rosters, posPtsVsAvg, posDefense };
 }
 
 /** そのチームの入力。リーグ表の行が無ければ null（開幕直後など） */

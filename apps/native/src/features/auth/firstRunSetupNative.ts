@@ -4,6 +4,22 @@ import { firstRunSetupPendingKey } from "../../../../../lib/onboarding/firstRunS
 
 /** オンボーディング完了直後に Main が先に読むことがあるためメモリにも持つ */
 const pendingMemory = new Set<string>();
+const listeners = new Set<() => void>();
+
+function notifyFirstRunSetupNative(): void {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      /* ignore */
+    }
+  });
+}
+
+export function subscribeFirstRunSetupNative(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
 
 export async function markFirstRunSetupPendingNative(uid: string): Promise<void> {
   pendingMemory.add(uid);
@@ -12,6 +28,7 @@ export async function markFirstRunSetupPendingNative(uid: string): Promise<void>
   } catch {
     // 容量超過などは握りつぶす
   }
+  notifyFirstRunSetupNative();
 }
 
 export async function readFirstRunSetupPendingNative(uid: string): Promise<boolean> {
@@ -30,4 +47,5 @@ export async function clearFirstRunSetupPendingNative(uid: string): Promise<void
   } catch {
     // 握りつぶす
   }
+  notifyFirstRunSetupNative();
 }

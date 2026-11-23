@@ -61,6 +61,11 @@ export default function AdminHomePage() {
           title="トレード Buzz"
           desc="噂と確定トレード。保存するとアプリにすぐ出る（再ビルド不要）"
         />
+        <Card
+          href="/admin/challenge-metrics"
+          title="12月チャレンジ"
+          desc="参加人数・上位・AdMob完了・UNIT・現物原価。お知らせ掲載と YouTube / X 文面"
+        />
       </div>
     </AdminGuard>
   );

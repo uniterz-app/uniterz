@@ -1,8 +1,9 @@
 /**
  * モーダル操作ボタンの共通形（カタログ 06）。
  * 四角。ghost = 枠、primary = 金塗り、danger = 赤塗り。
+ * 単体でも横幅いっぱい。横並びは `ModalActionRowNative` で包む。
  */
-import { type ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export type ModalActionTone = "ghost" | "primary" | "danger";
@@ -52,7 +53,15 @@ export function ModalActionRowNative({
 }: {
   children: ReactNode;
 }) {
-  return <View style={styles.row}>{children}</View>;
+  return (
+    <View style={styles.row}>
+      {Children.map(children, (child, i) => (
+        <View key={i} style={styles.rowItem}>
+          {child}
+        </View>
+      ))}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -61,9 +70,14 @@ const styles = StyleSheet.create({
     gap: 12,
     width: "100%",
   },
-  btn: {
+  rowItem: {
     flex: 1,
+  },
+  btn: {
+    width: "100%",
+    minHeight: 44,
     paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -88,13 +102,12 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   label: {
+    fontFamily: "NotoSansJP_600SemiBold",
     fontSize: 14,
-    fontWeight: "700",
     textAlign: "center",
   },
   ghostLabel: {
     color: "rgba(255,255,255,0.9)",
-    fontWeight: "600",
   },
   primaryLabel: {
     color: "#120e08",

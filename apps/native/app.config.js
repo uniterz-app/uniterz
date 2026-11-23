@@ -19,6 +19,7 @@ const ADMOB_TEST_IOS_APP_ID = "ca-app-pub-3940256099942544~1458002511";
 /**
  * iOS の SKAdNetwork（広告の計測）の ID。Info.plist の SKAdNetworkItems に入る。
  * 出典: Google 公式「iOS 14 対応」ページの一覧（developers.google.com/admob/ios/ios14・2026-11-18 更新）。
+ * Meta Audience Network の ID（v9wttpbfk9 / n38lu8286q）もこの一覧に含まれる。
  * 広告ネットワークが増えたら、同ページの一覧に合わせて足す。
  */
 const ADMOB_SKADNETWORK_IDS = [
@@ -95,9 +96,11 @@ const attPlugin = [
   },
 ];
 
+const metaMediationPlugin = "./plugins/withAdMobMetaMediation.js";
+
 module.exports = {
   ...base,
-  plugins: [...(base.plugins ?? []), adMobPlugin, attPlugin],
+  plugins: [...(base.plugins ?? []), adMobPlugin, attPlugin, metaMediationPlugin],
   name: isPreview ? "UNITERZ (Dev)" : base.name,
   ios: {
     ...base.ios,

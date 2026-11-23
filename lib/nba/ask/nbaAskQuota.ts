@@ -2,7 +2,7 @@
  * スタッツ質問チャットの回数ルール（費用の上限を決める唯一の場所）。
  *
  * - アプリの使い方の質問: 誰でも無制限（裏で 1 日 / 1 分の安全上限）
- * - スタッツの質問: 無料は 1 日 3 回、Pro は無制限（裏で 1 日 60 回）。日本時間 0 時に戻る
+ * - スタッツの質問: 無料は 1 日 5 回、Pro は無制限（裏で 1 日 60 回）。日本時間 0 時に戻る
  * - スタッツの回数は「AI が実際にスタッツの道具を使った」ときだけ答えたあとに数える
  */
 import type { Firestore } from "firebase-admin/firestore";
@@ -71,17 +71,61 @@ export async function readNbaAskStatsAllowance(
   return { allowed: remaining > 0, freeRemaining: remaining };
 }
 
-/** 答えを返したあと、スタッツの道具を使った質問だけ数える */
-export async function recordNbaAskStatsUse(db: Firestore, uid: string): Promise<void> {
-  await statsDailyRef(db, uid).set(
-    {
-      scope: STATS_DAILY_SCOPE,
-      subject: uid,
-      count: FieldValue.increment(1),
-      expiresAt: new Date(jstDayStart() + 2 * DAY_MS),
-    },
-    { merge: true }
-  );
+export type NbaAskStatsReservation = NbaAskStatsAllowance & {
+  /** 1 回分を先に数えた。スタッツを使わなかったら `releaseNbaAskStatsReservation` で戻す */
+  reserved: boolean;
+};
+
+/**
+ * 答える前に 1 回分を予約する（同時に送られた質問で無料枠を超えない）。
+ * 枠が無ければ allowed: false
+ */
+export async function reserveNbaAskStatsUse(
+  db: Firestore,
+  uid: string,
+  isPro: boolean
+): Promise<NbaAskStatsReservation> {
+  const ref = statsDailyRef(db, uid);
+  const cap = isPro
+    ? envInt("NBA_ASK_PRO_STATS_DAILY", PRO_STATS_DAILY_CAP)
+    : envInt("NBA_ASK_FREE_STATS_DAILY", NBA_ASK_FREE_STATS_DAILY);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const used = Number(snap.data()?.count ?? 0);
+    if (used >= cap) {
+      return { allowed: false, freeRemaining: isPro ? null : 0, reserved: false };
+    }
+    tx.set(
+      ref,
+      {
+        scope: STATS_DAILY_SCOPE,
+        subject: uid,
+        count: FieldValue.increment(1),
+        expiresAt: new Date(jstDayStart() + 2 * DAY_MS),
+      },
+      { merge: true }
+    );
+    return {
+      allowed: true,
+      freeRemaining: isPro ? null : Math.max(0, cap - used - 1),
+      reserved: true,
+    };
+  });
+}
+
+/** スタッツの道具を使わなかった質問の予約を戻す */
+export async function releaseNbaAskStatsReservation(
+  db: Firestore,
+  uid: string
+): Promise<void> {
+  try {
+    await statsDailyRef(db, uid).set(
+      { count: FieldValue.increment(-1) },
+      { merge: true }
+    );
+  } catch (e) {
+    console.warn("[nbaAskQuota] stats release failed", e);
+  }
 }
 
 export type NbaAskGateResult =

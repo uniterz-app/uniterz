@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import {
-  SYNTHETIC_EVENT_NOTICES,
+  liveSyntheticEventNotices,
   getSyntheticEventById,
 } from "@/lib/events/syntheticEventNotices";
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
@@ -37,9 +37,7 @@ function buildListItem(e: EventNoticeContent): AnnouncementListShape {
 export function shouldInjectSyntheticEventAnnouncement(
   firestoreIds: Set<string>
 ): boolean {
-  return SYNTHETIC_EVENT_NOTICES.some(
-    (e) => e.listInAnnouncements && !firestoreIds.has(e.id)
-  );
+  return liveSyntheticEventNotices().some((e) => !firestoreIds.has(e.id));
 }
 
 /** 未読カウント用: 一覧に出る合成 ID を Firestore 可視 ID に足す */
@@ -47,8 +45,7 @@ export function mergeSyntheticIdsIntoVisibleSet(
   firestoreTopIds: Set<string>
 ): Set<string> {
   const out = new Set(firestoreTopIds);
-  for (const e of SYNTHETIC_EVENT_NOTICES) {
-    if (!e.listInAnnouncements) continue;
+  for (const e of liveSyntheticEventNotices()) {
     if (firestoreTopIds.has(e.id)) continue;
     out.add(e.id);
   }
@@ -57,7 +54,7 @@ export function mergeSyntheticIdsIntoVisibleSet(
 
 /** @deprecated 複数合成に対応した merge を使う */
 export function buildSyntheticEventAnnouncementItem(): AnnouncementListShape {
-  const e = SYNTHETIC_EVENT_NOTICES[0];
+  const e = liveSyntheticEventNotices()[0];
   if (!e) {
     return {
       id: "",
@@ -76,8 +73,7 @@ export function mergeSyntheticEventIntoAnnouncements<
 >(items: T[]): T[] {
   const ids = new Set(items.map((i) => i.id));
   const toAdd: AnnouncementListShape[] = [];
-  for (const e of SYNTHETIC_EVENT_NOTICES) {
-    if (!e.listInAnnouncements) continue;
+  for (const e of liveSyntheticEventNotices()) {
     if (ids.has(e.id)) continue;
     toAdd.push(buildListItem(e));
     ids.add(e.id);

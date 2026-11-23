@@ -5,8 +5,9 @@
  * - sd = 0.3·mu + 3 を、今季 4 試合以上あれば試合ごとの散らばりと混ぜる
  * - 欠場: OUT は外す。出場未定は出る確率だけその回に出る
  * - 欠場者の得点を残りの選手に配る補正は入れない（2026-27 の 170 試合で外したほうが当たった）
- * 2026-27 の 170 試合（出場した選手が分かっている前提）で 1 番手が得点王 47.6%・上位 3 人に入る 80.6%。
- * 平均得点の 1 位は 41.8%、UNITERZ のみんなが一番選んだ選手は 44.7%（scripts/backtest-predict-kit-scorers.ts）。
+ * 2026-27 の 248 試合（出場した選手が分かっている前提）で 1 番手 45.6%。
+ * 相手の失点（全体 0.4 + 同じポジション 0.8、試合数で shrink）を平均に掛けると 46.8%。
+ * 40% 以上と出した試合の当たり 55.3% → 60.3%（scripts/backtest-predict-kit-scorers.ts）。
  */
 
 export const PREDICT_KIT_SCORER_TUNING = {
@@ -19,6 +20,25 @@ export const PREDICT_KIT_SCORER_TUNING = {
   minMu: 4,
   runs: 4000,
 } as const;
+
+/** 相手の失点で平均得点を動かす強さ（検証 248 試合） */
+export const PREDICT_KIT_SCORER_OPP = {
+  defW: 0.4,
+  posW: 0.8,
+  shrinkGames: 10,
+  minGames: 5,
+  minAdj: 0.82,
+  maxAdj: 1.18,
+} as const;
+
+export type PredictKitScorerPos = "G" | "F" | "C";
+
+export type PredictKitScorerOppDefense = {
+  games: number;
+  overall: number;
+  overallLeague: number;
+  groups: Record<PredictKitScorerPos, { value: number; leagueAvg: number }>;
+};
 
 /** 出場未定の選手がその試合に出る確率 */
 export const PREDICT_KIT_SCORER_PLAY_PROB: Record<string, number> = {
@@ -42,7 +62,30 @@ export type PredictKitScorerPlayer = {
   recentPts: number[];
   /** その試合に出る確率（1 = 欠場情報なし） */
   playProb: number;
+  pos?: PredictKitScorerPos;
+  /** 相手の失点補正（1 = そのまま） */
+  oppMuAdj?: number;
 };
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/** 相手がそのポジションに失点しやすいほど 1 より大きい */
+export function predictKitScorerOppMuAdj(
+  pos: PredictKitScorerPos | null | undefined,
+  opp: PredictKitScorerOppDefense | null | undefined
+): number {
+  const T = PREDICT_KIT_SCORER_OPP;
+  if (!opp || opp.games < T.minGames || opp.overallLeague <= 0) return 1;
+  const shrink = (raw: number) => 1 + (raw - 1) * (opp.games / (opp.games + T.shrinkGames));
+  let adj = 1 + T.defW * (shrink(opp.overall / opp.overallLeague) - 1);
+  const g = pos ? opp.groups[pos] : null;
+  if (g && g.leagueAvg > 0) {
+    adj *= 1 + T.posW * (shrink(g.value / g.leagueAvg) - 1);
+  }
+  return clamp(adj, T.minAdj, T.maxAdj);
+}
 
 export type PredictKitScorerOdds = {
   playerId: string;
@@ -81,11 +124,12 @@ export function predictKitScorerOdds(players: PredictKitScorerPlayer[], seed: nu
     .map((p) => {
       const seasonMu = predictKitScorerSeasonMu(p);
       const recent = p.recentPts.slice(0, T.recentGames);
-      const mu =
+      const blended =
         recent.length >= 3
           ? (1 - T.recentWeight) * seasonMu + (T.recentWeight * recent.reduce((a, b) => a + b, 0)) / recent.length
           : seasonMu;
-      const sd0 = T.sdSlope * mu + T.sdBase;
+      const sd0 = T.sdSlope * blended + T.sdBase;
+      const mu = blended * (p.oppMuAdj && p.oppMuAdj > 0 ? p.oppMuAdj : 1);
       const pts = p.recentPts;
       let sd = sd0;
       if (pts.length >= 4) {

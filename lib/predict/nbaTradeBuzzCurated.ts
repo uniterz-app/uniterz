@@ -1,5 +1,5 @@
 /**
- * トレード Buzz — 手で集めた 2026-11-12〜20 の動き（日本時間）。
+ * トレード Buzz — 手で集めた 2026-11-12〜23 の動き（日本時間）。
  * 確度順（rank 1 が最も確度が高い）。手更新。
  *
  * 出典の記者名・媒体は取材メモのまま。記事は二次配信（まとめ・X・転載）のものも含む。
@@ -8,7 +8,7 @@
 import type { NbaTradeBuzzItem } from "@/lib/predict/nbaTradeBuzz";
 
 /** 取材の基準時刻（JST の表示用） */
-export const NBA_TRADE_BUZZ_AS_OF_JST = "2026-11-20 13:07";
+export const NBA_TRADE_BUZZ_AS_OF_JST = "2026-11-23 10:00";
 
 export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   {
@@ -19,8 +19,38 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     fromTeamAbbr: "NOP",
     confidence: "official",
     headlineJa:
-      "本人がトレードを要求し、球団も認めた。行き先は未定。関心は Suns 中心で、Suns はドラフト補償の上乗せを求めているとされる。",
+      "地元紙の関係者情報では Suns と継続的に協議中。ほかの関心は薄く、急がない。Green 交換は進展なし。来季約3200万ドル。要求後はアリーナに来ていない。",
     events: [
+      {
+        day: "2026-11-23",
+        time: "00:17",
+        kind: "report",
+        textJa:
+          "地元紙の関係者情報。Pelicans は Suns と「継続的に協議している」一方、ほかに Murray について連絡してきたチームはあまりなく、急いで出すつもりもない。来季も約3200万ドルが残る。トレード要求後、Smoothie King Center には一度も来ておらず、アリーナ映像からも姿が消されている。",
+        sourceLabel: "Rod Walker（Times-Picayune）・HoopsHype 要約",
+        sourceUrl:
+          "https://www.nola.com/sports/rod-walker-dejounte-murray-s-trade-request-a-disappointing-final-chapter-for-his-time-with/article_5ee2efe9-e3fd-45ff-b19b-2494eed8bfc8.html",
+      },
+      {
+        day: "2026-11-20",
+        time: "23:44",
+        kind: "report",
+        textJa:
+          "両チーム関係者によると、Green と Murray を交換する話し合いは最近あったが約5分で終わり、まったく進んでいない。Pelicans は Murray に指名権を付けてまで出すつもりがない。",
+        sourceLabel: "Sam Amick（The Athletic）",
+        sourceUrl:
+          "https://www.nytimes.com/athletic/7796299/2026/11/20/jalen-green-suns-wizards-kings-jazz/",
+      },
+      {
+        day: "2026-11-20",
+        time: "22:01",
+        kind: "opinion",
+        textJa:
+          "この件はたぶんトレード期限（2/11）までもつれる、という見方。12/15 を過ぎてすぐ動くとは考えていない。Suns は指名権も欲し、Pelicans は指名権を付けたくないので差が埋まらない。",
+        sourceLabel: "Jake Fischer（The Stein Line・Hoops Rumors 要約）",
+        sourceUrl:
+          "https://www.hoopsrumors.com/2026/11/southwest-notes-murray-pelicans-grant-lopez-risacher.html",
+      },
       {
         day: "2026-11-20",
         time: "01:46",
@@ -108,8 +138,38 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     ],
   },
   {
-    id: "jones",
+    id: "vincent",
     rank: 2,
+    playerId: null,
+    playerName: "Gabe Vincent",
+    fromTeamAbbr: null,
+    confidence: "multi",
+    headlineJa:
+      "Kings はトレードではなく、FA の Vincent と契約する方向。Acuff Jr. の控え。最低保証額とされる。",
+    events: [
+      {
+        day: "2026-11-23",
+        time: "05:10",
+        kind: "report",
+        textJa:
+          "Ben Simmons がアキレス腱断裂で今季絶望になってから、Kings はベテランのガードを探していた。",
+        sourceLabel: "Marc Stein（X）",
+        sourceUrl: "https://x.com/TheSteinLine/status/2124596510075900078",
+      },
+      {
+        day: "2026-11-23",
+        time: "05:01",
+        kind: "report",
+        textJa:
+          "30歳のガード。新人 Darius Acuff Jr. の控えになる見込み。契約は最低保証額とされる。トレードではなく FA 契約の方向。",
+        sourceLabel: "Shams Charania（X）",
+        sourceUrl: "https://x.com/ShamsCharania/status/2124594228470726755",
+      },
+    ],
+  },
+  {
+    id: "jones",
+    rank: 3,
     playerId: null,
     playerName: "Tre Jones",
     fromTeamAbbr: "CHI",
@@ -141,7 +201,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "nets",
-    rank: 3,
+    rank: 4,
     playerId: null,
     playerName: "Michael Porter Jr. / Julius Randle",
     fromTeamAbbr: "BKN",
@@ -173,14 +233,24 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "green",
-    rank: 4,
+    rank: 5,
     playerId: null,
     playerName: "Jalen Green",
     fromTeamAbbr: "PHX",
-    confidence: "single",
+    confidence: "multi",
     headlineJa:
-      "Murray 交換の名前に出るが、Suns は本格協議をシーズン後半まで待つ見込み。本人は噂を気にしないと話す。",
+      "Murray との交換の話し合いは最近あったが数分で終わり、進んでいない。本人は噂をキャリアを通じてある雑音だとしている。",
     events: [
+      {
+        day: "2026-11-20",
+        time: "23:44",
+        kind: "report",
+        textJa:
+          "両チーム関係者によると、Green と Murray を交換する話し合いは最近あったが約5分で終わり、まったく進んでいない。本人は「トレードの噂はキャリアを通じてある雑音だ」と話した。",
+        sourceLabel: "Sam Amick（The Athletic）",
+        sourceUrl:
+          "https://www.nytimes.com/athletic/7796299/2026/11/20/jalen-green-suns-wizards-kings-jazz/",
+      },
       {
         day: "2026-11-18",
         time: null,
@@ -214,7 +284,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "collier",
-    rank: 5,
+    rank: 6,
     playerId: null,
     playerName: "Isaiah Collier",
     fromTeamAbbr: "UTA",
@@ -236,7 +306,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "bucks",
-    rank: 6,
+    rank: 7,
     playerId: null,
     playerName: "Myles Turner / Kyle Kuzma",
     fromTeamAbbr: "MIL",
@@ -258,7 +328,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "clippers",
-    rank: 7,
+    rank: 8,
     playerId: null,
     playerName: "Max Strus / Derrick Jones Jr. / Brook Lopez",
     fromTeamAbbr: "LAC",
@@ -289,7 +359,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "kings",
-    rank: 8,
+    rank: 9,
     playerId: null,
     playerName: "Domantas Sabonis / Zach LaVine / Malik Monk / Keegan Murray",
     fromTeamAbbr: "SAC",
@@ -321,13 +391,13 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "davis",
-    rank: 9,
+    rank: 10,
     playerId: null,
     playerName: "Anthony Davis",
     fromTeamAbbr: "WAS",
     confidence: "single",
     headlineJa:
-      "Wizards は20〜30試合ほど様子を見てから延長を考える。延長しなければ、2027年夏の FA 前に動く可能性がある。交渉の報道は今週なし。",
+      "Wizards は20〜30試合ほど様子を見てから延長を考える。この24時間に記者の新報はなし。",
     events: [
       {
         day: "2026-11-18",
@@ -363,7 +433,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "herbert",
-    rank: 10,
+    rank: 11,
     playerId: null,
     playerName: "Herbert Jones",
     fromTeamAbbr: "NOP",
@@ -385,7 +455,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "black",
-    rank: 11,
+    rank: 12,
     playerId: null,
     playerName: "Anthony Black",
     fromTeamAbbr: "ORL",
@@ -407,14 +477,24 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "pacers",
-    rank: 12,
+    rank: 13,
     playerId: null,
     playerName: "Pacers (buyers)",
     fromTeamAbbr: "IND",
     confidence: "single",
     headlineJa:
-      "売り手ではなく補強を探す側。Tyrese Haliburton の離脱で5勝9敗と苦しく、中堅クラスの補強を探している。",
+      "Haliburton 離脱で苦しく、ウィング補強だけでなく大きな動きも検討する声。狙っている選手の名前は出ていない。",
     events: [
+      {
+        day: "2026-11-21",
+        time: "13:22",
+        kind: "report",
+        textJa:
+          "Haliburton 離脱で苦しいため、チーム内には「ウィングを少し補強するだけでなく、もっと大きな動きも考えるべきだ」という声がある。狙っている選手の名前は出ていない。",
+        sourceLabel: "Jake Fischer（Hoops Rumors 要約）",
+        sourceUrl:
+          "https://www.hoopsrumors.com/2026/11/eastern-notes-harden-pacers-okongwu-daniels.html",
+      },
       {
         day: "2026-11-18",
         time: "01:05",
@@ -435,8 +515,29 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     ],
   },
   {
+    id: "lakers",
+    rank: 14,
+    playerId: null,
+    playerName: "Lakers (deadline)",
+    fromTeamAbbr: "LAL",
+    confidence: "single",
+    headlineJa:
+      "Pelinka GM が、2月のトレード期限に向けて積極的に動く方針を本人が話している。具体的な標的の名前は出ていない。",
+    events: [
+      {
+        day: "2026-11-23",
+        time: null,
+        kind: "statement",
+        textJa:
+          "Lakers の Rob Pelinka GM は、2月のトレード期限に向けて積極的に動く方針を本人が話している。狙っている選手の名前は出ていない。",
+        sourceLabel: "11/23 朝の取材まとめ",
+        sourceUrl: null,
+      },
+    ],
+  },
+  {
     id: "murphy",
-    rank: 13,
+    rank: 15,
     playerId: null,
     playerName: "Trey Murphy III",
     fromTeamAbbr: "NOP",
@@ -467,7 +568,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "irving",
-    rank: 14,
+    rank: 16,
     playerId: null,
     playerName: "Kyrie Irving",
     fromTeamAbbr: "DAL",
@@ -507,7 +608,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "mcbride",
-    rank: 15,
+    rank: 17,
     playerId: null,
     playerName: "Miles McBride",
     fromTeamAbbr: "NYK",
@@ -528,7 +629,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "reid",
-    rank: 16,
+    rank: 18,
     playerId: null,
     playerName: "Naz Reid",
     fromTeamAbbr: "CHA",
@@ -550,7 +651,7 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   },
   {
     id: "sporting-news-list",
-    rank: 17,
+    rank: 19,
     playerId: null,
     playerName: "Tyler Herro / Paolo Banchero / Trey Murphy III / Norman Powell ほか",
     fromTeamAbbr: null,

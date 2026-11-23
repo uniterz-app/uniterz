@@ -10,7 +10,10 @@ import {
   setDoc,
 } from "firebase/firestore";
 import EventModal from "@/app/component/modals/EventModal";
-import { EVENT_MODAL_QUEUE } from "@/lib/events/syntheticEventNotices";
+import {
+  EVENT_MODAL_QUEUE,
+  eventModalQueueAt,
+} from "@/lib/events/syntheticEventNotices";
 import type { EventNoticeContent } from "@/lib/events/eventNoticeTypes";
 import { usePathname } from "next/navigation";
 import { isPublicLpPath } from "@/lib/lp/publicLpPaths";
@@ -146,7 +149,7 @@ export default function EventGate() {
 
     const merged = new Set(readIds);
     pendingReadIdsRef.current.forEach((id) => merged.add(id));
-    const next = EVENT_MODAL_QUEUE.find((e) => !merged.has(e.id));
+    const next = eventModalQueueAt().find((e) => !merged.has(e.id));
     if (!next) return;
 
     setDisplayEvent(next);

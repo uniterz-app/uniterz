@@ -25,4 +25,17 @@ export type EventNoticeContent = {
   /** 一覧ソート用（postedAt 降順） */
   postedAtMs: number;
   heroImageURL: string;
+  /** この時刻以降に一覧・モーダル（未指定はすぐ） */
+  visibleFromMs?: number;
+  /** この時刻未満まで一覧・モーダル（未指定は無期限） */
+  visibleUntilMs?: number;
 };
+
+export function isEventNoticeLiveAt(
+  event: Pick<EventNoticeContent, "visibleFromMs" | "visibleUntilMs">,
+  nowMs: number = Date.now()
+): boolean {
+  if (event.visibleFromMs != null && nowMs < event.visibleFromMs) return false;
+  if (event.visibleUntilMs != null && nowMs >= event.visibleUntilMs) return false;
+  return true;
+}

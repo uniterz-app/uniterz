@@ -82,6 +82,8 @@ export type NbaAskIntent = {
   player_written: string | null;
   /** マッチアップの相手選手 */
   player2: string | null;
+  /** 3 人を比べるときの 3 人目 */
+  player3: string | null;
   /** NBA の 3 文字略称 */
   team: string | null;
   opponent: string | null;
@@ -119,6 +121,7 @@ const INTENT_SCHEMA = {
     "player",
     "player_written",
     "player2",
+    "player3",
     "team",
     "opponent",
     "date",
@@ -143,6 +146,7 @@ const INTENT_SCHEMA = {
     player: nullable("string"),
     player_written: nullable("string"),
     player2: nullable("string"),
+    player3: nullable("string"),
     team: nullable("string"),
     opponent: nullable("string"),
     date: nullable("string"),
@@ -160,9 +164,9 @@ const INTENT_SCHEMA = {
 
 const QUERY_GUIDE = [
   "games_on_date: games / schedule / results on a date, PICK UP games (pickup_only), a team's next game (team, no date). No date = today.",
-  "who_wins: asks you to predict who will win a game or the title, or which side to pick (any opinion about the future). Never games_on_date.",
+  "who_wins: asks you to predict who will win a game or the title, or which side to pick (any opinion about the future). Never games_on_date. Comparing two players' or teams' stats (どっちが得点多い, どっちがディフェンスいい) is not who_wins: use player_season with player2, or team_stat.",
   "team_payroll: a team's salaries (highest-paid players on a team, total payroll, cap / luxury tax).",
-  "team_splits: a team's record in a situation (ホーム / アウェー, 対東 / 対西, vs winning / losing teams, back-to-backs) or against one opponent (put it in opponent: 対戦成績 / 相性).",
+  "team_splits: a team's record in a situation (ホーム / アウェー, 対東 / 対西, vs winning / losing teams, back-to-backs) or against one opponent (put it in opponent: 対戦成績 / 相性). A team's record when a player sat out or played (〜が出なかった試合, 欠場時): also put that player in player.",
   "team_position_defense: points a team allows by position (guards / forwards / centers, ポジション別の失点).",
   "team_draft_picks: a team's future draft picks (指名権の数, 1巡目 / 2巡目).",
   "player_splits: a player's home / away averages, or vs one opponent (put it in opponent).",
@@ -203,7 +207,6 @@ const QUERY_GUIDE = [
 function systemPrompt(now: string, timeZone: string): string {
   return [
     "You classify a question sent to the UNITERZ app chat. UNITERZ is an NBA score-prediction app. You do NOT answer. Return JSON only.",
-    `Now: ${now} (${timeZone}). Dates are the user's calendar days.`,
     "kind:",
     "- app: how to use UNITERZ, where something is in the app, settings, Unit (in-app reward currency), PRO plans, rules of predictions and scoring. Set app_topic. For scoring also set scoring_focus.",
     "- nba: NBA data (games, players, teams, stats, standings, injuries, lineups, contracts, awards race, news). Set query and fields.",
@@ -215,11 +218,13 @@ function systemPrompt(now: string, timeZone: string): string {
     nbaAskKnowledgeCatalogLine(),
     "query ids:",
     QUERY_GUIDE,
-    "Fields: player = full English name (エンビード → Joel Embiid, シャイ / SGA → Shai Gilgeous-Alexander, レブロン / キング → LeBron James, アント / アントマン → Anthony Edwards, AD → Anthony Davis, KD → Kevin Durant, ヤニス / ギリシャの怪人 → Giannis Antetokounmpo, ルカ → Luka Doncic, ウェンビー / ウェンバン → Victor Wembanyama, ジョキッチ / ヨキッチ → Nikola Jokic, ステフ → Stephen Curry, ザイオン → Zion Williamson, ジミー / バトラー → Jimmy Butler, ブッカー → Devin Booker, テイタム → Jayson Tatum, CP3 → Chris Paul, ハリバートン → Tyrese Haliburton, ブランソン → Jalen Brunson, PG / ポールジョージ → Paul George, カワイ → Kawhi Leonard). If you do not know the player, put the written name's English spelling in player too — never swap in a different player. player_written = the player name exactly as the user wrote it, romanized in A-Z letters only (never katakana) without guessing who it is (フラッグ → Flagg, ジャ → Ja, 八村 → Hachimura, ウェンバンヤマ → Wembanyama); null if no player. team / opponent = 3-letter NBA abbreviation (LAL, GSW, PHI, NYK, BKN, PHX, NOP, SAS, UTA, WAS). season = like 2024-25 only when the user names a past season (year or 去年 / 前季), else null. 今季 / 今シーズン = null. playoffs only when asked. count = number of games asked for.",
+    "Fields: player = full English name (エンビード → Joel Embiid, シャイ / SGA → Shai Gilgeous-Alexander, レブロン / キング → LeBron James, アント / アントマン → Anthony Edwards, AD → Anthony Davis, KD → Kevin Durant, ヤニス / ギリシャの怪人 → Giannis Antetokounmpo, ルカ → Luka Doncic, ウェンビー / ウェンバン → Victor Wembanyama, ジョキッチ / ヨキッチ → Nikola Jokic, ステフ → Stephen Curry, ザイオン → Zion Williamson, ジミー / バトラー → Jimmy Butler, ブッカー → Devin Booker, テイタム → Jayson Tatum, CP3 → Chris Paul, ハリバートン → Tyrese Haliburton, ブランソン → Jalen Brunson, PG / ポールジョージ → Paul George, カワイ → Kawhi Leonard). If you do not know the player, put the written name's English spelling in player too — never swap in a different player. Fill player whenever a player is named, even in a team question (レブロンが休んだ試合のレイカーズ → player LeBron James, team LAL). player_written = the player name exactly as the user wrote it, copied character for character (keep katakana / hiragana as is; romanize only kanji) without guessing who it is (フラッグ → フラッグ, アレックスさー → アレックスさー, 八村 → Hachimura, Flagg → Flagg); null if no player. When two players are named (比べて, どっち, A と B), the second one goes in player2; a third named player goes in player3. team / opponent = 3-letter NBA abbreviation (LAL, GSW, PHI, NYK, BKN, PHX, NOP, SAS, UTA, WAS). season = like 2024-25 only when the user names a past season (year or 去年 / 前季), else null. 今季 / 今シーズン = null. playoffs only when asked. count = number of games asked for.",
     "A player question sets team only when the user wrote the team. Never fill team from what you remember about where a player plays (rosters change every season). A team-only question leaves player null.",
     "Follow-ups: earlier turns are the same conversation. 'じゃあ', 'その選手', 'リバウンドは?', '昨日のは?' keep the previous player / team and change only what the user changed. A correction or a bare name ('XじゃなくてY', 'Yは?', 'Yだと?', just 'Y') swaps only the player / team and keeps the previous query and its fields. A new full question with its own topic starts fresh. Example: 'カリーの直近5試合' then 'ドンチッチは？' = player_recent_games, Luka Doncic, count 5.",
-    "Unit, ランキング報酬, 招待, 言語, 通知, ログアウト, 退会, PRO の解約, PRO price / features are app questions, never nba. Asking to SEE today's PRO PICK or PRO LEAGUE board is nba.",
+    "Unit, ランキング報酬, 招待, 言語, 通知, ログアウト, 退会, PRO の解約, PRO price / features, 機種変更 / データの引き継ぎ / iPhone・Android / ログイン, 商品交換の送料 are app questions, never nba or off_topic. Asking to SEE today's PRO PICK or PRO LEAGUE board is nba.",
     "Use null for fields that do not apply. pickup_only and playoffs default to false.",
+    // 毎分変わる行は最後に置く（前の部分が毎回同じだと OpenAI のプロンプトキャッシュで入力が半額になる）
+    `Now: ${now} (${timeZone}). Dates are the user's calendar days.`,
   ].join("\n");
 }
 
@@ -251,6 +256,7 @@ const EMPTY: NbaAskIntent = {
   player: null,
   player_written: null,
   player2: null,
+  player3: null,
   team: null,
   opponent: null,
   date: null,
@@ -275,7 +281,7 @@ export function sanitizeNbaAskIntent(raw: unknown): NbaAskIntent {
   const o = raw as Record<string, unknown>;
   const s = (v: unknown, max = 60) => {
     const t = typeof v === "string" ? v.trim().slice(0, max) : "";
-    return t || null;
+    return t && !/^(null|none|undefined|n\/a)$/i.test(t) ? t : null;
   };
   const pick = <T extends string>(v: unknown, list: readonly T[]): T | null =>
     typeof v === "string" && (list as readonly string[]).includes(v) ? (v as T) : null;
@@ -290,6 +296,7 @@ export function sanitizeNbaAskIntent(raw: unknown): NbaAskIntent {
     player: s(o.player),
     player_written: latin(s(o.player_written)),
     player2: s(o.player2),
+    player3: s(o.player3),
     team: s(o.team, 40),
     opponent: s(o.opponent, 40),
     date: s(o.date, 20),
@@ -307,9 +314,9 @@ export function sanitizeNbaAskIntent(raw: unknown): NbaAskIntent {
 }
 
 /** 読み取りの食い違い（項目は合っているのに種類だけ違う）をコードで直す */
-/** 綴った名前はロスターの英字名と突き合わせるだけなので、カタカナのまま返ってきたら捨てる */
+/** 綴った名前はロスターと突き合わせる。英字はそのまま、かなは音で比べる（漢字は比べられないので捨てる） */
 function latin(v: string | null): string | null {
-  return v && /^[A-Za-z .'\-]+$/.test(v) ? v : null;
+  return v && (/^[A-Za-z .'\-]+$/.test(v) || /^[ぁ-ゖァ-ヺー・ 　]+$/.test(v)) ? v : null;
 }
 
 function repairNbaAskIntent(i: NbaAskIntent): NbaAskIntent {
@@ -323,6 +330,7 @@ function repairNbaAskIntent(i: NbaAskIntent): NbaAskIntent {
   if (out.kind === "off_topic" && nbaQuery && (out.player || out.team)) out.kind = "nba";
   if (out.query === "player_leaders" && out.date) out.query = "daily_leaders";
   if (out.query === "player_leaders" && out.player) out.query = "player_season";
+  if (out.query === "who_wins" && out.player && out.player2) out.query = "player_season";
   if (out.query === "player_last_game" && (out.count ?? 1) >= 2) out.query = "player_recent_games";
   if (out.query === "standings" && out.team && !out.conference) out.query = "team_record";
   if (out.query === "team_shapes" && !out.team) out.query = "team_stat";
@@ -333,7 +341,11 @@ function repairNbaAskIntent(i: NbaAskIntent): NbaAskIntent {
 
 type ChatResponse = {
   choices?: Array<{ message?: { content?: string | null; refusal?: string | null } }>;
-  usage?: { prompt_tokens?: number; completion_tokens?: number };
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    prompt_tokens_details?: { cached_tokens?: number };
+  };
   error?: { message?: string };
 };
 
@@ -348,7 +360,7 @@ function turnsForParse(turns: readonly Turn[]): Turn[] {
 export async function parseNbaAskIntent(input: {
   turns: readonly Turn[];
   timeZone: string;
-}): Promise<{ intent: NbaAskIntent; promptTokens: number; completionTokens: number }> {
+}): Promise<{ intent: NbaAskIntent; promptTokens: number; completionTokens: number; cachedTokens: number }> {
   const apiKey = requireOpenAiApiKey();
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -383,5 +395,7 @@ export async function parseNbaAskIntent(input: {
     intent: sanitizeNbaAskIntent(parsed),
     promptTokens: json.usage?.prompt_tokens ?? 0,
     completionTokens: json.usage?.completion_tokens ?? 0,
+    /** promptTokens のうちプロンプトキャッシュで半額になった分 */
+    cachedTokens: json.usage?.prompt_tokens_details?.cached_tokens ?? 0,
   };
 }

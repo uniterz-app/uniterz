@@ -92,6 +92,10 @@ type Props = {
   onOpenProSubscribe?: () => void;
   /** プレシーズン: INSIGHT は Free / Pro とも対象外表示（Pro 勧誘なし） */
   preseason?: boolean;
+  /** チュートリアル中は初回無料オファーを親に上げない */
+  tutorialMode?: boolean;
+  /** この試合で初回無料が使える（予想送信後の案内用） */
+  onFirstFreeOffer?: (available: boolean) => void;
   /** UNITERZ のみんなの予想（ホームを選んだ割合 % と人数）。予想の材料に並べる */
   crowd?: { homePct: number; total: number } | null;
 };
@@ -134,6 +138,8 @@ export default function NbaPredictToolsTabsNative({
   onOpenPlayerDetail,
   onOpenProSubscribe,
   preseason = false,
+  tutorialMode = false,
+  onFirstFreeOffer,
   crowd = null,
 }: Props) {
   const t = getGamesTexts(language);
@@ -191,7 +197,7 @@ export default function NbaPredictToolsTabsNative({
   } = useNbaMatchupInsightTeaser({
     gameId,
     apiBaseUrl,
-    enabled: !isPro && !preseason && visited.has("insight"),
+    enabled: !isPro && !preseason,
   });
   const { fUser } = useFirebaseUser();
   /** Free でも、この試合を解除済み（広告 / 初回の無料）なら Pro と同じ中身を出す */
@@ -258,6 +264,27 @@ export default function NbaPredictToolsTabsNative({
       setProPickUnlockBusy(false);
     }
   };
+
+  useEffect(() => {
+    const available =
+      !tutorialMode &&
+      !isPro &&
+      !preseason &&
+      firstFreeAvailable &&
+      !teaserUnlocked &&
+      !teaserLoading;
+    onFirstFreeOffer?.(available);
+    return () => onFirstFreeOffer?.(false);
+  }, [
+    tutorialMode,
+    isPro,
+    preseason,
+    firstFreeAvailable,
+    teaserUnlocked,
+    teaserLoading,
+    onFirstFreeOffer,
+  ]);
+
   const insightUnread = useProInsightUnreadNative({
     gameId,
     version: insightAvailable && !briefLoading ? insightUpdatedAt : null,
@@ -354,7 +381,7 @@ export default function NbaPredictToolsTabsNative({
                   locked
                   onPressUpgrade={() => openProSubscribe()}
                   onPressProPickUnlock={
-                    PRO_PICK_AD_UI_ENABLED && gameId
+                    gameId && (firstFreeAvailable || PRO_PICK_AD_UI_ENABLED)
                       ? () => void runProPickUnlock(false)
                       : undefined
                   }

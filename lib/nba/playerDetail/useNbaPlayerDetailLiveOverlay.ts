@@ -218,7 +218,8 @@ export function useNbaPlayerDetailLiveOverlay(options: Options): {
         next,
         hit,
         bundle.careerSeasons.careerSeasons,
-        bundle.roster.averagesSeasonKey
+        bundle.roster.averagesSeasonKey,
+        bundle.gameLogs.gameLogs
       );
     }
 

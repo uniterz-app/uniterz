@@ -25,6 +25,8 @@ import { ingestNbaShotChartsFromBdl } from "@/lib/nba/ingest/nbaShotChartsIngest
 import { ingestNbaCleanRatingsFromBdl } from "@/lib/nba/ingest/nbaCleanRatingsIngest";
 import { ingestNbaMatchupsFromBdl } from "@/lib/nba/ingest/nbaMatchupIngest";
 import { runPredictAudits } from "@/lib/nba/insights/predictKit/runPredictAudits";
+import { ensureNbaPlayerKanaNames } from "@/lib/nba/ask/nbaPlayerKanaNames";
+import { revalidateNbaDocCache } from "@/lib/nba/nbaPublicReadDb";
 import {
   loadNbaSeasonGameRows,
   type NbaSeasonGameRow,
@@ -180,6 +182,14 @@ export async function runNbaStatsDailyIngest(
   steps.push(
     await runStep("team-rosters", () =>
       ingestNbaTeamRostersFromBdl(db, { seasonKey })
+    )
+  );
+  steps.push(
+    await runStep("player-kana-names", () =>
+      ensureNbaPlayerKanaNames(db).then((r) => {
+        if (r.added > 0) revalidateNbaDocCache(["nbaPlayerKanaNames"]);
+        return r;
+      })
     )
   );
   steps.push(

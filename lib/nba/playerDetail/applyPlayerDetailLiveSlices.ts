@@ -9,6 +9,7 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import type { NbaRosterPlayer } from "@/lib/predict/nbaRoster";
 import type {
   NbaPlayerAvailability,
+  NbaPlayerCareerSeasonRow,
   NbaPlayerContractSummary,
   NbaPlayerDetailPreview,
   NbaPlayerGameLog,
@@ -16,7 +17,10 @@ import type {
   NbaPlayerShotZone,
 } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import { teamInjuryStatusToAvailability } from "@/lib/nba/teamInjuries/injuryStatusDisplay";
-import { metricsFromSeason } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import {
+  formatCareerSeasonLabel,
+  metricsFromSeason,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import type {
   NbaTeamInjuryEntry,
   NbaTeamPayrollLine,
@@ -402,9 +406,50 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  * ロスターの試合平均（Firestore・BDL の今季平均）から 1 行作り、前季までと見比べられるようにする。
  * - ロスターの平均の季（`averagesSeasonKey`）がキャリアに既にあれば何もしない（開幕前の前季フォールバックも二重にならない）
  * - 出場 0 試合なら足さない
- * - GS はロスターに無いので null（UI は「—」）
+ * - GS はロスターに無いので、今季試合ログの starter が揃っていればそこから数える
  * - 年齢は直近の行から季の差だけ進める（無ければ生年月日の 2/1 時点）
  */
+export function gamesStartedFromGameLogs(
+  logs: NbaPlayerGameLog[] | null | undefined,
+  gamesPlayed: number
+): number | null {
+  if (!logs?.length || gamesPlayed <= 0) return null;
+  const flagged = logs.filter((g) => typeof g.starter === "boolean");
+  const need = Math.min(logs.length, gamesPlayed);
+  if (flagged.length < Math.ceil(need * 0.7)) return null;
+  return flagged.filter((g) => g.starter === true).length;
+}
+
+export function fillCareerOptionalFromMetrics(
+  rows: NbaPlayerCareerSeasonRow[],
+  bySeason: Map<
+    string,
+    Partial<Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>>
+  >
+): NbaPlayerCareerSeasonRow[] {
+  if (bySeason.size === 0) return rows;
+  return rows.map((row) => {
+    const m = bySeason.get(formatCareerSeasonLabel(row.seasonStart));
+    if (!m) return row;
+    const oreb = row.oreb ?? metricCell(m.oreb);
+    const dreb = row.dreb ?? metricCell(m.dreb);
+    const pf = row.pf ?? metricCell(m.pf);
+    if (oreb == null && dreb == null && pf == null) return row;
+    return {
+      ...row,
+      ...(oreb != null ? { oreb: round1(oreb) } : {}),
+      ...(dreb != null ? { dreb: round1(dreb) } : {}),
+      ...(pf != null ? { pf: round1(pf) } : {}),
+    };
+  });
+}
+
+function metricCell(
+  cell: NbaPlayerSeasonMetricCell | undefined
+): number | null {
+  return cell && Number.isFinite(cell.value) ? cell.value : null;
+}
+
 export function appendInProgressSeasonToCareer(
   detail: NbaPlayerDetailPreview,
   hit: PlayerRosterHit,
@@ -412,7 +457,8 @@ export function appendInProgressSeasonToCareer(
     regular: NbaPlayerDetailPreview["careerSeasons"]["regular"];
     playoffs: NbaPlayerDetailPreview["careerSeasons"]["playoffs"];
   },
-  averagesSeasonKey: string | null | undefined
+  averagesSeasonKey: string | null | undefined,
+  gameLogs?: NbaPlayerGameLog[] | null
 ): NbaPlayerDetailPreview {
   const seasonStart = Number.parseInt(
     String(averagesSeasonKey ?? "").slice(0, 4),
@@ -453,7 +499,7 @@ export function appendInProgressSeasonToCareer(
     teamAbbr: TEAM_SHORT[teamId] ?? detail.teamAbbr,
     position: (p.position || detail.position || "").split("-")[0] ?? "",
     games,
-    gamesStarted: null,
+    gamesStarted: gamesStartedFromGameLogs(gameLogs, games),
     min: p.mpg || 0,
     fgm: p.fgm ?? round1(fga * fgPct),
     fga,

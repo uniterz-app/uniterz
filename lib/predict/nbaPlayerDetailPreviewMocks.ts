@@ -95,6 +95,8 @@ export type NbaPlayerGameLog = {
   ftm: number;
   fta: number;
   plusMinus: number;
+  /** games.liveStarterIds から。無い試合は未設定 */
+  starter?: boolean;
 };
 
 /** キャリアのシーズン平均 1 行（BRef Per Game 相当・プレビュー） */

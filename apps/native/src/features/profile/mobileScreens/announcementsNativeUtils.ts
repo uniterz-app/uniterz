@@ -3,7 +3,7 @@
  */
 import { Timestamp } from "firebase/firestore";
 import {
-  SYNTHETIC_EVENT_NOTICES,
+  liveSyntheticEventNotices,
   getSyntheticEventById,
 } from "../../../../../../lib/events/syntheticEventNotices";
 
@@ -22,7 +22,9 @@ function postedAtMillis(v: Timestamp | Date | null | undefined): number {
   return v.getTime();
 }
 
-function buildListItemNative(e: (typeof SYNTHETIC_EVENT_NOTICES)[number]): AnnouncementListShapeNative {
+function buildListItemNative(
+  e: ReturnType<typeof liveSyntheticEventNotices>[number]
+): AnnouncementListShapeNative {
   return {
     id: e.id,
     title: e.title,
@@ -36,13 +38,11 @@ function buildListItemNative(e: (typeof SYNTHETIC_EVENT_NOTICES)[number]): Annou
 export function shouldInjectSyntheticEventAnnouncementNative(
   firestoreIds: Set<string>
 ): boolean {
-  return SYNTHETIC_EVENT_NOTICES.some(
-    (e) => e.listInAnnouncements && !firestoreIds.has(e.id)
-  );
+  return liveSyntheticEventNotices().some((e) => !firestoreIds.has(e.id));
 }
 
 export function buildSyntheticEventAnnouncementItemNative(): AnnouncementListShapeNative {
-  const e = SYNTHETIC_EVENT_NOTICES[0];
+  const e = liveSyntheticEventNotices()[0];
   if (!e) {
     return {
       id: "",
@@ -60,8 +60,7 @@ export function mergeSyntheticEventIntoAnnouncementsNative<
 >(items: T[]): T[] {
   const ids = new Set(items.map((i) => i.id));
   const toAdd: AnnouncementListShapeNative[] = [];
-  for (const e of SYNTHETIC_EVENT_NOTICES) {
-    if (!e.listInAnnouncements) continue;
+  for (const e of liveSyntheticEventNotices()) {
     if (ids.has(e.id)) continue;
     toAdd.push(buildListItemNative(e));
     ids.add(e.id);

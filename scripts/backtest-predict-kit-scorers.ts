@@ -6,7 +6,8 @@
  *   npx tsx --tsconfig tsconfig.json scripts/backtest-predict-kit-scorers.ts
  *   K / RECENT_W / BOOST / SD_A / SD_B / SD_EMP=0 で設定を変えて比べる（既定は本番と同じ）
  *   --write: 1 番手の当たりを nbaPredictShadowMeta/{season}.kitBacktest.scorerGames / scorerHits に保存（本番設定のときだけ使う）
- *   DEF_W / POS_W / OPP_K: 相手の失点（全体 / 同じポジション G・F・C）で平均を補正する強さと、その前の試合数での寄せ（本番は入れていない）
+ *   DEF_W / POS_W / OPP_K: 相手の失点（全体 / 同じポジション G・F・C）で平均を補正する強さと、その前の試合数での寄せ
+ *   本番は DEF_W=0.4 POS_W=0.8 OPP_K=10（predictKitScorers PREDICT_KIT_SCORER_OPP）
  */
 import "./_loadAdminEnv";
 import { getAdminDb } from "../lib/firebaseAdmin";

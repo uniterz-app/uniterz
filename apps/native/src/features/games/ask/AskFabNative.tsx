@@ -67,7 +67,7 @@ export default function AskFabNative() {
         style={[
           styles.wrap,
           {
-            bottom: bottomContentReserveY - 4,
+            bottom: Math.max(8, bottomContentReserveY - 4),
             transform: [
               { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [0, 18] }) },
               { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] }) },

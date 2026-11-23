@@ -2,8 +2,11 @@
  * プレイヤー詳細の寄せ読み（Firestore のみ）。
  * 公開 API /api/nba/player-detail が使う。
  */
-import type { Firestore } from "firebase-admin/firestore";
-import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
+import type { DocumentReference, Firestore } from "firebase-admin/firestore";
+import {
+  CURRENT_NBA_SEASON_KEY,
+  nbaLeagueStatsSeasonKeys,
+} from "@/lib/rankings/nbaSeason";
 import { resolveNbaStatsDisplaySeasonKey, resolveNbaRosterInjuryDisplaySeasonKey } from "@/lib/nba/resolveNbaStatsDisplaySeason";
 import { loadPlayerRosterHit } from "@/lib/nba/teamRosters/loadTeamRostersSnapshot";
 import { loadTeamInjury } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
@@ -25,8 +28,16 @@ import { loadTeamPayroll } from "@/lib/nba/teamPayroll/loadTeamPayrollSnapshot";
 import {
   contractFromPayrollLine,
   contractFromRosterPresence,
+  fillCareerOptionalFromMetrics,
   isUsablePlayerContract,
 } from "@/lib/nba/playerDetail/applyPlayerDetailLiveSlices";
+import { nbaGameDocIdFromBdlId } from "@/lib/nba/bdl/mapBdlGameToNbaGameDoc";
+import {
+  formatCareerSeasonLabel,
+  type NbaPlayerGameLog,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import type { NbaPlayerSeasonMetricCell } from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import { playerIdLookupSet } from "@/lib/nba/playerIdAliases";
 import { isCuratedTwoWayPlayer } from "@/lib/nba/contracts/nbaTwoWayPlayersBySeason";
 import {
@@ -248,6 +259,11 @@ export async function loadPlayerDetailBundle(
     ? "firestore"
     : "empty";
 
+  const [careerFilled, logsWithStarters] = await Promise.all([
+    enrichCareerOptionalStats(db, playerId, careerSeasons, seasonMetrics.season, seasonMetrics.metrics),
+    attachStartersToPlayerGameLogs(db, playerId, gameLogs.gameLogs),
+  ]);
+
   return {
     ok: true,
     season: statsSeason,
@@ -255,8 +271,8 @@ export async function loadPlayerDetailBundle(
     roster,
     injury,
     contract,
-    careerSeasons,
-    gameLogs,
+    careerSeasons: careerFilled,
+    gameLogs: { ...gameLogs, gameLogs: logsWithStarters },
     shotZones,
     seasonMetrics,
     offRosterIdentity,
@@ -272,6 +288,84 @@ export async function loadPlayerDetailBundle(
       seasonMetrics.updatedAt
     ),
   };
+}
+
+async function enrichCareerOptionalStats(
+  db: Firestore,
+  playerId: string,
+  career: NbaPlayerCareerSeasonsApiPayload,
+  alreadySeason: string,
+  alreadyMetrics: Partial<Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>>
+): Promise<NbaPlayerCareerSeasonsApiPayload> {
+  const known = nbaLeagueStatsSeasonKeys();
+  const bySeason = new Map<
+    string,
+    Partial<Record<NbaPlayerLeaderMetricId, NbaPlayerSeasonMetricCell>>
+  >();
+  if (Object.keys(alreadyMetrics).length > 0) {
+    bySeason.set(alreadySeason, alreadyMetrics);
+  }
+  const missing = new Set<string>();
+  for (const row of career.careerSeasons.regular) {
+    if (row.oreb != null && row.dreb != null && row.pf != null) continue;
+    const key = formatCareerSeasonLabel(row.seasonStart);
+    if (bySeason.has(key) || !known.includes(key)) continue;
+    missing.add(key);
+  }
+  if (missing.size > 0) {
+    const extras = await Promise.all(
+      [...missing].map((season) => loadPlayerSeasonMetricsSnapshot(db, season, playerId))
+    );
+    for (const extra of extras) {
+      if (Object.keys(extra.metrics).length > 0) bySeason.set(extra.season, extra.metrics);
+    }
+  }
+  if (bySeason.size === 0) return career;
+  return {
+    ...career,
+    careerSeasons: {
+      regular: fillCareerOptionalFromMetrics(career.careerSeasons.regular, bySeason),
+      playoffs: career.careerSeasons.playoffs,
+    },
+  };
+}
+
+async function attachStartersToPlayerGameLogs(
+  db: Firestore,
+  playerId: string,
+  logs: NbaPlayerGameLog[]
+): Promise<NbaPlayerGameLog[]> {
+  if (logs.length === 0) return logs;
+  const pid = String(playerId);
+  const refs: DocumentReference[] = [];
+  const indexByDoc = new Map<string, number[]>();
+  logs.forEach((g, i) => {
+    const n = Number(g.gameId);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const id = nbaGameDocIdFromBdlId(n);
+    const list = indexByDoc.get(id);
+    if (list) {
+      list.push(i);
+      return;
+    }
+    indexByDoc.set(id, [i]);
+    refs.push(db.collection("games").doc(id));
+  });
+  if (refs.length === 0) return logs;
+  const snaps = await db.getAll(...refs, { fieldMask: ["liveStarterIds"] });
+  const next = logs.slice();
+  for (const snap of snaps) {
+    if (!snap.exists) continue;
+    const ids = snap.get("liveStarterIds");
+    if (!Array.isArray(ids) || ids.length === 0) continue;
+    const set = new Set(ids.map(String));
+    for (const i of indexByDoc.get(snap.id) ?? []) {
+      const row = next[i];
+      if (!row) continue;
+      next[i] = { ...row, starter: set.has(pid) };
+    }
+  }
+  return next;
 }
 
 function attachCuratedDeadSalary(

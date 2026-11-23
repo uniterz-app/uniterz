@@ -23,6 +23,16 @@ export type ProInsightGateCopy = {
   eyebrow: string;
   title: string;
   body: string;
+  /** 初回無料が残っているとき（払壁ではなくギフト） */
+  firstFreeKicker: string;
+  firstFreeTitle: string;
+  firstFreeBody: string;
+  /** 予想送信直後の案内（次の試合と同じ聞き方） */
+  firstFreeAskTitle: string;
+  firstFreeAskBody: string;
+  firstFreeDeck: string;
+  /** タブを開く前の案内モーダルで後回し */
+  firstFreeLater: string;
   bullets: readonly ProInsightGateBullet[];
   cta: string;
   /** Native: 無料トライアル誘導のボタン文言 */
@@ -62,6 +72,83 @@ export function proInsightGateCopy(
   const lang = resolveLocalizedLang(language);
   return {
     eyebrow: "PRO PICK",
+    firstFreeKicker: L(lang, {
+      ja: "初回のみ",
+      en: "First look",
+      ko: "첫 회만",
+      zh: "仅首次",
+      es: "Solo la primera",
+      pt: "Só a primeira",
+      fr: "Première fois",
+      de: "Nur beim ersten Mal",
+      ar: "للمرة الأولى فقط",
+    }),
+    firstFreeTitle: L(lang, {
+      ja: "この試合の PRO PICK が見られます",
+      en: "You can see this game's PRO PICK",
+      ko: "이 경기의 PRO PICK을 볼 수 있습니다",
+      zh: "可以查看本场 PRO PICK",
+      es: "Puedes ver el PRO PICK de este partido",
+      pt: "Você pode ver o PRO PICK deste jogo",
+      fr: "Tu peux voir le PRO PICK de ce match",
+      de: "Du kannst das PRO PICK dieses Spiels sehen",
+      ar: "يمكنك مشاهدة PRO PICK لهذه المباراة",
+    }),
+    firstFreeAskTitle: L(lang, {
+      ja: "今予想した試合の PRO PICK を見ますか？",
+      en: "See PRO PICK for the game you just picked?",
+      ko: "방금 예측한 경기의 PRO PICK을 볼까요?",
+      zh: "要看刚才预测的这场 PRO PICK 吗？",
+      es: "¿Ves el PRO PICK del partido que acabas de pronosticar?",
+      pt: "Ver o PRO PICK do jogo que você acabou de prever?",
+      fr: "Voir le PRO PICK du match que tu viens de pronostiquer ?",
+      de: "PRO PICK zum Spiel sehen, das du gerade getippt hast?",
+      ar: "هل تريد مشاهدة PRO PICK للمباراة التي توقعتها للتو؟",
+    }),
+    firstFreeAskBody: L(lang, {
+      ja: "最初の1試合だけ、広告なしで見られます。",
+      en: "The first game is free — no ad.",
+      ko: "첫 경기만 광고 없이 볼 수 있습니다.",
+      zh: "仅第一场可免广告查看。",
+      es: "El primer partido es gratis, sin anuncio.",
+      pt: "Só o primeiro jogo é grátis, sem anúncio.",
+      fr: "Le premier match est gratuit, sans pub.",
+      de: "Nur das erste Spiel ist ohne Werbung kostenlos.",
+      ar: "المباراة الأولى فقط مجانًا وبدون إعلان.",
+    }),
+    firstFreeDeck: L(lang, {
+      ja: "今の予想",
+      en: "YOUR PICK",
+      ko: "방금 예측",
+      zh: "刚才的预测",
+      es: "TU PALPITE",
+      pt: "SEU PALPITE",
+      fr: "TON PRONO",
+      de: "DEIN TIPP",
+      ar: "توقعك الآن",
+    }),
+    firstFreeLater: L(lang, {
+      ja: "あとで",
+      en: "Later",
+      ko: "나중에",
+      zh: "稍后",
+      es: "Más tarde",
+      pt: "Depois",
+      fr: "Plus tard",
+      de: "Später",
+      ar: "لاحقًا",
+    }),
+    firstFreeBody: L(lang, {
+      ja: "この試合の勝つ確率・予想スコア・得点王を、広告なしで 1 回だけ開けます。",
+      en: "Open this game's win chance, projected score and top scorer once — no ad.",
+      ko: "이 경기의 승리 확률·예상 스코어·득점왕을 광고 없이 한 번만 엽니다.",
+      zh: "本场胜率、预测比分与得分王，可免广告打开一次。",
+      es: "Abre una vez la probabilidad, el marcador previsto y el máximo anotador de este partido, sin anuncio.",
+      pt: "Abra uma vez a chance de vitória, o placar previsto e o cestinha deste jogo — sem anúncio.",
+      fr: "Ouvre une fois la probabilité, le score projeté et le meilleur marqueur de ce match — sans pub.",
+      de: "Öffne einmal Siegchance, Prognosescore und Topscorer dieses Spiels — ohne Werbung.",
+      ar: "افتح مرة واحدة احتمالية الفوز والنتيجة المتوقعة وأفضل مسجل لهذه المباراة — بدون إعلان.",
+    }),
     title: L(lang, {
       ja: "この試合の勝つ確率・予想スコア・得点王は PRO PICK で見られます",
       en: "See this game's win chance, projected score and top scorer with PRO PICK",

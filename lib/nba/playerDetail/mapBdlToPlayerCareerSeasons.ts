@@ -44,7 +44,7 @@ function careerPf(
   stats: BdlPlayerCareerAverageRow["stats"]
 ): { pf: number } | Record<string, never> {
   if (!stats) return {};
-  for (const key of ["pf", "personal_fouls"] as const) {
+  for (const key of ["pf", "personal_fouls", "personal_foul", "fouls"] as const) {
     const raw = stats[key];
     const n =
       typeof raw === "number"
@@ -154,8 +154,8 @@ export function mapBdlCareerAverageToRow(
       bdlCareerStatNum(stats, "ft_pct") || (fta > 0 ? ftm / fta : 0)
     ),
     reb: round1(bdlCareerStatNum(stats, "reb", "trb")),
-    ...careerOptional(stats, "oreb", "oreb", "offensive_rebounds"),
-    ...careerOptional(stats, "dreb", "dreb", "defensive_rebounds"),
+    ...careerOptional(stats, "oreb", "oreb", "orb", "orpg", "offensive_rebounds", "offensive_rebound"),
+    ...careerOptional(stats, "dreb", "dreb", "drb", "drpg", "defensive_rebounds", "defensive_rebound"),
     ast: round1(bdlCareerStatNum(stats, "ast")),
     stl: round1(bdlCareerStatNum(stats, "stl")),
     blk: round1(bdlCareerStatNum(stats, "blk")),

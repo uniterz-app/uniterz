@@ -31,6 +31,8 @@ import ProInsightNarrativePreviewScreenNative from "../../games/predict/ProInsig
 import MatchupTeamStatsPreviewScreenNative from "../../games/predict/MatchupTeamStatsPreviewScreenNative";
 import RankingCommentDesignPreviewScreenNative from "../../rankings/RankingCommentDesignPreviewScreenNative";
 import MonthlyBadgePreviewScreenNative from "../MonthlyBadgePreviewScreenNative";
+import EventModalPreviewScreenNative from "../../events/EventModalPreviewScreenNative";
+import ProLabPreviewScreenNative from "../reports/ProLabPreviewScreenNative";
 import ResultDetailPreviewScreenNative from "../../results/ResultDetailPreviewScreenNative";
 import ResultPickupPreviewScreenNative from "../../results/ResultPickupPreviewScreenNative";
 import { View } from "react-native";
@@ -444,6 +446,25 @@ export function MonthlyBadgePreviewScreenWrapper() {
       onClose={() => navigation.goBack()}
     />
   );
+}
+
+export function EventModalPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const { fUser } = useFirebaseUser();
+  const { language } = useNativeUserLanguage(fUser?.uid);
+  return (
+    <EventModalPreviewScreenNative
+      language={language}
+      onClose={() => navigation.goBack()}
+    />
+  );
+}
+
+export function ProLabPreviewScreenWrapper() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  return <ProLabPreviewScreenNative onClose={() => navigation.goBack()} />;
 }
 
 export function MatchupTeamStatsPreviewScreenWrapper() {

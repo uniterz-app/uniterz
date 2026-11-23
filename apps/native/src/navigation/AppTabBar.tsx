@@ -14,8 +14,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
 import { useNativeNavTabNotificationBadges } from "./useNativeNavTabNotificationBadges";
 import NavBarChamferShellNative from "./NavBarChamferShellNative";
-/** `useBottomTabBarInsets` の pill 底オフセットと同じ式（コンテンツ余白と揃える） */
-const TAB_BAR_BOTTOM_GAP = 2;
+import {
+  TAB_BAR_BOTTOM_GAP,
+  TAB_BAR_PILL_PAD_V,
+  TAB_BAR_TAB_MIN_H,
+} from "./useBottomTabBarInsets";
 import {
   getNavBarCompact,
   noteNavBarTouched,
@@ -428,11 +431,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: TAB_BAR_PILL_PAD_V,
   },
   tabButton: {
     flex: 1,
-    minHeight: 48,
+    minHeight: TAB_BAR_TAB_MIN_H,
     alignItems: "center",
     justifyContent: "center",
   },

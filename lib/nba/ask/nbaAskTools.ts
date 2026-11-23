@@ -52,7 +52,12 @@ import {
   metricValue,
   type NbaLeagueTeamStatMetric,
 } from "@/lib/predict/nbaLeagueTeamStatsMocks";
-import type { NbaPlayerLeaderMetricId } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import type { NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import { nbaShotPctParts } from "@/lib/nba/playerStatLeaders/shotPctParts";
+import {
+  NBA_PLAYER_SEASON_METRICS_COLLECTION,
+  NBA_PLAYER_SEASON_METRICS_PLAYERS_SUB,
+} from "@/lib/nba/playerSeasonMetrics/playerSeasonMetricsTypes";
 import { GAME_PRO_INSIGHT_FIELDS, loadGameProInsight } from "@/lib/nba/insights/gameProInsightStore";
 import { sanitizeProInsightNarrativeForDisplay } from "@/lib/predict/validateProInsightNarrative";
 import type { ProInsightNarrativeBrief } from "@/lib/predict/proInsightNarrativeTypes";
@@ -60,7 +65,7 @@ import { L, resolveLocalizedLang } from "@/lib/i18n/localize";
 import type { UiStrings } from "@/lib/i18n/ui";
 import { GAME_SCHEDULE_SEASON } from "@/lib/games/gameScheduleSeason";
 import { loadGameDayIndex } from "@/lib/games/server/gameDayIndexAdmin";
-import { resolveLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
+import { nbaSlateDayRange, resolveLatestNbaSlateDateKey } from "@/lib/games/latestNbaSlate";
 import {
   loadDailyScoreLeadersAdmin,
   selectDailyScoreBoardRows,
@@ -280,10 +285,7 @@ async function resolveTeam(
 }
 
 let injuryCache: { at: number; teams: Record<string, NbaTeamInjuryDocTeam> } | null = null;
-let movesCache: {
-  at: number;
-  teams: NbaTeamOffseasonMovesDoc["teams"];
-} | null = null;
+let movesCache: { at: number; doc: NbaTeamOffseasonMovesDoc } | null = null;
 
 async function loadInjuryTeams(
   db: Firestore,
@@ -312,18 +314,24 @@ function askSeason(raw: unknown): string | { error: string } {
   return season;
 }
 
-async function loadMovesTeams(
-  db: Firestore
-): Promise<NbaTeamOffseasonMovesDoc["teams"]> {
-  if (movesCache && Date.now() - movesCache.at < ROSTER_CACHE_MS) return movesCache.teams;
+export async function loadMovesDoc(db: Firestore): Promise<NbaTeamOffseasonMovesDoc> {
+  if (movesCache && Date.now() - movesCache.at < ROSTER_CACHE_MS) return movesCache.doc;
   const snap = await db
     .collection(NBA_TEAM_OFFSEASON_MOVES_COLLECTION)
     .doc(CURRENT_NBA_SEASON_KEY)
     .get();
-  const teams =
-    (snap.data() as Partial<NbaTeamOffseasonMovesDoc> | undefined)?.teams ?? {};
-  movesCache = { at: Date.now(), teams };
-  return teams;
+  const data = snap.data() as Partial<NbaTeamOffseasonMovesDoc> | undefined;
+  const doc: NbaTeamOffseasonMovesDoc = {
+    seasonKey: data?.seasonKey ?? CURRENT_NBA_SEASON_KEY,
+    priorSeasonKey: data?.priorSeasonKey ?? "",
+    teams: data?.teams ?? {},
+  };
+  movesCache = { at: Date.now(), doc };
+  return doc;
+}
+
+async function loadMovesTeams(db: Firestore): Promise<NbaTeamOffseasonMovesDoc["teams"]> {
+  return (await loadMovesDoc(db)).teams;
 }
 
 const MOVE_CAP = 12;
@@ -389,6 +397,39 @@ function compactProInsight(brief: ProInsightNarrativeBrief, language: string) {
   };
 }
 
+/**
+ * 成功率のリーダーの 1 試合平均の成功数 / 試投数。行に無ければ（ingest 前のスナップショット）
+ * レギュラーの FG / 3P / FT だけメトリクス doc の fgm / fga 等を fieldMask で読む。
+ */
+async function leaderShotParts(
+  db: Firestore,
+  season: string,
+  metric: string,
+  windowName: "season" | "playoffs",
+  rows: NbaPlayerStatLeaderRow[]
+): Promise<Map<string, { made: number; att: number }>> {
+  const out = new Map<string, { made: number; att: number }>();
+  const parts = nbaShotPctParts(metric);
+  if (!parts) return out;
+  const missing: string[] = [];
+  for (const row of rows) {
+    if (row.made != null && row.att != null) out.set(row.playerId, { made: row.made, att: row.att });
+    else missing.push(row.playerId);
+  }
+  if (missing.length === 0 || windowName !== "season" || !parts.made || !parts.att) return out;
+  const col = db.collection(NBA_PLAYER_SEASON_METRICS_COLLECTION).doc(season).collection(NBA_PLAYER_SEASON_METRICS_PLAYERS_SUB);
+  const docs = await db.getAll(...[...new Set(missing)].map((id) => col.doc(id)), {
+    fieldMask: [`metrics.${parts.made}.value`, `metrics.${parts.att}.value`],
+  });
+  for (const d of docs) {
+    const m = (d.data()?.metrics ?? {}) as Record<string, { value?: unknown }>;
+    const made = m[parts.made]?.value;
+    const att = m[parts.att]?.value;
+    if (typeof made === "number" && typeof att === "number") out.set(d.id, { made, att });
+  }
+  return out;
+}
+
 export async function runNbaAskTool(
   db: Firestore,
   name: string,
@@ -437,8 +478,9 @@ export async function runNbaAskTool(
       games: listed.slice(0, 15).map(({ id, data }) => {
         const ctx = gameDocTeamContext(data);
         const live = normalizeLiveGameStatsDoc(data.liveStats);
-        const score = getResolvedGameScore(data);
         const status = gameStatus(data, live?.phase ?? null);
+        /** 試合中のスコアは出さない（ネタバレ防止） */
+        const score = status === "final" ? getResolvedGameScore(data) : null;
         return {
           id,
           away: abbr(ctx.awayTeamId),
@@ -450,8 +492,8 @@ export async function runNbaAskTool(
           start: kickoffLabel(data, timeZone),
           pickup: isNbaPickupGame(data),
           score: score ? `${score.away}-${score.home}` : null,
-          scoreHome: score && status !== "scheduled" ? score.home : null,
-          scoreAway: score && status !== "scheduled" ? score.away : null,
+          scoreHome: score ? score.home : null,
+          scoreAway: score ? score.away : null,
           status,
           round: displayNbaRoundLabel(typeof data.roundLabel === "string" ? data.roundLabel : ""),
         };
@@ -692,36 +734,31 @@ export async function runNbaAskTool(
     const payload = await loadPlayerStatLeadersSnapshot(db, season);
     const rows = payload.bundle[windowName]?.[metric] ?? [];
     if (rows.length === 0) return { found: false, season, metric, note: "No leader snapshot" };
-    const ranked = rows.slice(0, 8).map((row, index) => ({
-      rank: index + 1,
-      name: row.playerName,
-      team: abbr(row.teamId),
-      value: row.value,
-    }));
+    const limit = Math.min(20, Math.max(1, Math.round(Number(args.limit) || 5)));
+    const shown = rows.slice(0, Math.max(8, limit)).map((row, index) => ({ row, rank: index + 1 }));
     const teamQ = str(args.team);
-    let teamRow: { rank: number; name: string; team: string; value: number } | null = null;
+    let mine: { row: NbaPlayerStatLeaderRow; rank: number } | null = null;
     if (teamQ) {
       const team = await resolveTeam(db, teamQ);
       if ("teamId" in team) {
         const index = rows.findIndex((row) => row.teamId === team.teamId);
-        const row = index >= 0 ? rows[index] : undefined;
-        if (row) {
-          teamRow = {
-            rank: index + 1,
-            name: row.playerName,
-            team: abbr(row.teamId),
-            value: row.value,
-          };
-        }
+        if (index >= 0) mine = { row: rows[index]!, rank: index + 1 };
       }
     }
+    const shots = await leaderShotParts(db, season, metric, windowName, [...shown.map((x) => x.row), ...(mine ? [mine.row] : [])]);
+    const pack = ({ row, rank }: { row: NbaPlayerStatLeaderRow; rank: number }) => {
+      const shot = shots.get(row.playerId);
+      return { rank, name: row.playerName, team: abbr(row.teamId), value: row.value, ...(shot ? { made: shot.made, att: shot.att, gp: row.gamesPlayed } : {}) };
+    };
+    const ranked = shown.map(pack);
+    const teamRow = mine ? pack(mine) : null;
     return {
       found: true,
       season,
       metric,
       seasonType: windowName,
       leader: ranked[0],
-      leaders: ranked.slice(0, 5),
+      leaders: ranked.slice(0, limit),
       ...(teamRow ? { team: teamRow } : {}),
     };
   }
@@ -946,10 +983,17 @@ export async function runNbaAskTool(
     if (!date) {
       const index = await loadGameDayIndex(db, { league: "nba", season: GAME_SCHEDULE_SEASON });
       date = resolveLatestNbaSlateDateKey(index.startMs);
+      /** 「昨日」= 最新の試合日の 1 つ前の試合日（米国東部） */
+      for (let back = Math.min(7, Math.max(0, Math.round(Number(args.slatesBack) || 0))); back > 0; back--) {
+        const range = nbaSlateDayRange(date);
+        if (!range) break;
+        date = resolveLatestNbaSlateDateKey(index.startMs, range.start.getTime() - 1);
+      }
     }
     if (!DATE_RE.test(date)) return { error: "date must be YYYY-MM-DD" };
     const payload = await loadDailyLeadersAdmin(db, { dateKey: date, timeZone: NBA_SLATE_TIME_ZONE });
-    const leaders = (payload.boards[metric] ?? []).slice(0, 5).map((row, index) => ({
+    const limit = Math.min(20, Math.max(1, Math.round(Number(args.limit) || 5)));
+    const leaders = (payload.boards[metric] ?? []).slice(0, limit).map((row, index) => ({
       rank: index + 1,
       name: `${row.firstName} ${row.lastName}`.trim(),
       team: row.teamAbbr,

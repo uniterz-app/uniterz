@@ -121,6 +121,8 @@ type Props = {
     | "matchupTeamStatsPreview"
     | "rankingCommentDesignPreview"
     | "monthlyBadgePreview"
+    | "eventModalPreview"
+    | "proLabPreview"
     | "adminFeatureInbox"
     | "adminContactInbox"
     | "adminRedemptions"
@@ -321,6 +323,8 @@ export default function ProfileSideMenuModal({
       | "matchupTeamStatsPreview"
       | "rankingCommentDesignPreview"
       | "monthlyBadgePreview"
+      | "eventModalPreview"
+      | "proLabPreview"
         | "adminFeatureInbox"
       | "adminContactInbox"
       | "adminRedemptions"
@@ -703,6 +707,22 @@ export default function ProfileSideMenuModal({
                       <CyberSideMenuSectionTitleNative>DEV</CyberSideMenuSectionTitleNative>
                       <View style={styles.itemGroup}>
                         <SideMenuItemButtonNative
+                          icon="gift-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("eventModalPreview")}
+                        >
+                          12月イベントモーダル
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="lightbulb-on-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proInsightGatePreview")}
+                        >
+                          PRO PICK 初回無料
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="bell-ring-outline"
                           dense
                           labelStyle={labelStyle}
@@ -733,6 +753,14 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("tradeBuzzPreview")}
                         >
                           トレード Buzz
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="flask-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proLabPreview")}
+                        >
+                          PRO LAB
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="file-chart-outline"
@@ -789,108 +817,6 @@ export default function ProfileSideMenuModal({
                           onPress={() => openUserPage("playerDetailPreview")}
                         >
                           プレイヤー詳細（ショット）
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="sword-cross"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("proLeagueTeaserPreview")}
-                        >
-                          PRO LEAGUE ゲート
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="flash-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("streakFramePreview")}
-                        >
-                          連勝フレーム光
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="texture-box"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("dustProSkinPreview")}
-                        >
-                          Dust Pro Skin
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="texture-box"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("milestoneProSkinPreview")}
-                        >
-                          Milestone Pro Skin
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="texture-box"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("candidateProSkinPreview")}
-                        >
-                          Candidate Pro Skin
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="tag-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("teamAbbrBadgePreview")}
-                        >
-                          TeamAbbrBadge
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="bookmark-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("resultPickupPreview")}
-                        >
-                          リザルト PICK UP
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="lightbulb-on-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("proInsightGatePreview")}
-                        >
-                          PRO INSIGHT ゲート
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="text-box-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("proInsightNarrativePreview")
-                          }
-                        >
-                          PRO INSIGHT 予想の材料
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="chart-timeline-variant"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("matchupTeamStatsPreview")
-                          }
-                        >
-                          マッチアップ STATS + LAST 5
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="message-processing-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() =>
-                            openUserPage("rankingCommentDesignPreview")
-                          }
-                        >
-                          ひとこと デザイン案
-                        </SideMenuItemButtonNative>
-                        <SideMenuItemButtonNative
-                          icon="medal-outline"
-                          dense
-                          labelStyle={labelStyle}
-                          onPress={() => openUserPage("monthlyBadgePreview")}
-                        >
-                          月間バッジ プレビュー
                         </SideMenuItemButtonNative>
                       </View>
                     </>

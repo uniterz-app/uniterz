@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppState } from "react-native";
 import { db } from "../../lib/firebase";
-import { SYNTHETIC_EVENT_NOTICES } from "../../../../../lib/events/syntheticEventNotices";
+import { liveSyntheticEventNotices } from "../../../../../lib/events/syntheticEventNotices";
 import {
   loadAnnouncementReadIdsFor,
   subscribeAnnouncementReadsRefresh,
@@ -15,8 +15,7 @@ function mergeSyntheticIdsIntoVisibleSetNative(
   firestoreTopIds: Set<string>
 ): Set<string> {
   const out = new Set(firestoreTopIds);
-  for (const e of SYNTHETIC_EVENT_NOTICES) {
-    if (!e.listInAnnouncements) continue;
+  for (const e of liveSyntheticEventNotices()) {
     if (firestoreTopIds.has(e.id)) continue;
     out.add(e.id);
   }

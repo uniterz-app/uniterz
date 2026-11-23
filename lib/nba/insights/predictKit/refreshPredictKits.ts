@@ -17,7 +17,10 @@ import {
   toProInsightPredictKit,
   type ProInsightPredictKit,
 } from "@/lib/nba/insights/predictKit/predictKitTypes";
-import { predictKitScorerOdds } from "@/lib/nba/insights/predictKit/predictKitScorers";
+import {
+  predictKitScorerOdds,
+  predictKitScorerOppMuAdj,
+} from "@/lib/nba/insights/predictKit/predictKitScorers";
 import {
   etDateOf,
   loadPredictKitInjuryContext,
@@ -261,7 +264,10 @@ export async function refreshPredictKits(
     const rawKit = buildPredictKit({ season, ...kitInput });
     const predictKitRaw = toProInsightPredictKit({ kit: rawKit, homeTeamId, awayTeamId, absences });
     const scorers = predictKitScorerOdds(
-      [...(scorerPlayers[homeTeamId] ?? []), ...(scorerPlayers[awayTeamId] ?? [])],
+      [...(scorerPlayers[homeTeamId] ?? []), ...(scorerPlayers[awayTeamId] ?? [])].map((p) => {
+        const oppId = p.teamId === homeTeamId ? awayTeamId : homeTeamId;
+        return { ...p, oppMuAdj: predictKitScorerOppMuAdj(p.pos, sim.posDefense[oppId] ?? null) };
+      }),
       seedOf(doc.id)
     )
       .slice(0, PREDICT_KIT_SCORERS_SHOWN)
