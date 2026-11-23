@@ -401,8 +401,8 @@ export default function ProfileHomeScreen({
     if (fromLeaderboards) {
       const groupId = leaderboardsGroupId?.trim();
       tabNavigation.navigate("LeaderboardsTab", {
-        screen: "LeaderboardsHome",
-        params: groupId ? { reopenGroupId: groupId } : undefined,
+        screen: groupId ? "CommunityDetail" : "LeaderboardsHome",
+        params: groupId ? { groupId } : undefined,
       });
       return;
     }

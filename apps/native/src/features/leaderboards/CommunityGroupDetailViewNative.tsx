@@ -11,13 +11,17 @@ import {
   communityMetricToMobile,
   communityRowToRankingCardRow,
 } from "../../../../../lib/communities/leaderboardDisplayRow";
+import { resortCommunityLeaderboardRows } from "../../../../../lib/communities/resortCommunityLeaderboardRows";
+import {
+  parseCommunityGamesScope,
+  type CommunityGamesScope,
+} from "../../../../../lib/communities/communityGamesScope";
+import { metricLabel } from "../../../../../lib/communities/labels";
+import type { CommunityMetric } from "../../../../../lib/communities/types";
 import { warmPublicProfileFromRankingRowNative } from "../profile/warmPublicProfileNative";
 import type { OpenPublicProfileWarm } from "../../navigation/navigateToPublicProfileNative";
 import { SkeletonScanNative } from "../../components/SkeletonScanNative";
-import {
-  RankingsCyberPanelNative,
-  RankingsCyberSectionLabelNative,
-} from "../rankings/RankingsCyberPanelNative";
+import { RankingsCyberPanelNative } from "../rankings/RankingsCyberPanelNative";
 import RankingsListEntranceRowNative from "../rankings/RankingsListEntranceRowNative";
 import { RankingListCardNative } from "../rankings/RankingsRankingCards";
 import type { RankingsLanguage } from "../rankings/rankingsTexts";
@@ -27,15 +31,23 @@ import {
   invalidateCommunityGroupDetail,
   listPreviewToSummary,
 } from "./communityGroupDetailCacheNative";
-import { communityApiUrl, communityAuthHeader, type CommunityGroupListPreview, type CommunityGroupSummary } from "./communityApiNative";
+import {
+  communityApiUrl,
+  communityAuthHeader,
+  type CommunityGroupLeaderboardRow,
+  type CommunityGroupListPreview,
+  type CommunityGroupSummary,
+} from "./communityApiNative";
 import CommunityGroupHeaderHeroNative from "./CommunityGroupHeaderHeroNative";
-import CommunityGroupZoneLabelNative from "./CommunityGroupZoneLabelNative";
-import { COMMUNITY_GROUP_PANEL_PADDING_X } from "../../../../../lib/communities/communityGroupShell";
+import CommunityGroupViewBarNative from "./CommunityGroupViewBarNative";
+import CommunityEditGroupModalNative from "./CommunityEditGroupModalNative";
+import { CommunityModalBackdropNative } from "./CommunityCrtPartsNative";
 import { RankingsShellGridOverlay } from "../rankings/rankingsUiDecorations";
 import { copyTextNative, shareTextNative } from "./copyTextNative";
 import { getShareAppOrigin } from "../../../../../lib/share/shareAppUrls";
 import { communityMono, communityPressableTapStyle } from "./communityCrtThemeNative";
 import { COMMUNITY_GROUP_HERO_BG } from "../../../../../lib/communities/communityGroupHeroLayout";
+import { MAX_MEMBERS_PER_GROUP } from "../../../../../lib/communities/limitValues";
 import { resolveLocalizedLang } from "../../../../../lib/i18n/localize";
 import { moderationCopy } from "../../../../../lib/moderation/moderationCopy";
 import { filterBlockedRows } from "../../../../../lib/moderation/moderationTypes";
@@ -52,6 +64,7 @@ type Props = {
   reloadToken?: number;
   onSummaryLoaded?: (summary: CommunityGroupSummary) => void;
   onExitAction?: () => void;
+  /** 終了確認後に呼ばれる（アーカイブ実行） */
   onRequestEndGroup?: (groupName: string) => void;
   /** 親 Modal 内では cyberAlert が裏に回るため、確認 UI を親に任せる */
   onRequestLeave?: () => void;
@@ -61,6 +74,10 @@ type Props = {
   onHeaderImageEditingChange?: (editing: boolean) => void;
   /** `CommunityGroupDetailCard` 内 — 余白を詰めてヒーローを上端に揃える */
   inDetailCard?: boolean;
+  /** 親が Modal のとき、確認も embedded で重ねる */
+  embedConfirmModals?: boolean;
+  /** 終了 API 実行中（確認モーダルの busy） */
+  endingGroup?: boolean;
 };
 
 export default function CommunityGroupDetailViewNative({
@@ -78,15 +95,51 @@ export default function CommunityGroupDetailViewNative({
   onImageUpdated,
   onHeaderImageEditingChange,
   inDetailCard = false,
+  embedConfirmModals = false,
+  endingGroup = false,
 }: Props) {
   const initialCached = getCachedCommunityGroupDetail(groupId);
   const [summary, setSummary] = useState(() =>
     initialCached?.summary ?? (listPreview ? listPreviewToSummary(groupId, listPreview) : null)
   );
-  const [rows, setRows] = useState(() => initialCached?.rows ?? []);
-  const [metric, setMetric] = useState(() => initialCached?.metric ?? listPreview?.rankingMetric ?? "totalPoints");
+  const [baseRows, setBaseRows] = useState<CommunityGroupLeaderboardRow[]>(
+    () => initialCached?.rows ?? []
+  );
+  const [metric, setMetric] = useState<CommunityMetric>(
+    () => initialCached?.metric ?? listPreview?.rankingMetric ?? "totalPoints"
+  );
+  const [gamesScope, setGamesScope] = useState<CommunityGamesScope>(() =>
+    parseCommunityGamesScope(
+      initialCached?.gamesScope ??
+        initialCached?.summary?.rankingGamesScope ??
+        "all"
+    )
+  );
   const [loadingDetail, setLoadingDetail] = useState(() => !initialCached && !listPreview);
   const [loadingRows, setLoadingRows] = useState(() => !initialCached);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  /** 招待コードは常時出さず、空き枠タップで開く */
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [editGroupOpen, setEditGroupOpen] = useState(false);
+  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
+  const [headerImageEditingLocal, setHeaderImageEditingLocal] = useState(false);
+
+  const setScrollLocked = useCallback(
+    (locked: boolean) => {
+      onHeaderImageEditingChange?.(locked);
+    },
+    [onHeaderImageEditingChange]
+  );
+
+  const openEditGroup = useCallback(() => {
+    setEditGroupOpen(true);
+    setScrollLocked(true);
+  }, [setScrollLocked]);
+
+  const closeEditGroup = useCallback(() => {
+    setEditGroupOpen(false);
+    setScrollLocked(headerImageEditingLocal);
+  }, [headerImageEditingLocal, setScrollLocked]);
 
   const scrollStyle = useMemo(
     () => [
@@ -96,75 +149,142 @@ export default function CommunityGroupDetailViewNative({
     [inDetailCard]
   );
 
-  const load = useCallback(async () => {
-    if (!groupId) return;
-    const cached = getCachedCommunityGroupDetail(groupId);
-    if (cached) {
-      setSummary(cached.summary);
-      onSummaryLoaded?.(cached.summary);
-      setRows(cached.rows);
-      setMetric(cached.metric);
-      setLoadingDetail(false);
-      setLoadingRows(false);
-    } else if (listPreview) {
-      const previewSummary = listPreviewToSummary(groupId, listPreview);
-      setSummary(previewSummary);
-      onSummaryLoaded?.(previewSummary);
-      setMetric(listPreview.rankingMetric);
-      setLoadingDetail(false);
-      setLoadingRows(true);
-    } else {
-      setLoadingDetail(true);
-      setLoadingRows(true);
-    }
-
-    const entry = await fetchCommunityGroupDetail(groupId, getIdToken);
-    if (!entry) {
-      if (!cached && !listPreview) {
-        cyberAlert("", language === "en" ? "Load failed." : "読み込みに失敗しました。");
+  const applyEntry = useCallback(
+    (
+      entry: {
+        summary: CommunityGroupSummary;
+        rows: CommunityGroupLeaderboardRow[];
+        metric: CommunityMetric;
+        gamesScope: CommunityGamesScope;
+      },
+      keepViewMetric: boolean
+    ) => {
+      setSummary(entry.summary);
+      onSummaryLoaded?.(entry.summary);
+      setBaseRows(entry.rows);
+      setGamesScope(entry.gamesScope);
+      if (!keepViewMetric) {
+        setMetric(entry.metric);
       }
+    },
+    [onSummaryLoaded]
+  );
+
+  const load = useCallback(
+    async (opts?: { gamesScope?: CommunityGamesScope; keepViewMetric?: boolean }) => {
+      if (!groupId) return;
+      const requestedScope = opts?.gamesScope;
+      const keepViewMetric = opts?.keepViewMetric ?? false;
+      const cached = getCachedCommunityGroupDetail(groupId, requestedScope);
+      if (cached) {
+        applyEntry(cached, keepViewMetric);
+        setLoadingDetail(false);
+        setLoadingRows(false);
+      } else if (listPreview && !requestedScope) {
+        const previewSummary = listPreviewToSummary(groupId, listPreview);
+        setSummary(previewSummary);
+        onSummaryLoaded?.(previewSummary);
+        if (!keepViewMetric) setMetric(listPreview.rankingMetric);
+        setLoadingDetail(false);
+        setLoadingRows(true);
+      } else {
+        setLoadingRows(true);
+      }
+
+      const entry = await fetchCommunityGroupDetail(groupId, getIdToken, {
+        gamesScope: requestedScope,
+      });
+      if (!entry) {
+        if (!cached && !listPreview) {
+          cyberAlert("", language === "en" ? "Load failed." : "読み込みに失敗しました。");
+        }
+        setLoadingDetail(false);
+        setLoadingRows(false);
+        return;
+      }
+      applyEntry(entry, keepViewMetric);
       setLoadingDetail(false);
       setLoadingRows(false);
-      return;
-    }
-    setSummary(entry.summary);
-    onSummaryLoaded?.(entry.summary);
-    setRows(entry.rows);
-    setMetric(entry.metric);
-    setLoadingDetail(false);
-    setLoadingRows(false);
-  }, [groupId, listPreview, language, getIdToken, onSummaryLoaded]);
+    },
+    [groupId, listPreview, language, getIdToken, onSummaryLoaded, applyEntry]
+  );
 
   useEffect(() => {
     void load();
-  }, [load, reloadToken]);
+  }, [groupId, reloadToken]); // eslint-disable-line react-hooks/exhaustive-deps -- 初回と明示リロードのみ
+
+  const onSelectMetric = useCallback((next: CommunityMetric) => {
+    setMetric(next);
+  }, []);
+
+  const onSelectGamesScope = useCallback(
+    (next: CommunityGamesScope) => {
+      if (next === gamesScope || loadingRows) return;
+      // 成功するまでタブを切り替えない（失敗時に全試合得点のままピックアップ表示になるのを防ぐ）
+      void (async () => {
+        setLoadingRows(true);
+        const entry = await fetchCommunityGroupDetail(groupId, getIdToken, {
+          gamesScope: next,
+        });
+        if (!entry || entry.gamesScope !== next) {
+          setLoadingRows(false);
+          cyberAlert(
+            "",
+            language === "en"
+              ? "Could not load Pick Up scores. Try again."
+              : "ピックアップの得点を読み込めませんでした。もう一度お試しください。"
+          );
+          return;
+        }
+        applyEntry(entry, true);
+        setLoadingDetail(false);
+        setLoadingRows(false);
+      })();
+    },
+    [gamesScope, loadingRows, groupId, getIdToken, language, applyEntry]
+  );
 
   const t = useMemo(
     () =>
       language === "en"
         ? {
-            ranking: "RANKING",
             inviteLabel: "Invite code",
             copyInvite: "Copy",
             shareInvite: "Share",
-            inviteUnavailable:
-              "Invite code is not stored for this group. Create a new group to get a code.",
-            endGroup: "End this group",
+            issueInvite: "Create invite code",
+            issuing: "…",
+            inviteUnavailable: "Could not create an invite code. Try again.",
+            openSlot: "Add someone",
             leave: "Leave group",
             noEntries: "No entries yet.",
+            endTitle: "End this group?",
+            endBody: (name: string) =>
+              `This will archive "${name}". Members will no longer see it in active slots.`,
+            endCancel: "Cancel",
+            endConfirm: "End group",
           }
         : {
-            ranking: "RANKING",
             inviteLabel: "招待コード",
             copyInvite: "コピー",
             shareInvite: "共有",
-            inviteUnavailable:
-              "このグループには招待コードが保存されていません。新規作成時に表示されたコードをご利用ください。",
-            endGroup: "グループを終了する",
+            issueInvite: "招待コードを発行",
+            issuing: "…",
+            inviteUnavailable: "招待コードを発行できませんでした。もう一度お試しください。",
+            openSlot: "人を追加",
             leave: "グループを退会",
             noEntries: "まだエントリーがありません。",
+            endTitle: "グループを終了しますか？",
+            endBody: (name: string) =>
+              `「${name}」を終了します。メンバーはアクティブなスロットから非表示になります。`,
+            endCancel: "キャンセル",
+            endConfirm: "終了する",
           },
     [language]
+  );
+
+  const rows = useMemo(
+    () => resortCommunityLeaderboardRows(baseRows, metric),
+    [baseRows, metric]
   );
 
   const moderation = useMemo(
@@ -189,8 +309,9 @@ export default function CommunityGroupDetailViewNative({
   const lang = language as RankingsLanguage;
   const reduceMotion = useReducedMotion() ?? false;
   const rankListEntranceKey = useMemo(
-    () => `${groupId}:${metric}:${rows.map((r) => `${r.uid}:${r.rank}`).join("|")}`,
-    [groupId, metric, rows]
+    () =>
+      `${groupId}:${metric}:${gamesScope}:${rows.map((r) => `${r.uid}:${r.rank}`).join("|")}`,
+    [groupId, metric, gamesScope, rows]
   );
 
   const onCopyInvite = useCallback(async () => {
@@ -221,6 +342,60 @@ export default function CommunityGroupDetailViewNative({
     const message = base.includes(origin) ? base : `${base}\n\n${origin}`;
     await shareTextNative(t.shareInvite, message);
   }, [summary?.inviteCode, summary?.name, language, t.shareInvite]);
+
+  const onIssueInvite = useCallback(async (): Promise<string | null> => {
+    if (!summary?.isOwner || inviteBusy) return summary?.inviteCode ?? null;
+    setInviteBusy(true);
+    try {
+      const h = await communityAuthHeader(getIdToken);
+      if (!h) return null;
+      const res = await fetch(
+        communityApiUrl(`/api/communities/${groupId}/rotate-invite`),
+        { method: "POST", headers: { Authorization: h } }
+      );
+      const json = await res.json().catch(() => ({}));
+      const code =
+        typeof json?.inviteCode === "string" ? json.inviteCode.trim() : "";
+      if (!res.ok || !json?.ok || !code) {
+        cyberAlert("", t.inviteUnavailable);
+        return null;
+      }
+      setSummary((prev) => (prev ? { ...prev, inviteCode: code } : prev));
+      invalidateCommunityGroupDetail(groupId);
+      return code;
+    } finally {
+      setInviteBusy(false);
+    }
+  }, [
+    summary?.isOwner,
+    summary?.inviteCode,
+    inviteBusy,
+    getIdToken,
+    groupId,
+    t.inviteUnavailable,
+  ]);
+
+  const onToggleInvite = useCallback(async () => {
+    if (inviteOpen) {
+      setInviteOpen(false);
+      return;
+    }
+    if (!summary?.inviteCode) {
+      if (!summary?.isOwner) {
+        cyberAlert("", t.inviteUnavailable);
+        return;
+      }
+      const code = await onIssueInvite();
+      if (!code) return;
+    }
+    setInviteOpen(true);
+  }, [
+    inviteOpen,
+    summary?.inviteCode,
+    summary?.isOwner,
+    onIssueInvite,
+    t.inviteUnavailable,
+  ]);
 
   const onLeave = useCallback(() => {
     if (onRequestLeave) {
@@ -323,13 +498,29 @@ export default function CommunityGroupDetailViewNative({
           getIdToken={getIdToken}
           capTop={inDetailCard}
           onImageUpdated={handleHeaderImageUpdated}
-          onImageEditingChange={onHeaderImageEditingChange}
+          onImageEditingChange={(editing) => {
+            setHeaderImageEditingLocal(editing);
+            setScrollLocked(editing || editGroupOpen);
+          }}
+          onEditGroup={
+            summary.isOwner && !summary.archived ? openEditGroup : undefined
+          }
+          onEndGroup={
+            summary.isOwner && !summary.archived && onRequestEndGroup
+              ? () => setEndConfirmOpen(true)
+              : undefined
+          }
         />
       ) : null}
 
-      <View style={styles.rankingZoneLabel}>
-        <CommunityGroupZoneLabelNative>{t.ranking}</CommunityGroupZoneLabelNative>
-      </View>
+      <CommunityGroupViewBarNative
+        language={language}
+        metric={metric}
+        gamesScope={gamesScope}
+        onSelectMetric={onSelectMetric}
+        onSelectGamesScope={onSelectGamesScope}
+        gamesScopeBusy={loadingRows}
+      />
 
       {loadingRows ? (
         <RankingsCyberPanelNative subtle compact style={styles.rankingSkeletonPanel}>
@@ -338,69 +529,111 @@ export default function CommunityGroupDetailViewNative({
           <SkeletonScanNative style={styles.skeletonRow} />
           <SkeletonScanNative style={styles.skeletonRow} />
         </RankingsCyberPanelNative>
-      ) : rankingCardRows.length === 0 ? (
-        <Text style={styles.emptyRank}>{t.noEntries}</Text>
       ) : (
         <View style={styles.rankingList}>
-          {rankingItems.map((item, i) => (
-            <RankingsListEntranceRowNative
-              key={item.row.uid ?? item.row.handle ?? `r-${item.rank}`}
-              index={i}
-              entranceKey={rankListEntranceKey}
-            >
-              <RankingListCardNative
-                row={item.row}
-                rank={item.rank}
-                metric={rankMetricForProfile}
-                language={lang}
-                animateCrown={item.rank === 1}
-                pageKey={rankListEntranceKey}
-                reduceMotion={reduceMotion}
-                onPress={onOpenProfile ? () => openProfile(item.row) : undefined}
-              />
-            </RankingsListEntranceRowNative>
-          ))}
+          {rankingCardRows.length === 0 ? (
+            <Text style={styles.emptyRank}>{t.noEntries}</Text>
+          ) : (
+            rankingItems.map((item, i) => (
+              <RankingsListEntranceRowNative
+                key={item.row.uid ?? item.row.handle ?? `r-${item.rank}`}
+                index={i}
+                entranceKey={rankListEntranceKey}
+              >
+                <RankingListCardNative
+                  row={item.row}
+                  rank={item.rank}
+                  metric={rankMetricForProfile}
+                  language={lang}
+                  animateCrown={item.rank === 1}
+                  pageKey={rankListEntranceKey}
+                  reduceMotion={reduceMotion}
+                  frameFallback
+                  metricTagOverride={
+                    metric === "activeWinStreak"
+                      ? metricLabel("activeWinStreak", language)
+                      : null
+                  }
+                  onPress={onOpenProfile ? () => openProfile(item.row) : undefined}
+                />
+              </RankingsListEntranceRowNative>
+            ))
+          )}
+          {/* 順位番号ではなく「一覧の最後の人」の直後 */}
+          {summary &&
+          !summary.archived &&
+          (summary.memberCount ?? rankingItems.length) < MAX_MEMBERS_PER_GROUP ? (
+            <>
+              <Pressable
+                disabled={inviteBusy}
+                onPress={() => void onToggleInvite()}
+                style={({ pressed }) => [
+                  styles.openMemberSlot,
+                  inviteOpen && styles.openMemberSlotActive,
+                  rankingCardRows.length === 0 && styles.openMemberSlotAlone,
+                  pressed && communityPressableTapStyle(true),
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t.openSlot}
+              >
+                <MaterialCommunityIcons
+                  name={inviteOpen ? "chevron-up" : "plus"}
+                  size={18}
+                  color="rgba(148,163,184,0.72)"
+                />
+                <Text style={styles.openMemberSlotText}>
+                  {inviteBusy ? t.issuing : t.openSlot}
+                </Text>
+              </Pressable>
+              {inviteOpen && summary.inviteCode ? (
+                <View style={styles.inviteReveal}>
+                  <Text style={styles.inviteLabel}>{t.inviteLabel}</Text>
+                  <View style={styles.inviteCodeRow}>
+                    <Text style={styles.inviteCode}>{summary.inviteCode}</Text>
+                    <View style={styles.inviteActions}>
+                      <Pressable
+                        onPress={() => void onCopyInvite()}
+                        style={({ pressed }) => [
+                          styles.inviteBtn,
+                          pressed && communityPressableTapStyle(true),
+                        ]}
+                        accessibilityLabel={t.copyInvite}
+                      >
+                        <MaterialCommunityIcons
+                          name="content-copy"
+                          size={14}
+                          color="rgba(186,230,253,0.8)"
+                        />
+                        <Text style={styles.inviteBtnText}>{t.copyInvite}</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => void onShareInvite()}
+                        style={({ pressed }) => [
+                          styles.inviteBtn,
+                          styles.inviteBtnPrimary,
+                          pressed && communityPressableTapStyle(true),
+                        ]}
+                        accessibilityLabel={t.shareInvite}
+                      >
+                        <MaterialCommunityIcons
+                          name="share-variant"
+                          size={14}
+                          color="rgba(224,242,254,0.95)"
+                        />
+                        <Text
+                          style={[styles.inviteBtnText, styles.inviteBtnTextPrimary]}
+                        >
+                          {t.shareInvite}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </>
+          ) : null}
         </View>
       )}
-
-      {summary?.isOwner && !summary.archived ? (
-        <RankingsCyberPanelNative subtle compact style={styles.invitePanel}>
-          <RankingsCyberSectionLabelNative subtle style={styles.sectionLabelInPanel}>
-            {t.inviteLabel}
-          </RankingsCyberSectionLabelNative>
-          {summary.inviteCode ? (
-            <View style={styles.inviteCodeRow}>
-              <Text style={styles.inviteCode}>{summary.inviteCode}</Text>
-              <View style={styles.inviteActions}>
-                <Pressable
-                  onPress={() => void onCopyInvite()}
-                  style={({ pressed }) => [styles.inviteBtn, pressed && communityPressableTapStyle(true)]}
-                  accessibilityLabel={t.copyInvite}
-                >
-                  <MaterialCommunityIcons name="content-copy" size={14} color="rgba(186,230,253,0.8)" />
-                  <Text style={styles.inviteBtnText}>{t.copyInvite}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => void onShareInvite()}
-                  style={({ pressed }) => [styles.inviteBtn, styles.inviteBtnPrimary, pressed && communityPressableTapStyle(true)]}
-                  accessibilityLabel={t.shareInvite}
-                >
-                  <MaterialCommunityIcons name="share-variant" size={14} color="rgba(224,242,254,0.95)" />
-                  <Text style={[styles.inviteBtnText, styles.inviteBtnTextPrimary]}>{t.shareInvite}</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <Text style={styles.inviteUnavailable}>{t.inviteUnavailable}</Text>
-          )}
-          <Pressable
-            onPress={() => onRequestEndGroup?.(summary.name)}
-            style={({ pressed }) => [styles.endGroupBtn, pressed && communityPressableTapStyle(true)]}
-          >
-            <Text style={styles.endGroupText}>{t.endGroup}</Text>
-          </Pressable>
-        </RankingsCyberPanelNative>
-      ) : null}
 
       {!summary?.isOwner && !summary?.archived ? (
         <Pressable
@@ -434,8 +667,8 @@ export default function CommunityGroupDetailViewNative({
   );
 
   return (
-    <View style={styles.root}>
-      <RankingsShellGridOverlay borderRadius={0} />
+    <View style={[styles.root, inDetailCard ? styles.rootInDetailCard : null]}>
+      {inDetailCard ? null : <RankingsShellGridOverlay borderRadius={0} />}
       {scrollEnabled ? (
         <ScrollView contentContainerStyle={scrollStyle} showsVerticalScrollIndicator={false}>
           {content}
@@ -443,6 +676,62 @@ export default function CommunityGroupDetailViewNative({
       ) : (
         <View style={scrollStyle}>{content}</View>
       )}
+      {summary ? (
+        <CommunityEditGroupModalNative
+          visible={editGroupOpen}
+          groupId={groupId}
+          language={language}
+          initialName={summary.name}
+          initialDescription={summary.description}
+          initialHeaderImageUrl={summary.headerImageUrl}
+          getIdToken={getIdToken}
+          onClose={closeEditGroup}
+          onSaved={() => {
+            closeEditGroup();
+            invalidateCommunityGroupDetail(groupId);
+            void load({ keepViewMetric: true });
+            onImageUpdated?.();
+          }}
+        />
+      ) : null}
+      {summary && onRequestEndGroup ? (
+        <CommunityModalBackdropNative
+          visible={endConfirmOpen}
+          embedded={embedConfirmModals}
+          onClose={() => {
+            if (!endingGroup) setEndConfirmOpen(false);
+          }}
+        >
+          <Text style={styles.endConfirmTitle}>{t.endTitle}</Text>
+          <Text style={styles.endConfirmBody}>{t.endBody(summary.name)}</Text>
+          <View style={styles.endConfirmActions}>
+            <Pressable
+              disabled={endingGroup}
+              onPress={() => setEndConfirmOpen(false)}
+              style={({ pressed }) => [
+                styles.endConfirmCancelBtn,
+                pressed && communityPressableTapStyle(true),
+              ]}
+            >
+              <Text style={styles.endConfirmCancelText}>{t.endCancel}</Text>
+            </Pressable>
+            <Pressable
+              disabled={endingGroup}
+              onPress={() => {
+                onRequestEndGroup(summary.name);
+              }}
+              style={({ pressed }) => [
+                styles.endConfirmOkBtn,
+                pressed && communityPressableTapStyle(true),
+              ]}
+            >
+              <Text style={styles.endConfirmOkText}>
+                {endingGroup ? t.issuing : t.endConfirm}
+              </Text>
+            </Pressable>
+          </View>
+        </CommunityModalBackdropNative>
+      ) : null}
     </View>
   );
 }
@@ -453,6 +742,47 @@ const styles = StyleSheet.create({
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
     borderRadius: 0,
     overflow: "hidden",
+  },
+  rootInDetailCard: {
+    backgroundColor: "transparent",
+  },
+  endConfirmTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#F8FAFC",
+    marginBottom: 8,
+  },
+  endConfirmBody: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 16,
+  },
+  endConfirmActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  endConfirmCancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  endConfirmCancelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.75)",
+  },
+  endConfirmOkBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "rgba(248,113,113,0.9)",
+  },
+  endConfirmOkText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#050508",
   },
   scroll: {
     paddingTop: 8,
@@ -468,13 +798,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rankingZoneLabel: {
-    paddingHorizontal: COMMUNITY_GROUP_PANEL_PADDING_X,
-    marginBottom: 8,
-  },
-  sectionLabelInPanel: {
+  inviteLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.45)",
     marginBottom: 10,
-    paddingBottom: 6,
   },
   inviteCodeRow: {
     flexDirection: "row",
@@ -517,24 +847,6 @@ const styles = StyleSheet.create({
   },
   inviteBtnTextPrimary: {
     color: "rgba(224,242,254,0.95)",
-  },
-  inviteUnavailable: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.45)",
-  },
-  endGroupBtn: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "rgba(248,113,113,0.35)",
-    backgroundColor: "rgba(127,29,29,0.3)",
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  endGroupText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "rgba(254,202,202,0.95)",
   },
   leaveBtn: {
     marginTop: 4,
@@ -588,15 +900,41 @@ const styles = StyleSheet.create({
     marginVertical: 24,
   },
   rankingList: {
-    marginTop: -4,
+    marginTop: 4,
     marginBottom: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
-  invitePanel: {
-    marginTop: 4,
-    backgroundColor: COMMUNITY_GROUP_HERO_BG,
+  /** 一覧末尾（最後のメンバーの直下）— あとから入れる空き枠 */
+  openMemberSlot: {
+    minHeight: 72,
+    marginTop: 3,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "rgba(148,163,184,0.38)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  openMemberSlotAlone: {
+    marginTop: 0,
+  },
+  openMemberSlotActive: {
+    borderColor: "rgba(34,211,238,0.42)",
+    backgroundColor: "rgba(34,211,238,0.05)",
+  },
+  openMemberSlotText: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    color: "rgba(148,163,184,0.72)",
+  },
+  inviteReveal: {
+    marginTop: 8,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
 });

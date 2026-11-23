@@ -47,7 +47,7 @@ export type GamesStackParamList = {
   /** シーズン アワード / 順位予想（プレビュー） */
   SeasonPredict: { mode: "awards" | "standings"; view?: "mine" | "crowd" };
   /** STATS ハブ（Team / Player タブ） */
-  LeagueStats: { tab?: "team" | "player" } | undefined;
+  LeagueStats: { tab?: "team" | "player" | "league" } | undefined;
   /** @deprecated LeagueStats へ */
   LeagueTeamStats: undefined;
   /** @deprecated LeagueStats tab=player へ */

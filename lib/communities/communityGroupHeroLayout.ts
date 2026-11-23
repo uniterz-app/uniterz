@@ -6,7 +6,7 @@ export const COMMUNITY_GROUP_HERO_IMAGE_HEIGHT = 272;
 /** Web — ヒーロー画像の表示高さ（より広い画角） */
 export const COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT = 340;
 
-/** パネルが画像に重なる量（TITLE を画像上に載せる） */
+/** パネルが画像に重なる量（下フェード帯に名前・メタを載せる） */
 export const COMMUNITY_GROUP_HERO_PANEL_OVERLAP = 148;
 
 /** Web — パネルが画像に重なる量 */
@@ -22,9 +22,9 @@ export const COMMUNITY_GROUP_HERO_WEB_IMAGE_HEIGHT_WITH_BACK =
 /** ヒーロー／詳細カードの背景色 */
 export const COMMUNITY_GROUP_HERO_BG = "#000000";
 
-/** Web — 縦方向（下端で背景色へ溶解） */
+/** Web — 縦方向（上端は見出しへ・下端は黒へ溶かして切れ目を消す） */
 export const COMMUNITY_GROUP_HERO_SCRIM_VERTICAL =
-  "linear-gradient(180deg, rgba(0,0,0,0.32) 0%, rgba(0,0,0,0) 12%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.22) 50%, rgba(0,0,0,0.48) 72%, rgba(0,0,0,0.72) 88%, rgba(0,0,0,1) 100%)";
+  "linear-gradient(180deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 10%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 36%, rgba(0,0,0,0.35) 58%, rgba(0,0,0,0.75) 80%, rgba(0,0,0,0.96) 100%)";
 
 /** Web — 横方向（左テキスト帯を確保し右下は画像が見える） */
 export const COMMUNITY_GROUP_HERO_SCRIM_HORIZONTAL =
@@ -41,16 +41,33 @@ export const COMMUNITY_GROUP_HERO_NATIVE_SCRIM_HORIZONTAL = {
   locations: [0, 0.42, 0.66, 0.82] as const,
 };
 
-/** Native — 画像上のフェード（下端で背景色へ溶解、右下は縦だけだと暗くなりすぎるので控えめ） */
+/**
+ * Native — 画像上の縦フェード。
+ * 上端は見出し帯へ溶かし、下端はアプリ背景を透かす。
+ */
 export const COMMUNITY_GROUP_HERO_NATIVE_SCRIM = {
   colors: [
-    "rgba(0,0,0,0.32)",
+    "rgba(0,0,0,0.92)",
+    "rgba(0,0,0,0.4)",
     "rgba(0,0,0,0)",
     "rgba(0,0,0,0)",
-    "rgba(0,0,0,0.22)",
-    "rgba(0,0,0,0.48)",
-    "rgba(0,0,0,0.72)",
-    "rgba(0,0,0,1)",
+    "rgba(0,0,0,0.35)",
+    "rgba(0,0,0,0.75)",
+    "rgba(0,0,0,0.96)",
   ] as const,
-  locations: [0, 0.12, 0.3, 0.5, 0.72, 0.88, 1] as const,
+  locations: [0, 0.1, 0.22, 0.36, 0.58, 0.8, 1] as const,
+};
+
+/** Native — 写真上端だけを見出しへ溶かす短い帯 */
+export const COMMUNITY_GROUP_HERO_NATIVE_SCRIM_TOP = {
+  colors: ["rgba(0,0,0,0.9)", "rgba(0,0,0,0.4)", "rgba(0,0,0,0)"] as const,
+  locations: [0, 0.5, 1] as const,
+  heightRatio: 0.28,
+};
+
+/** Native — 写真下端の切れ目を溶かす帯 */
+export const COMMUNITY_GROUP_HERO_NATIVE_SCRIM_BOTTOM = {
+  colors: ["rgba(0,0,0,0)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.97)"] as const,
+  locations: [0, 0.5, 1] as const,
+  heightRatio: 0.45,
 };

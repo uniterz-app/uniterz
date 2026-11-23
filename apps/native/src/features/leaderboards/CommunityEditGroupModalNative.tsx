@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
-  Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -202,12 +202,7 @@ export default function CommunityEditGroupModalNative({
 
           <View style={styles.cardInner}>
             <Text style={styles.title}>{t.title}</Text>
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
+            <View style={styles.formBody}>
               <Text style={communityFieldLabelStyle}>{t.name}</Text>
               <TextInput
                 value={name}
@@ -244,7 +239,7 @@ export default function CommunityEditGroupModalNative({
                   </Pressable>
                 ) : null}
               </View>
-            </ScrollView>
+            </View>
 
             <View style={styles.footer}>
               <Pressable disabled={busy} onPress={closeReset} style={({ pressed }) => [styles.cancelBtn, pressed && communityPressableTapStyle(true)]}>
@@ -286,7 +281,6 @@ const styles = StyleSheet.create({
     ...communityModalCardStyle,
     width: "100%",
     maxWidth: 400,
-    maxHeight: "88%",
     borderColor: "rgba(255,255,255,0.16)",
     backgroundColor: "rgba(8,14,28,0.42)",
   },
@@ -315,11 +309,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.1)",
   },
-  scroll: {
-    flexGrow: 0,
-    flexShrink: 1,
-  },
-  scrollContent: {
+  formBody: {
     padding: 16,
     paddingBottom: 20,
   },

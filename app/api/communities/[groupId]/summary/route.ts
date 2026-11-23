@@ -3,6 +3,7 @@ import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { assertMember } from "@/lib/communities/groupAccess";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { buildCommunityGroupSummaryPayload } from "@/lib/communities/buildCommunityGroupSummaryPayload";
+import { ensureGroupInviteCode } from "@/lib/communities/ensureGroupInviteCode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,11 @@ export async function GET(req: Request, ctx: Ctx) {
     const uid = await requireUidFromRequest(req);
     const { groupId } = await ctx.params;
     const groupSnap = await assertMember(adminDb, groupId, uid);
-    const d = groupSnap.data()!;
+    const ensuredInvite = await ensureGroupInviteCode(groupSnap);
+    const d = {
+      ...groupSnap.data()!,
+      ...(ensuredInvite ? { inviteCode: ensuredInvite } : {}),
+    };
 
     return NextResponse.json({
       ok: true,

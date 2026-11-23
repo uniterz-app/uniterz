@@ -1,309 +1,195 @@
-/** Web グループ詳細ヘッダー — タイトル / メモ / 競技条件をサイバー HUD で分離 */
+/** グループ詳細カバー — 名前・メモ・固定メタ（切替は ViewBar） */
 import { StyleSheet, Text, View } from "react-native";
 import type { Language } from "../../../../../lib/i18n/language";
 import { COMMUNITY_GROUP_PANEL_PADDING_X } from "../../../../../lib/communities/communityGroupShell";
-import { leagueLabel, metricLabel, communityRankingPeriodValue, rankingTeamsLabel, gamesScopeLabel } from "../../../../../lib/communities/labels";
+import {
+  communityRankingPeriodValue,
+  rankingTeamsLabel,
+} from "../../../../../lib/communities/labels";
 import type { CommunityPeriodType } from "../../../../../lib/communities/types";
 import type { CommunityGroupSummary } from "./communityApiNative";
-import MatchListCyberClipNative from "../games/MatchListCyberClipNative";
-import { communityMono } from "./communityCrtThemeNative";
-import CommunityGroupZoneLabelNative from "./CommunityGroupZoneLabelNative";
 import { MATCH_CARD_METRIC_FONT } from "../games/matchCardTypography";
+import { communityMono } from "./communityCrtThemeNative";
 
 type Props = {
   summary: CommunityGroupSummary;
   language: Language;
+  /** 画像上に重ねるとき */
   overlay?: boolean;
 };
 
-type ConditionItem = {
+type MetaCell = {
   key: string;
   label: string;
   value: string;
-  accent?: "cyan" | "amber" | "emerald";
-  wide?: boolean;
 };
-
-function ConditionChip({
-  label,
-  value,
-  accent = "cyan",
-  wide = false,
-}: {
-  label: string;
-  value: string;
-  accent?: "cyan" | "amber" | "emerald";
-  wide?: boolean;
-  overlay?: boolean;
-}) {
-  const borderStyle =
-    accent === "amber"
-      ? styles.chipBorderAmber
-      : accent === "emerald"
-        ? styles.chipBorderEmerald
-        : styles.chipBorderCyan;
-
-  return (
-    <View style={[styles.chip, borderStyle, wide && styles.chipWide]}>
-      <View style={styles.chipBody}>
-        <Text
-          style={[
-            styles.chipLabel,
-            accent === "amber"
-              ? styles.chipLabelAmber
-              : accent === "emerald"
-                ? styles.chipLabelEmerald
-                : null,
-          ]}
-        >
-          {label}
-        </Text>
-        <Text style={styles.chipValue} numberOfLines={wide ? 2 : 1}>
-          {value}
-        </Text>
-      </View>
-    </View>
-  );
-}
 
 export default function CommunityGroupHeaderPanelNative({
   summary,
   language,
   overlay = false,
 }: Props) {
+  const teamsValue = rankingTeamsLabel(summary.rankingTeamIds ?? [], language);
+  const period = communityRankingPeriodValue(summary.rankingStartDateKey, language, {
+    periodType: summary.periodType as CommunityPeriodType,
+    rankingEndDateKey: summary.rankingEndDateKey,
+    rankingPeriodMonthKey: summary.rankingPeriodMonthKey,
+    rankingSeasonKey: summary.rankingSeasonKey,
+  });
+
   const labels =
     language === "en"
       ? {
-          title: "TITLE",
-          memo: "MEMO",
-          conditions: "CONDITIONS",
           members: "MEMBERS",
-          league: "LEAGUE",
-          metric: "METRIC",
           period: "PERIOD",
           teams: "TEAMS",
-          ended: "This group has ended.",
+          ended: "ENDED",
         }
       : {
-          title: "TITLE",
-          memo: "MEMO",
-          conditions: "競技条件",
-          members: "参加人数",
-          league: "リーグ",
-          metric: "指標",
-          period: "集計期間",
-          teams: "対象チーム",
-          ended: "このグループは終了しています。",
+          members: "人数",
+          period: "期間",
+          teams: "チーム",
+          ended: "終了",
         };
 
-  const teamsValue = rankingTeamsLabel(summary.rankingTeamIds ?? [], language);
-  const conditions: ConditionItem[] = [
+  const metaCells: MetaCell[] = [
     {
       key: "members",
       label: labels.members,
       value: String(summary.memberCount ?? 0),
-      accent: "emerald",
-    },
-    {
-      key: "league",
-      label: labels.league,
-      value: leagueLabel(summary.rankingLeague ?? "all", language),
-      accent: "cyan",
-    },
-    {
-      key: "metric",
-      label: labels.metric,
-      value: metricLabel(summary.rankingMetric, language),
-      accent: "amber",
     },
     {
       key: "period",
       label: labels.period,
-      value: communityRankingPeriodValue(summary.rankingStartDateKey, language, {
-        periodType: summary.periodType as CommunityPeriodType,
-        rankingEndDateKey: summary.rankingEndDateKey,
-        rankingPeriodMonthKey: summary.rankingPeriodMonthKey,
-        rankingSeasonKey: summary.rankingSeasonKey,
-      }),
-      accent: "cyan",
-    },
-    {
-      key: "scope",
-      label: language === "en" ? "Games" : "対象試合",
-      value: gamesScopeLabel(summary.rankingGamesScope ?? "all", language),
-      accent: "amber",
+      value: period,
     },
   ];
-
   if (teamsValue) {
-    conditions.push({
+    metaCells.push({
       key: "teams",
       label: labels.teams,
       value: teamsValue,
-      accent: "cyan",
-      wide: true,
     });
   }
 
-  const body = (
-    <View style={[styles.inner, overlay && styles.innerOverlay]}>
-        <View style={styles.zone}>
-          <CommunityGroupZoneLabelNative>{labels.title}</CommunityGroupZoneLabelNative>
-          <Text style={styles.groupName}>{summary.name}</Text>
-        </View>
+  const memo = summary.description?.trim() ?? "";
 
-        <View style={[styles.zoneDivider, overlay && styles.zoneDividerOverlay]} />
-        <View style={styles.zone}>
-          <CommunityGroupZoneLabelNative>{labels.memo}</CommunityGroupZoneLabelNative>
-          <Text style={styles.description}>
-            {summary.description?.trim() || "—"}
+  return (
+    <View style={[styles.root, overlay && styles.rootOverlay]}>
+      <View style={styles.titleBlock}>
+        <Text style={styles.name} numberOfLines={2}>
+          {summary.name}
+        </Text>
+        <View style={styles.titleRule} />
+        {memo ? (
+          <Text style={styles.memo} numberOfLines={2}>
+            {memo}
           </Text>
-        </View>
-
-        <View style={[styles.zoneDivider, overlay && styles.zoneDividerOverlay]} />
-        <View style={styles.zone}>
-          <CommunityGroupZoneLabelNative>{labels.conditions}</CommunityGroupZoneLabelNative>
-          <View style={styles.chipGrid}>
-            {conditions.map((item) => (
-              <ConditionChip
-                key={item.key}
-                label={item.label}
-                value={item.value}
-                accent={item.accent}
-                wide={item.wide}
-              />
-            ))}
-          </View>
-        </View>
-
-        {summary.archived ? (
-          <View style={styles.endedRow}>
-            <View style={styles.endedDot} />
-            <Text style={styles.endedText}>{labels.ended}</Text>
-          </View>
         ) : null}
       </View>
+
+      <View style={styles.metaRow}>
+        {metaCells.map((cell, i) => (
+          <View
+            key={cell.key}
+            style={[styles.metaCell, i > 0 && styles.metaCellBorder]}
+          >
+            <Text style={styles.metaLabel}>{cell.label}</Text>
+            <Text style={styles.metaValue} numberOfLines={2}>
+              {cell.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {summary.archived ? (
+        <View style={styles.endedBadge}>
+          <Text style={styles.endedText}>{labels.ended}</Text>
+        </View>
+      ) : null}
+    </View>
   );
-
-  if (overlay) {
-    return <View style={styles.overlayShell}>{body}</View>;
-  }
-
-  return <MatchListCyberClipNative style={styles.shell}>{body}</MatchListCyberClipNative>;
 }
 
 const styles = StyleSheet.create({
-  shell: {
-    marginBottom: 16,
-  },
-  overlayShell: {
-    position: "relative",
-    zIndex: 2,
-  },
-  inner: {
+  root: {
     paddingHorizontal: COMMUNITY_GROUP_PANEL_PADDING_X,
-    paddingVertical: 14,
-  },
-  innerOverlay: {
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  zone: {
-    gap: 8,
-  },
-  zoneDivider: {
-    height: 1,
-    marginVertical: 12,
-    backgroundColor: "rgba(34,211,238,0.12)",
-  },
-  zoneDividerOverlay: {
-    marginVertical: 9,
-  },
-  groupName: {
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    fontSize: 24,
-    fontWeight: "800",
-    lineHeight: 30,
-    color: "rgba(248,250,252,0.98)",
-    letterSpacing: 0.6,
-  },
-  description: {
-    fontSize: 13,
-    lineHeight: 21,
-    color: "rgba(255,255,255,0.68)",
-  },
-  chipGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
-    width: "48%",
-    flexGrow: 0,
-    flexBasis: "48%",
-    borderWidth: 1,
-    backgroundColor: "#000000",
-    minHeight: 52,
-    overflow: "hidden",
-  },
-  chipBorderCyan: {
-    borderColor: "rgba(0,245,255,0.7)",
-  },
-  chipBorderAmber: {
-    borderColor: "rgba(251,191,36,0.7)",
-  },
-  chipBorderEmerald: {
-    borderColor: "rgba(52,211,153,0.7)",
-  },
-  chipWide: {
-    width: "100%",
-    flexBasis: "100%",
-  },
-  chipBody: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    gap: 3,
-  },
-  chipLabel: {
-    fontFamily: communityMono,
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-    color: "rgba(165,243,252,0.7)",
-  },
-  chipLabelAmber: {
-    color: "rgba(253,230,138,0.8)",
-  },
-  chipLabelEmerald: {
-    color: "rgba(167,243,208,0.8)",
-  },
-  chipValue: {
-    fontFamily: MATCH_CARD_METRIC_FONT,
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 17,
-    color: "rgba(224,242,254,0.95)",
-  },
-  endedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 12,
     paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(251,191,36,0.18)",
+    paddingBottom: 14,
+    gap: 14,
   },
-  endedDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(251,191,36,0.85)",
+  rootOverlay: {
+    paddingTop: 4,
+    paddingBottom: 10,
+  },
+  titleBlock: {
+    gap: 8,
+  },
+  name: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 30,
+    fontWeight: "800",
+    lineHeight: 36,
+    letterSpacing: -0.4,
+    color: "#F8FAFC",
+  },
+  titleRule: {
+    width: 40,
+    height: 2,
+    backgroundColor: "#00F5FF",
+  },
+  memo: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.62)",
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(0,245,255,0.28)",
+    paddingTop: 10,
+  },
+  metaCell: {
+    flex: 1,
+    gap: 4,
+    paddingRight: 10,
+  },
+  metaCellBorder: {
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: "rgba(255,255,255,0.14)",
+    paddingLeft: 10,
+    paddingRight: 0,
+  },
+  metaLabel: {
+    fontFamily: communityMono,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: "rgba(0,245,255,0.72)",
+  },
+  metaValue: {
+    fontFamily: MATCH_CARD_METRIC_FONT,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 18,
+    letterSpacing: 0.2,
+    color: "rgba(248,250,252,0.95)",
+  },
+  endedBadge: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.55)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   endedText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "rgba(251,191,36,0.9)",
+    fontFamily: communityMono,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: "rgba(251,191,36,0.95)",
   },
 });

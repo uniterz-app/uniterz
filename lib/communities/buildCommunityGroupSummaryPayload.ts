@@ -72,8 +72,9 @@ export function buildCommunityGroupSummaryPayload(
     ),
     archived: !!d.archivedAt,
     isOwner,
+    /** メンバーなら誰でも共有可（後から人を足すため）。平文が無い古いグループは ensure 側で埋める */
     inviteCode:
-      isOwner && typeof d.inviteCode === "string" && d.inviteCode.trim()
+      typeof d.inviteCode === "string" && d.inviteCode.trim()
         ? d.inviteCode.trim()
         : null,
     rankingStartDateKey: resolveRankingStartDateKey(d),

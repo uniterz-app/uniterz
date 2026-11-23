@@ -45,7 +45,6 @@ export default function CommunityGroupOverlayNative({
   const insets = useSafeAreaInsets();
   const topInset = useMemo(() => communityGroupOverlayTopInset(insets.top), [insets.top]);
   const m = t(language);
-  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
   const [endConfirmName, setEndConfirmName] = useState("");
   const [endingGroup, setEndingGroup] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
@@ -62,7 +61,6 @@ export default function CommunityGroupOverlayNative({
   useEffect(() => {
     if (!visible) {
       setProfileCoverHidden(false);
-      setEndConfirmOpen(false);
       setLeaveConfirmOpen(false);
     }
   }, [visible]);
@@ -82,7 +80,6 @@ export default function CommunityGroupOverlayNative({
         cyberAlert("", String(json?.error ?? "failed"));
         return;
       }
-      setEndConfirmOpen(false);
       cyberAlert("", language === "en" ? "Group ended." : "グループを終了しました。");
       invalidateCommunityGroupDetail(groupId);
       onRefreshList?.();
@@ -132,10 +129,6 @@ export default function CommunityGroupOverlayNative({
         transparent={false}
         onRequestClose={() => {
           if (endingGroup || leavingGroup) return;
-          if (endConfirmOpen) {
-            setEndConfirmOpen(false);
-            return;
-          }
           if (leaveConfirmOpen) {
             setLeaveConfirmOpen(false);
             return;
@@ -170,10 +163,11 @@ export default function CommunityGroupOverlayNative({
                     onRefreshList?.();
                     onClose();
                   }}
-                  onRequestEndGroup={(name) => {
-                    setEndConfirmName(name);
-                    setEndConfirmOpen(true);
+                  onRequestEndGroup={() => {
+                    void confirmEndGroup();
                   }}
+                  endingGroup={endingGroup}
+                  embedConfirmModals
                   onRequestLeave={() => setLeaveConfirmOpen(true)}
                   onImageUpdated={onRefreshList}
                   onHeaderImageEditingChange={setHeaderImageEditing}
@@ -187,18 +181,6 @@ export default function CommunityGroupOverlayNative({
             <ProfileBackEdgeHandleNative
               onPress={onClose}
               accessibilityLabel={backLabel}
-            />
-
-            <EndGroupConfirmModalNative
-              embedded
-              visible={endConfirmOpen}
-              groupName={endConfirmName || listPreview?.name}
-              language={language}
-              busy={endingGroup}
-              onCancel={() => {
-                if (!endingGroup) setEndConfirmOpen(false);
-              }}
-              onConfirm={() => void confirmEndGroup()}
             />
 
             <LeaveGroupConfirmModalNative
@@ -255,49 +237,6 @@ function LeaveGroupConfirmModalNative({
         </Pressable>
         <Pressable disabled={busy} onPress={onConfirm} style={({ pressed }) => [modalStyles.confirmBtn, pressed && communityPressableTapStyle(true)]}>
           <Text style={modalStyles.confirmText}>{busy ? "…" : language === "en" ? "Leave" : "退会する"}</Text>
-        </Pressable>
-      </View>
-    </CommunityModalBackdropNative>
-  );
-}
-
-function EndGroupConfirmModalNative({
-  visible,
-  groupName,
-  language,
-  busy,
-  onCancel,
-  onConfirm,
-  embedded = false,
-}: {
-  visible: boolean;
-  groupName?: string;
-  language: Language;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-  embedded?: boolean;
-}) {
-  const title = language === "en" ? "End this group?" : "グループを終了しますか？";
-  const body =
-    language === "en"
-      ? `This will archive "${groupName ?? "this group"}". Members will no longer see it in active slots.`
-      : `「${groupName ?? "このグループ"}」を終了します。メンバーはアクティブなスロットから非表示になります。`;
-
-  return (
-    <CommunityModalBackdropNative
-      embedded={embedded}
-      visible={visible}
-      onClose={busy ? () => {} : onCancel}
-    >
-      <Text style={modalStyles.title}>{title}</Text>
-      <Text style={modalStyles.body}>{body}</Text>
-      <View style={modalStyles.actions}>
-        <Pressable disabled={busy} onPress={onCancel} style={({ pressed }) => [modalStyles.cancelBtn, pressed && communityPressableTapStyle(true)]}>
-          <Text style={modalStyles.cancelText}>{language === "en" ? "Cancel" : "キャンセル"}</Text>
-        </Pressable>
-        <Pressable disabled={busy} onPress={onConfirm} style={({ pressed }) => [modalStyles.confirmBtn, pressed && communityPressableTapStyle(true)]}>
-          <Text style={modalStyles.confirmText}>{busy ? "…" : language === "en" ? "End group" : "終了する"}</Text>
         </Pressable>
       </View>
     </CommunityModalBackdropNative>

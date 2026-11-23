@@ -1,4 +1,4 @@
-/** STATS ハブ — 既定 Team Stats、タブで Player Stats 切替 */
+/** STATS ハブ — Team / Player 表 + LEAGUE（図で見る） */
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import GamesNbaSubpageShellNative from "../GamesNbaSubpageShellNative";
@@ -8,6 +8,7 @@ import {
 } from "../../rankings/CyberSlantedTabNative";
 import NbaLeagueTeamStatsPanelNative from "../teamStats/NbaLeagueTeamStatsPanelNative";
 import NbaLeaguePlayerStatLeadersPanelNative from "../playerStats/NbaLeaguePlayerStatLeadersPanelNative";
+import LeagueHubPanelNative from "../leagueHub/LeagueHubPanelNative";
 import NbaStatsSearchBarNative from "./NbaStatsSearchBarNative";
 import {
   LeagueStatsCollapseProvider,
@@ -15,7 +16,7 @@ import {
   useLeagueStatsCollapseState,
 } from "./LeagueStatsCollapseNative";
 
-type TabId = "team" | "player";
+type TabId = "team" | "player" | "league";
 
 type Props = {
   language: "ja" | "en";
@@ -34,7 +35,8 @@ export default function LeagueStatsHubScreenNative({
   initialTab = "team",
 }: Props) {
   const [tab, setTab] = useState<TabId>(initialTab);
-  const title = tab === "team" ? "TEAM STATS" : "PLAYER STATS";
+  const title =
+    tab === "team" ? "TEAM STATS" : tab === "player" ? "PLAYER STATS" : "LEAGUE";
   const collapse = useLeagueStatsCollapseState(tab);
 
   return (
@@ -47,7 +49,7 @@ export default function LeagueStatsHubScreenNative({
     >
       <LeagueStatsCollapseProvider value={collapse}>
       <LeagueStatsCollapsibleNative zIndex={20}>
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, tab === "league" ? styles.tabsLeague : null]}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
             label="TEAM"
@@ -61,22 +63,30 @@ export default function LeagueStatsHubScreenNative({
             onPress={() => setTab("player")}
             compact
           />
+          <CyberSlantedTabNative
+            label="LEAGUE"
+            active={tab === "league"}
+            onPress={() => setTab("league")}
+            compact
+          />
         </CyberSlantedTabBarNative>
       </View>
-      <View style={styles.search}>
-        <NbaStatsSearchBarNative
-          key={tab}
-          kind={tab}
-          language={language}
-          onSelect={(hit) => {
-            if (hit.kind === "team") {
-              onSelectTeam(hit.id);
-              return;
-            }
-            onSelectPlayer?.(hit.id);
-          }}
-        />
-      </View>
+      {tab !== "league" ? (
+        <View style={styles.search}>
+          <NbaStatsSearchBarNative
+            key={tab}
+            kind={tab}
+            language={language}
+            onSelect={(hit) => {
+              if (hit.kind === "team") {
+                onSelectTeam(hit.id);
+                return;
+              }
+              onSelectPlayer?.(hit.id);
+            }}
+          />
+        </View>
+      ) : null}
       </LeagueStatsCollapsibleNative>
       <View style={styles.body}>
         {tab === "team" ? (
@@ -84,10 +94,16 @@ export default function LeagueStatsHubScreenNative({
             language={language}
             onSelectTeam={onSelectTeam}
           />
-        ) : (
+        ) : tab === "player" ? (
           <NbaLeaguePlayerStatLeadersPanelNative
             language={language}
             onSelectPlayer={onSelectPlayer}
+          />
+        ) : (
+          <LeagueHubPanelNative
+            lang={language}
+            onSelectTeam={onSelectTeam}
+            onSelectPlayer={(playerId) => onSelectPlayer?.(playerId)}
           />
         )}
       </View>
@@ -104,6 +120,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 2,
+  },
+  /** LEAGUE 下段タブへ線が届くよう、間の余白だけ詰める */
+  tabsLeague: {
+    paddingBottom: 0,
   },
   search: {
     paddingHorizontal: 12,

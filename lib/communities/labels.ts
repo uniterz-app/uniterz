@@ -23,7 +23,7 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
       case "winRate":
         return "Win rate";
       case "activeWinStreak":
-        return "Win streak";
+        return "Best streak";
       default:
         return m;
     }
@@ -36,7 +36,7 @@ export function metricLabel(m: CommunityMetric, lang: Language): string {
     case "winRate":
       return "勝率";
     case "activeWinStreak":
-      return "連勝";
+      return "最高連勝";
     default:
       return m;
   }
@@ -79,6 +79,17 @@ export function gamesScopeLabel(
     return scope === "pickup" ? "Match Pickup only" : "All ranked games";
   }
   return scope === "pickup" ? "ピックアップのみ" : "全試合（ランキング対象）";
+}
+
+/** 詳細画面の切替チップ用（短い表記） */
+export function gamesScopeChipLabel(
+  scope: "all" | "pickup",
+  lang: Language
+): string {
+  if (lang === "en") {
+    return scope === "pickup" ? "PICK UP" : "ALL";
+  }
+  return scope === "pickup" ? "ピックアップ" : "ALL";
 }
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -149,7 +160,8 @@ export function communityRankingPeriodValue(
     const end = formatDateKey(endKey, lang);
     return lang === "en" ? `${start} → ${end}` : `${start} 〜 ${end}`;
   }
-  return lang === "en" ? `From ${start}` : `${start} 以降`;
+  // 終了なしは開区間（「以降」は硬いので 〜 / →）
+  return lang === "en" ? `${start} →` : `${start}〜`;
 }
 
 /** チームIDから表示名（WC は国旗名、それ以外は nameById または ID 末尾） */

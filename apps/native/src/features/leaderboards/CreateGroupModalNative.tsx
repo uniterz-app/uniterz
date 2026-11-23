@@ -9,8 +9,6 @@ import * as ImagePicker from "expo-image-picker";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { Language } from "../../../../../lib/i18n/language";
 import {
-  COMMUNITY_CREATE_LEAGUES,
-  COMMUNITY_CREATE_METRICS,
   COMMUNITY_CREATE_PERIODS,
   type CommunityLeague,
   type CommunityMetric,
@@ -18,8 +16,6 @@ import {
 } from "../../../../../lib/communities/types";
 import {
   gamesScopeLabel,
-  leagueLabel,
-  metricLabel,
   periodLabel,
 } from "../../../../../lib/communities/labels";
 import {
@@ -121,8 +117,6 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             description: "Description (optional)",
             descriptionPh: "e.g. Weekend picks with friends — share the invite code to join",
             header: "Header image",
-            metric: "Compete on",
-            league: "League",
             period: "Period",
             periodMonth: "Month",
             periodEnd: "End date (optional)",
@@ -131,7 +125,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             gamesScope: "Games",
             teams: "Teams (optional)",
             scoringNote:
-              "Ranking options (period, games, teams) are locked when the group is created. For “From group start”, scores count from the create day (JST); past results are not included.",
+              "Period and teams are fixed at creation. Metric and ALL / PICK UP can be switched anytime in the group. For “From group start”, scores count from the create day (JST).",
             cancel: "Cancel",
             submit: "Create",
             planLimits: `Plan limits: Free users can create up to ${FREE_MAX_OWNED_GROUPS} groups and join up to ${FREE_MAX_MEMBERSHIPS} groups. Pro users can create up to ${PRO_MAX_OWNED_GROUPS} groups and join up to ${PRO_MAX_MEMBERSHIPS} groups.`,
@@ -144,8 +138,6 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             description: "説明（任意）",
             descriptionPh: "例：仲間とのNBA予想ランキング。招待コードで参加できます",
             header: "ヘッダー画像",
-            metric: "競う項目",
-            league: "リーグ",
             period: "期間",
             periodMonth: "対象月",
             periodEnd: "終了日（任意）",
@@ -154,7 +146,7 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
             gamesScope: "試合対象",
             teams: "チーム（任意）",
             scoringNote:
-              "期間・試合対象・チームなどの集計設定は作成時に確定し、あとから変更できません。「グループ開始以降」の場合、作成日（JST）以降の予想だけが集計され、過去の成績は含みません。",
+              "期間とチームは作成時に確定。競う項目と ALL／ピックアップはグループ内でいつでも切り替えできます。「グループ開始以降」は作成日（JST）からの集計です。",
             cancel: "キャンセル",
             submit: "作成",
             planLimits: `プラン上限: Free はグループを最大 ${FREE_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${FREE_MAX_MEMBERSHIPS} 件まで参加できます。Pro はグループを最大 ${PRO_MAX_OWNED_GROUPS} 件まで作成でき、最大 ${PRO_MAX_MEMBERSHIPS} 件まで参加できます。`,
@@ -337,26 +329,6 @@ export default function CreateGroupModalNative({ visible, language, onClose, onC
               {headerUri ? <Image source={{ uri: headerUri }} style={styles.preview} /> : null}
 
               <Text style={[styles.note, styles.gapTop]}>{t.scoringNote}</Text>
-
-              <Text style={[LABEL, styles.gapTop]}>{t.league}</Text>
-              <OptionRow
-                options={COMMUNITY_CREATE_LEAGUES.map((k) => ({
-                  key: k,
-                  label: leagueLabel(k, language),
-                }))}
-                value={league}
-                onChange={(v) => setLeague(v as CommunityLeague)}
-              />
-
-              <Text style={[LABEL, styles.gapTop]}>{t.metric}</Text>
-              <OptionRow
-                options={COMMUNITY_CREATE_METRICS.map((k) => ({
-                  key: k,
-                  label: metricLabel(k, language),
-                }))}
-                value={metric}
-                onChange={(v) => setMetric(v as CommunityMetric)}
-              />
 
               <Text style={[LABEL, styles.gapTop]}>{t.period}</Text>
               <OptionRow

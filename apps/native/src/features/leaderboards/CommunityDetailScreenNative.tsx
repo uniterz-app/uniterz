@@ -1,6 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,9 +25,9 @@ import { CommunityModalBackdropNative } from "./CommunityCrtPartsNative";
 import { communityApiUrl, communityAuthHeader } from "./communityApiNative";
 import { invalidateCommunityGroupDetail } from "./communityGroupDetailCacheNative";
 import { communityPressableTapStyle } from "./communityCrtThemeNative";
-import CommunityGroupDetailCardNative from "./CommunityGroupDetailCardNative";
+import { peekLeaderboardsGroupReturnPreview } from "../../../../../lib/navigation/leaderboardsGroupReturn";
 
-/** Web `CommunityDetailClient`（mobile）相当 */
+/** グループ詳細 — スタック画面（一覧の上にモーダルを載せない） */
 export default function CommunityDetailScreenNative() {
   const route = useRoute<RouteProp<LeaderboardsStackParamList, "CommunityDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<LeaderboardsStackParamList>>();
@@ -27,13 +35,23 @@ export default function CommunityDetailScreenNative() {
   const { fUser } = useFirebaseUser();
   const { language } = useNativeLanguage();
   const { groupId } = route.params;
+  const listPreview = peekLeaderboardsGroupReturnPreview(groupId);
+  const scrollRef = useRef<ScrollView>(null);
+  const bounceOnRef = useRef(false);
 
-  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
-  const [endConfirmName, setEndConfirmName] = useState("");
+  const [endConfirmName, setEndConfirmName] = useState(listPreview?.name ?? "");
   const [endingGroup, setEndingGroup] = useState(false);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [leavingGroup, setLeavingGroup] = useState(false);
   const [headerImageEditing, setHeaderImageEditing] = useState(false);
+
+  /** 上端だけゴムバンド禁止。下がったあとは通常の弾力を戻す */
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const next = e.nativeEvent.contentOffset.y > 1;
+    if (next === bounceOnRef.current) return;
+    bounceOnRef.current = next;
+    scrollRef.current?.setNativeProps({ bounces: next });
+  }, []);
 
   const getIdToken = useCallback(() => {
     if (!fUser) return Promise.reject(new Error("no user"));
@@ -54,7 +72,6 @@ export default function CommunityDetailScreenNative() {
         cyberAlert("", String(json?.error ?? "failed"));
         return;
       }
-      setEndConfirmOpen(false);
       cyberAlert("", language === "en" ? "Group ended." : "グループを終了しました。");
       invalidateCommunityGroupDetail(groupId);
       navigation.goBack();
@@ -93,6 +110,7 @@ export default function CommunityDetailScreenNative() {
     return (
       <MobilePageShell
         title="GROUP"
+        eyebrow="LEADERBOARDS"
         onClose={() => navigation.goBack()}
         backgroundColor="#000000"
       >
@@ -106,58 +124,57 @@ export default function CommunityDetailScreenNative() {
   return (
     <>
       <MobilePageShell
-        title="GROUP DETAIL"
+        title="GROUP"
+        eyebrow="LEADERBOARDS"
         onClose={() => navigation.goBack()}
         backgroundColor="#000000"
       >
         <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
           scrollEnabled={!headerImageEditing}
-          contentContainerStyle={[styles.content, { paddingBottom: bottomContentReserveY + spacing.md }]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: bottomContentReserveY + spacing.md },
+          ]}
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          alwaysBounceVertical={false}
+          overScrollMode="never"
+          onScroll={onScroll}
+          scrollEventThrottle={16}
         >
-          <CommunityGroupDetailCardNative>
-            <CommunityGroupDetailViewNative
-              groupId={groupId}
-              language={language}
-              scrollEnabled={false}
-              inDetailCard
-              getIdToken={getIdToken}
-              onSummaryLoaded={(summary) => {
-                setEndConfirmName(summary.name);
-              }}
-              onExitAction={() => navigation.goBack()}
-              onRequestEndGroup={(name) => {
-                setEndConfirmName(name);
-                setEndConfirmOpen(true);
-              }}
-              onRequestLeave={() => setLeaveConfirmOpen(true)}
-              onImageUpdated={() => {
-                invalidateCommunityGroupDetail(groupId);
-              }}
-              onHeaderImageEditingChange={setHeaderImageEditing}
-              onOpenProfile={(handle, warm) => {
-                navigateToPublicProfileNative(navigation, {
-                  handle,
-                  fromLeaderboards: true,
-                  leaderboardsGroupId: groupId,
-                  ...(warm ? { warm } : {}),
-                });
-              }}
-            />
-          </CommunityGroupDetailCardNative>
+          <CommunityGroupDetailViewNative
+            groupId={groupId}
+            language={language}
+            listPreview={listPreview}
+            scrollEnabled={false}
+            inDetailCard
+            getIdToken={getIdToken}
+            onSummaryLoaded={(summary) => {
+              setEndConfirmName(summary.name);
+            }}
+            onExitAction={() => navigation.goBack()}
+            onRequestEndGroup={() => {
+              void confirmEndGroup();
+            }}
+            endingGroup={endingGroup}
+            onRequestLeave={() => setLeaveConfirmOpen(true)}
+            onImageUpdated={() => {
+              invalidateCommunityGroupDetail(groupId);
+            }}
+            onHeaderImageEditingChange={setHeaderImageEditing}
+            onOpenProfile={(handle, warm) => {
+              navigateToPublicProfileNative(navigation, {
+                handle,
+                fromLeaderboards: true,
+                leaderboardsGroupId: groupId,
+                ...(warm ? { warm } : {}),
+              });
+            }}
+          />
         </ScrollView>
       </MobilePageShell>
-
-      <EndGroupConfirmModalNative
-        visible={endConfirmOpen}
-        groupName={endConfirmName}
-        language={language}
-        busy={endingGroup}
-        onCancel={() => {
-          if (!endingGroup) setEndConfirmOpen(false);
-        }}
-        onConfirm={() => void confirmEndGroup()}
-      />
 
       <LeaveGroupConfirmModalNative
         visible={leaveConfirmOpen}
@@ -220,57 +237,16 @@ function LeaveGroupConfirmModalNative({
   );
 }
 
-function EndGroupConfirmModalNative({
-  visible,
-  groupName,
-  language,
-  busy,
-  onCancel,
-  onConfirm,
-}: {
-  visible: boolean;
-  groupName?: string;
-  language: Language;
-  busy: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const title = language === "en" ? "End this group?" : "グループを終了しますか？";
-  const body =
-    language === "en"
-      ? `This will archive "${groupName ?? "this group"}". Members will no longer see it in active slots.`
-      : `「${groupName ?? "このグループ"}」を終了します。メンバーはアクティブなスロットから非表示になります。`;
-
-  return (
-    <CommunityModalBackdropNative visible={visible} onClose={busy ? () => {} : onCancel}>
-      <Text style={modalStyles.title}>{title}</Text>
-      <Text style={modalStyles.body}>{body}</Text>
-      <View style={modalStyles.actions}>
-        <Pressable
-          disabled={busy}
-          onPress={onCancel}
-          style={({ pressed }) => [modalStyles.cancelBtn, pressed && communityPressableTapStyle(true)]}
-        >
-          <Text style={modalStyles.cancelText}>{language === "en" ? "Cancel" : "キャンセル"}</Text>
-        </Pressable>
-        <Pressable
-          disabled={busy}
-          onPress={onConfirm}
-          style={({ pressed }) => [modalStyles.confirmBtn, pressed && communityPressableTapStyle(true)]}
-        >
-          <Text style={modalStyles.confirmText}>
-            {busy ? "…" : language === "en" ? "End group" : "終了する"}
-          </Text>
-        </Pressable>
-      </View>
-    </CommunityModalBackdropNative>
-  );
-}
-
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+    backgroundColor: "#000000",
+  },
   content: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    flexGrow: 1,
+    backgroundColor: "#000000",
   },
   signIn: {
     marginTop: 24,
@@ -282,42 +258,41 @@ const styles = StyleSheet.create({
 
 const modalStyles = StyleSheet.create({
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#fff",
-    marginBottom: 10,
+    color: "#F8FAFC",
+    marginBottom: 8,
   },
   body: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: "rgba(255,255,255,0.72)",
+    fontSize: 13,
+    lineHeight: 20,
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 16,
   },
   actions: {
     flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 8,
-    marginTop: 16,
   },
   cancelBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
   cancelText: {
-    color: "rgba(255,255,255,0.85)",
+    fontSize: 13,
     fontWeight: "600",
+    color: "rgba(255,255,255,0.75)",
   },
   confirmBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "rgba(251,113,133,0.35)",
-    backgroundColor: "rgba(244,63,94,0.15)",
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    alignItems: "center",
+    backgroundColor: "#00F5FF",
   },
   confirmText: {
-    color: "rgba(254,205,211,0.95)",
+    fontSize: 13,
     fontWeight: "700",
+    color: "#050508",
   },
 });
