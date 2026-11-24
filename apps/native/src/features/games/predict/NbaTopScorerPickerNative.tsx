@@ -49,6 +49,10 @@ type Props = {
   onChange: (next: NbaTopScorerPick | null) => void;
   language: GamesLanguage;
   injuryReport?: NbaInjuryReport | null;
+  /** 折りたたみ時に出す人数。まとめて入力は 1 */
+  collapsedCount?: number;
+  /** 余白を詰める。折りたたみ中の行タップは展開（選択しない） */
+  compact?: boolean;
 };
 
 function InjuryChip({ status }: { status: string }) {
@@ -97,6 +101,8 @@ export default function NbaTopScorerPickerNative({
   onChange,
   language,
   injuryReport,
+  collapsedCount = TOP_N,
+  compact = false,
 }: Props) {
   const t = getGamesTexts(language);
   const apiBaseUrl = getUniterzApiBaseUrl();
@@ -122,15 +128,28 @@ export default function NbaTopScorerPickerNative({
     () => (liveInjury ? injuryStatusByPlayerId(liveInjury) : {}),
     [liveInjury]
   );
-  const restCount = Math.max(0, sorted.length - TOP_N);
-  /** 初回は常に上位 5。選択が下位でも自動展開しない */
+  const foldCount = Math.max(1, collapsedCount);
+  const restCount = Math.max(0, sorted.length - foldCount);
+  /** 初回は常に上位 N。選択が下位でも自動展開しない */
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setExpanded(false);
   }, [homeTeamId, awayTeamId]);
 
-  const visible = expanded ? sorted : sorted.slice(0, TOP_N);
+  const visible = useMemo(() => {
+    if (expanded) {
+      return sorted.map((row, index) => ({ row, rank: index + 1 }));
+    }
+    if (value) {
+      const index = sorted.findIndex((row) => isSamePick(value, row));
+      if (index >= 0) return [{ row: sorted[index], rank: index + 1 }];
+    }
+    return sorted.slice(0, foldCount).map((row, index) => ({
+      row,
+      rank: index + 1,
+    }));
+  }, [expanded, foldCount, sorted, value]);
 
   const onPick = (row: NbaTopScorerCandidate) => {
     if (isSamePick(value, row)) {
@@ -138,14 +157,27 @@ export default function NbaTopScorerPickerNative({
       return;
     }
     onChange({ playerId: row.playerId, teamId: row.teamId, name: row.name });
+    if (compact) setExpanded(false);
+  };
+
+  const onRowPress = (row: NbaTopScorerCandidate) => {
+    if (compact && !expanded && restCount > 0) {
+      setExpanded(true);
+      return;
+    }
+    onPick(row);
   };
 
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
+    <View style={[styles.root, compact ? styles.rootCompact : null]}>
+      <View style={[styles.header, compact ? styles.headerCompact : null]}>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{t.nbaTopScorerTitle}</Text>
-          <Text style={styles.hint}>{t.nbaTopScorerBonusHint}</Text>
+          <Text style={[styles.title, compact ? styles.titleCompact : null]}>
+            {t.nbaTopScorerTitle}
+          </Text>
+          <Text style={[styles.hint, compact ? styles.hintCompact : null]}>
+            {t.nbaTopScorerBonusHint}
+          </Text>
         </View>
         {value ? (
           <Pressable
@@ -169,8 +201,16 @@ export default function NbaTopScorerPickerNative({
         </View>
       ) : (
         <View style={styles.table}>
-          <View style={styles.head}>
-            <Text style={[styles.th, styles.colRank]}>#</Text>
+          <View style={[styles.head, compact ? styles.headCompact : null]}>
+            <Text
+              style={[
+                styles.th,
+                styles.colRank,
+                compact ? styles.colRankCompact : null,
+              ]}
+            >
+              #
+            </Text>
             <Text style={[styles.th, styles.colPlayer]}>
               {t.nbaTopScorerPlayerCol}
             </Text>
@@ -181,18 +221,18 @@ export default function NbaTopScorerPickerNative({
             <Text style={[styles.th, styles.colMetric]}>PTS</Text>
           </View>
 
-          {visible.map((row, index) => {
-            const rank = index + 1;
+          {visible.map(({ row, rank }) => {
             const selected = isSamePick(value, row);
             const injuryStatus = injuryById[row.playerId];
             return (
               <Pressable
                 key={`${row.teamId}:${row.playerId}`}
-                onPress={() => onPick(row)}
+                onPress={() => onRowPress(row)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 style={({ pressed }) => [
                   styles.row,
+                  compact ? styles.rowCompact : null,
                   selected ? styles.rowSelected : null,
                   pressed ? styles.rowPressed : null,
                 ]}
@@ -205,15 +245,34 @@ export default function NbaTopScorerPickerNative({
                         style={styles.rowPressedWash}
                       />
                     ) : null}
-                    <Text style={[styles.tdRank, { color: rankColor(rank) }]}>
+                    <Text
+                      style={[
+                        styles.tdRank,
+                        compact ? styles.tdRankCompact : null,
+                        { color: rankColor(rank) },
+                      ]}
+                    >
                       {rank}
                     </Text>
-                    <View style={styles.playerCol}>
-                      <Text style={styles.tdPlayer} numberOfLines={1}>
+                    <View
+                      style={[
+                        styles.playerCol,
+                        compact ? styles.playerColCompact : null,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tdPlayer,
+                          compact ? styles.tdPlayerCompact : null,
+                        ]}
+                        numberOfLines={1}
+                      >
                         {row.name}
                       </Text>
                       {injuryStatus ? (
-                        <InjuryChip status={injuryStatus} />
+                        <View style={compact ? styles.injuryChipCompactWrap : null}>
+                          <InjuryChip status={injuryStatus} />
+                        </View>
                       ) : null}
                     </View>
                     <View style={styles.colTeam}>
@@ -231,8 +290,19 @@ export default function NbaTopScorerPickerNative({
                         }
                       />
                     </View>
-                    <Text style={styles.tdGp}>{row.gp ?? "—"}</Text>
-                    <Text style={styles.tdMetric}>{fmtPpg(row.ppg)}</Text>
+                    <Text
+                      style={[styles.tdGp, compact ? styles.tdGpCompact : null]}
+                    >
+                      {row.gp ?? "—"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.tdMetric,
+                        compact ? styles.tdMetricCompact : null,
+                      ]}
+                    >
+                      {fmtPpg(row.ppg)}
+                    </Text>
                   </>
                 )}
               </Pressable>
@@ -246,6 +316,7 @@ export default function NbaTopScorerPickerNative({
               accessibilityState={{ expanded }}
               style={({ pressed }) => [
                 styles.more,
+                compact ? styles.moreCompact : null,
                 pressed ? styles.rowPressed : null,
               ]}
             >
@@ -275,12 +346,67 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0,245,255,0.32)",
     backgroundColor: "rgba(0,14,20,0.55)",
   },
+  rootCompact: {
+    paddingHorizontal: 0,
+    paddingTop: 4,
+    paddingBottom: 0,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
     marginBottom: 10,
+  },
+  headerCompact: {
+    marginBottom: 4,
+  },
+  titleCompact: {
+    fontSize: 14,
+    lineHeight: 16,
+    letterSpacing: 0.9,
+  },
+  hintCompact: {
+    fontSize: 11,
+    letterSpacing: 0.4,
+  },
+  headCompact: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  rowCompact: {
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+  },
+  colRankCompact: {
+    width: 18,
+  },
+  tdRankCompact: {
+    width: 18,
+    fontSize: 14,
+  },
+  playerColCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingRight: 2,
+  },
+  injuryChipCompactWrap: {
+    marginTop: -2,
+  },
+  tdPlayerCompact: {
+    fontSize: 13,
+  },
+  tdGpCompact: {
+    fontSize: 12,
+  },
+  tdMetricCompact: {
+    fontSize: 13,
+  },
+  moreCompact: {
+    paddingVertical: 5,
   },
   headerText: {
     flex: 1,

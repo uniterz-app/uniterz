@@ -13,6 +13,12 @@ import type { MainTabParamList, ResultStackParamList } from "../../navigation/ty
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useReducedMotion } from "react-native-reanimated";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
+import { useNativeUserPlan } from "../../hooks/useNativeUserPlan";
+import ResultFeedBannerNative from "../ads/ResultFeedBannerNative";
+import {
+  RESULT_FEED_ADS_ENABLED,
+  shouldInsertResultFeedAdAfter,
+} from "../ads/resultFeedAdPlacementNative";
 import { t as i18nT } from "../../../../../lib/i18n/t";
 import {
   L,
@@ -231,6 +237,9 @@ export default function ResultHomeScreen({
   const { language } = useNativeUserLanguageFromAuth();
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const uid = fUser?.uid ?? null;
+  const { isPro: isProUser, loading: planLoading } = useNativeUserPlan(uid);
+  const showResultFeedAds =
+    RESULT_FEED_ADS_ENABLED && !planLoading && !isProUser;
 
   const t = useMemo(() => {
     const lang = resolveLocalizedLang(language);
@@ -773,6 +782,7 @@ export default function ResultHomeScreen({
           listRef={resultListRef}
           style={styles.listScroll}
           sections={sections}
+          extraData={showResultFeedAds}
           contentContainerStyle={listContentWithBottomPad}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
@@ -833,34 +843,40 @@ export default function ResultHomeScreen({
           }}
           renderItem={({ item, index, section }) => {
             const isLastInSection = index === section.data.length - 1;
+            const flatIndex = section.baseFlatIndex + index;
+            const showAd =
+              showResultFeedAds && shouldInsertResultFeedAdAfter(flatIndex);
             return (
-              <ResultPostCardNative
-                post={item}
-                pkScore={resolveResultPostPkScore(item, pkFromGames)}
-                gameMarket={resolveResultPostGameMarket(item, marketsFromGames)}
-                gameRoundMeta={resolveResultPostGameRoundMeta(
-                  item,
-                  roundMetaFromGames
-                )}
-                language={language}
-                nowMs={listNowTick}
-                viewerUid={uid}
-                listEnterIndex={section.baseFlatIndex + index}
-                entranceEnabled={entranceArmed}
-                siblingOverlayOpen={detailPostId != null}
-                compactSpacing={isLastInSection}
-                tutorialTargetId={
-                  section.baseFlatIndex + index === 0
-                    ? "result-card"
-                    : undefined
-                }
-                onOpenDetail={onOpenResultDetail}
-                onRequestDeleteConfirm={requestDeleteConfirm}
-                onRequestPredictEdit={openPredictEditFromResult}
-                spotlightPlayId={
-                  jumpSpotlight?.id === item.id ? jumpSpotlight.play : 0
-                }
-              />
+              <View>
+                <ResultPostCardNative
+                  post={item}
+                  pkScore={resolveResultPostPkScore(item, pkFromGames)}
+                  gameMarket={resolveResultPostGameMarket(item, marketsFromGames)}
+                  gameRoundMeta={resolveResultPostGameRoundMeta(
+                    item,
+                    roundMetaFromGames
+                  )}
+                  language={language}
+                  nowMs={listNowTick}
+                  viewerUid={uid}
+                  listEnterIndex={flatIndex}
+                  entranceEnabled={entranceArmed}
+                  siblingOverlayOpen={detailPostId != null}
+                  compactSpacing={isLastInSection && !showAd}
+                  tutorialTargetId={
+                    flatIndex === 0 ? "result-card" : undefined
+                  }
+                  onOpenDetail={onOpenResultDetail}
+                  onRequestDeleteConfirm={requestDeleteConfirm}
+                  onRequestPredictEdit={openPredictEditFromResult}
+                  spotlightPlayId={
+                    jumpSpotlight?.id === item.id ? jumpSpotlight.play : 0
+                  }
+                />
+                {showAd ? (
+                  <ResultFeedBannerNative compactSpacing={isLastInSection} />
+                ) : null}
+              </View>
             );
           }}
         />
@@ -908,6 +924,7 @@ function ResultSectionListWithVisibility({
   listRef,
   style,
   sections,
+  extraData,
   contentContainerStyle,
   ListHeaderComponent,
   ListEmptyComponent,
@@ -924,6 +941,7 @@ function ResultSectionListWithVisibility({
   listRef: RefObject<SectionListType<PostWithMillis, SectionT> | null>;
   style: ViewStyle | ViewStyle[];
   sections: SectionT[];
+  extraData?: unknown;
   contentContainerStyle: object;
   ListHeaderComponent: ReactElement | null;
   ListEmptyComponent: ReactElement | null;
@@ -953,6 +971,7 @@ function ResultSectionListWithVisibility({
       ref={listRef}
       style={style}
       sections={sections}
+      extraData={extraData}
       keyExtractor={(item) => item.id}
       stickySectionHeadersEnabled={false}
       initialNumToRender={4}

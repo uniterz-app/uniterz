@@ -1394,7 +1394,12 @@ const FACTS: Array<(lang: Lang) => string> = [
       "PRO の料金は、一度支払ったあとは途中で解約しても日割りや返金はありません（Season Pass も同じ）。返金を求めるときは、買ったストア（App Store / Google Play）の返金手続きになります。",
       "PRO fees aren't prorated or refunded by UNITERZ after payment, even if you cancel mid-period (the Season Pass too). For a refund, use the refund process of the store you bought from (App Store / Google Play)."
     ),
-  (lang) => T(lang, "いまアプリ内に広告は出ません。", "The app currently shows no ads."),
+  (lang) =>
+    T(
+      lang,
+      "無料プランでは、PRO PICK とトレード Buzz を見るときに短いリワード広告が出ます。リザルト一覧ではカード7枚ごとにバナー広告が入ります。PRO は広告なしです。",
+      "On the free plan, a short rewarded ad plays to open PRO PICK or Trade Buzz. The results list inserts a banner ad after every 7 cards. PRO has no ads."
+    ),
   (lang) =>
     T(
       lang,

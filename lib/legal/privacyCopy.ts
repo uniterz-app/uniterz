@@ -20,7 +20,7 @@ import type { LegalLang } from "@/lib/legal/unitRedemptionLegalCopy";
 
 export type { LegalLang };
 
-export const PRIVACY_UPDATED_AT = "2026-11-23";
+export const PRIVACY_UPDATED_AT = "2026-11-24";
 
 export const PRIVACY_INTRO = {
   ja: "Uniterz におけるユーザー情報の取り扱いについて説明するページです。",
@@ -502,14 +502,14 @@ export const PRIVACY_SECTIONS: readonly LegalSection[] = [
             "Cookieとは、任意の文字が書かれた小さなファイルのことで、ユーザーがウェブサイトを閲覧した際に、ウェブサーバとユーザーのブラウザとの間でやりとりされ、ユーザーの端末に保存されるものです。これにより、閲覧履歴、サービス利用履歴等の情報を取得することがあります。",
             "ユーザーは、ブラウザの設定により、Cookieの無効化及び保存済みCookieの削除をすることができます。Cookieの利用を拒否した場合、ウェブサイトでご利用いただける機能が制限される可能性があります。",
             "Web版では、ログイン状態の維持、セキュリティ、必要な機能の提供のためにCookie等を使用することがあります。広告目的のトラッキングCookieを、現時点では埋め込みません。",
-            "アプリでは、無料機能の対価としてリワード広告を表示するため、Google AdMob およびそのメディエーションパートナー（Meta Audience Network を含みます）のSDKを使用します。広告識別子その他の端末情報は、ユーザーがトラッキングを許可した場合に、広告の配信および効果測定のために当該事業者へ送信されることがあります。許可しない場合でも、個人向けでない広告は表示されることがあります。",
+            "アプリでは、無料機能の対価としてリワード広告およびリザルト一覧のバナー広告を表示するため、Google AdMob およびそのメディエーションパートナー（Meta Audience Network を含みます）のSDKを使用します。広告識別子その他の端末情報は、ユーザーがトラッキングを許可した場合に、広告の配信および効果測定のために当該事業者へ送信されることがあります。許可しない場合でも、個人向けでない広告は表示されることがあります。",
           ],
           en: [
             "Our website may use cookies and similar technologies (\"Cookies\") to provide a better Service.",
             "Cookies are small files stored on your device when you browse. They may collect browsing and usage information.",
             "You can disable or delete Cookies in your browser; some site features may then be limited.",
             "The web version may use Cookies to keep you signed in, protect security, and provide required features. We do not currently embed advertising tracking cookies.",
-            "In the app we show rewarded ads as consideration for free features, using Google AdMob and its mediation partners (including Meta Audience Network). Advertising identifiers and similar device data may be sent to those providers for ad delivery and measurement if you allow tracking. If you decline, non-personalized ads may still appear.",
+            "In the app we show rewarded ads and in-feed banner ads on the results list as consideration for free features, using Google AdMob and its mediation partners (including Meta Audience Network). Advertising identifiers and similar device data may be sent to those providers for ad delivery and measurement if you allow tracking. If you decline, non-personalized ads may still appear.",
           ],
         },
       },

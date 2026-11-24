@@ -3,23 +3,15 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import {
-  nbaTopScorerSegmentLabel,
   normalizeNbaTopScorerCandidates,
-  sortNbaTopScorerCandidatesByPpg,
-  type NbaTopScorerCandidate,
   type NbaTopScorerPick,
 } from "../../../../../lib/nba/topScorer";
-import { useNbaTopScorerCandidates } from "../../../../../lib/nba/useNbaTopScorerCandidates";
-import { getTeamRosterMarkColor } from "../../../../../lib/team-colors";
 import { batchPredictWinnerFromScores } from "../../../../../lib/predict/batchPredict";
-import {
-  CYBER_TAB_CYAN,
-  CyberSlantedTabBarNative,
-  CyberSlantedTabNative,
-} from "../rankings/CyberSlantedTabNative";
-import { getUniterzApiBaseUrl } from "./submitPredictionApi";
+import { useNativeLanguage } from "../../i18n/NativeLanguageProvider";
+import { toNativeGamesLanguage } from "./gamesI18n";
+import { MATCH_CARD_DISPLAY_FONT } from "./matchCardTypography";
+import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
 
-const TOP_BOTH_TEAMS = 4;
 const WIN_SCORE = "#F5C518";
 const UNCONFIRMED = "rgba(255,255,255,0.38)";
 
@@ -58,18 +50,20 @@ export default function BatchDayEntryNative({
 }: Props) {
   return (
     <View style={styles.list}>
-      {rows.map((row) => (
-        <BatchDayBlock
-          key={row.gameId}
-          row={row}
-          home={scores[row.gameId]?.home ?? ""}
-          away={scores[row.gameId]?.away ?? ""}
-          pick={scorers[row.gameId] ?? null}
-          onScore={onScore}
-          onScorer={onScorer}
-          tieLabel={tieLabel}
-          onOpenStats={onOpenStats}
-        />
+      {rows.map((row, index) => (
+        <View key={row.gameId}>
+          {index > 0 ? <View style={styles.gameRule} /> : null}
+          <BatchDayBlock
+            row={row}
+            home={scores[row.gameId]?.home ?? ""}
+            away={scores[row.gameId]?.away ?? ""}
+            pick={scorers[row.gameId] ?? null}
+            onScore={onScore}
+            onScorer={onScorer}
+            tieLabel={tieLabel}
+            onOpenStats={onOpenStats}
+          />
+        </View>
       ))}
     </View>
   );
@@ -123,29 +117,41 @@ function BatchDayBlock({
   return (
     <View style={styles.block}>
       <View style={styles.scoreLine}>
-        <Text style={[styles.team, styles.teamHome]} numberOfLines={1}>
-          {row.homeLabel}
-        </Text>
-        <ScoreField
-          value={home}
-          placeholder={row.homePpg}
-          confirmed={confirmed}
-          leading={confirmed && homeNum > awayNum}
-          label={`${row.homeLabel} score`}
-          onChange={(value) => commit("home", value)}
-        />
-        <Text style={styles.dash}>-</Text>
-        <ScoreField
-          value={away}
-          placeholder={row.awayPpg}
-          confirmed={confirmed}
-          leading={confirmed && awayNum > homeNum}
-          label={`${row.awayLabel} score`}
-          onChange={(value) => commit("away", value)}
-        />
-        <Text style={[styles.team, styles.teamAway]} numberOfLines={1}>
-          {row.awayLabel}
-        </Text>
+        <View style={[styles.teamCol, styles.teamColHome]}>
+          <View style={styles.teamStack}>
+            <Text style={styles.sideTag}>HOME</Text>
+            <Text style={styles.team} numberOfLines={1}>
+              {row.homeLabel}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.scoreCluster}>
+          <ScoreField
+            value={home}
+            placeholder={row.homePpg}
+            confirmed={confirmed}
+            leading={confirmed && homeNum > awayNum}
+            label={`${row.homeLabel} score`}
+            onChange={(value) => commit("home", value)}
+          />
+          <Text style={styles.dash}>-</Text>
+          <ScoreField
+            value={away}
+            placeholder={row.awayPpg}
+            confirmed={confirmed}
+            leading={confirmed && awayNum > homeNum}
+            label={`${row.awayLabel} score`}
+            onChange={(value) => commit("away", value)}
+          />
+        </View>
+        <View style={[styles.teamCol, styles.teamColAway]}>
+          <View style={styles.teamStack}>
+            <Text style={styles.sideTag}>AWAY</Text>
+            <Text style={styles.team} numberOfLines={1}>
+              {row.awayLabel}
+            </Text>
+          </View>
+        </View>
       </View>
       {nba && onOpenStats ? (
         <Pressable
@@ -223,67 +229,23 @@ function ScorerPick({
   pick: NbaTopScorerPick | null;
   onPick: (pick: NbaTopScorerPick | null) => void;
 }) {
+  const { language } = useNativeLanguage();
   const override = useMemo(
     () => normalizeNbaTopScorerCandidates(overrideCandidates),
     [overrideCandidates]
   );
-  const { candidates, loading } = useNbaTopScorerCandidates({
-    homeTeamId,
-    awayTeamId,
-    apiBaseUrl: getUniterzApiBaseUrl(),
-    override: override.length > 0 ? override : null,
-    enabled: true,
-  });
-  const top = useMemo(
-    () => sortNbaTopScorerCandidatesByPpg(candidates).slice(0, TOP_BOTH_TEAMS),
-    [candidates]
-  );
-  if (!loading && top.length === 0) return null;
-  const slots: Array<NbaTopScorerCandidate | null> =
-    top.length > 0 ? top : Array.from({ length: TOP_BOTH_TEAMS }, () => null);
   return (
     <View style={styles.scorerRow}>
-      <CyberSlantedTabBarNative fill>
-        {slots.map((player, index) => {
-          if (!player) {
-            return (
-              <CyberSlantedTabNative
-                key={`slot-${index}`}
-                label="—"
-                active={false}
-                compact
-                onPress={() => {}}
-              />
-            );
-          }
-          const selected =
-            pick?.playerId === player.playerId && pick.teamId === player.teamId;
-          return (
-            <CyberSlantedTabNative
-              key={`${player.teamId}:${player.playerId}`}
-              label={nbaTopScorerSegmentLabel(player.name)}
-              active={selected}
-              compact
-              theme={{
-                accent: CYBER_TAB_CYAN,
-                inactiveText: CYBER_TAB_CYAN,
-                inactiveBorder: getTeamRosterMarkColor("nba", player.teamId),
-              }}
-              onPress={() =>
-                onPick(
-                  selected
-                    ? null
-                    : {
-                        playerId: player.playerId,
-                        teamId: player.teamId,
-                        name: player.name,
-                      }
-                )
-              }
-            />
-          );
-        })}
-      </CyberSlantedTabBarNative>
+      <NbaTopScorerPickerNative
+        homeTeamId={homeTeamId}
+        awayTeamId={awayTeamId}
+        candidates={override.length > 0 ? override : undefined}
+        value={pick}
+        onChange={onPick}
+        language={toNativeGamesLanguage(language)}
+        compact
+        collapsedCount={1}
+      />
     </View>
   );
 }
@@ -291,34 +253,64 @@ function ScorerPick({
 const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 12,
-    gap: 14,
     paddingBottom: 8,
   },
+  gameRule: {
+    height: 1,
+    marginVertical: 16,
+    backgroundColor: "rgba(255,255,255,0.55)",
+  },
   block: {
-    gap: 8,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.14)",
+    gap: 6,
   },
   scoreLine: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     gap: 6,
   },
-  team: {
+  teamCol: {
     flex: 1,
+    minWidth: 0,
+  },
+  teamColHome: {
+    alignItems: "flex-end",
+    paddingRight: 10,
+  },
+  teamColAway: {
+    alignItems: "flex-start",
+    paddingLeft: 10,
+  },
+  teamStack: {
+    alignItems: "center",
+    maxWidth: "100%",
+    gap: 1,
+  },
+  sideTag: {
+    color: "rgba(255,255,255,0.55)",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 11,
+    lineHeight: 12,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
+  },
+  team: {
     color: "#F8FAFC",
-    fontSize: 16,
-    lineHeight: 20,
-    fontFamily: "Oxanium_600SemiBold",
+    fontFamily: MATCH_CARD_DISPLAY_FONT,
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: "400",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    includeFontPadding: false,
+    transform: [{ skewX: "-6deg" }],
   },
-  teamHome: {
-    textAlign: "right",
-    marginRight: 10,
-  },
-  teamAway: {
-    textAlign: "left",
-    marginLeft: 10,
+  scoreCluster: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 1,
   },
   input: {
     width: 52,
@@ -348,7 +340,7 @@ const styles = StyleSheet.create({
     fontFamily: "Oxanium_600SemiBold",
   },
   scorerRow: {
-    marginTop: 2,
+    marginTop: 0,
   },
   tie: {
     color: "#F87171",

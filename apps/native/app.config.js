@@ -10,7 +10,7 @@ const isPreview = variant === "preview";
 const base = appJson.expo;
 
 /**
- * AdMob（リワード広告・PRO PICK の解除）。アプリ ID は本番では環境変数で差し替える（EAS の env）。
+ * AdMob（リワード＝PRO PICK / Buzz、バナー＝リザルト一覧）。アプリ ID は本番では環境変数で差し替える（EAS の env）。
  * 未設定のときは Google の公式テスト用 ID（開発・確認用。本番に出さない）。
  */
 const ADMOB_TEST_ANDROID_APP_ID = "ca-app-pub-3940256099942544~3347511713";
