@@ -704,6 +704,20 @@ export function metricValue(
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
+/** 期間窓など、値が入っている指標だけレールに出す */
+export function leagueTeamRailGroupsForFilledRows(
+  rows: readonly NbaLeagueTeamStatRow[]
+): NbaLeagueTeamRailGroup[] {
+  return leagueTeamRailGroups()
+    .map((g) => ({
+      ...g,
+      metrics: g.metrics.filter((m) =>
+        rows.some((r) => Math.abs(metricValue(r, m.id)) > 1e-9)
+      ),
+    }))
+    .filter((g) => g.metrics.length > 0);
+}
+
 export function formatMetricValue(
   metric: NbaLeagueTeamStatMetric,
   value: number | null | undefined

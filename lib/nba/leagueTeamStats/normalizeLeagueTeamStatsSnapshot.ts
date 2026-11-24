@@ -101,6 +101,12 @@ function parseRow(
   );
 }
 
+export function parseLeagueTeamWindowRows(
+  raw: unknown
+): NbaLeagueTeamStatRow[] | null {
+  return parseRows(raw, "last10");
+}
+
 function parseRows(
   raw: unknown,
   window: "season" | "last10"

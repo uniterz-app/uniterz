@@ -9,7 +9,10 @@ import {
   HOW_THEY_PLAY_TRACKING_HINTS,
 } from "@/lib/predict/nbaHowTheyPlayHints";
 import { getNbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
-import type { NbaPlayerDetailPreview } from "@/lib/predict/nbaPlayerDetailPreviewMocks";
+import type {
+  NbaPlayerDetailPreview,
+  NbaPlayerGameLog,
+} from "@/lib/predict/nbaPlayerDetailPreviewMocks";
 import {
   howPtsCell,
   ptsFromShare,
@@ -707,5 +710,142 @@ export function getPlayerHowTheyPlay(
     hustle,
     rebounding,
     tracking,
+  };
+}
+
+function hasHowValue(value: number): boolean {
+  return Number.isFinite(value) && Math.abs(value) > 1e-9;
+}
+
+/** 期間窓など、値が入っているタブだけ出す */
+export function playerHowTheyPlayTabsWithData(
+  board: PlayerHowTheyPlay
+): PlayerHowTheyPlayTab[] {
+  const filled: PlayerHowTheyPlayTab[] = [];
+  if (board.ratings.some((r) => hasHowValue(r.cell.value))) filled.push("ratings");
+  if (board.fourFactors.some((r) => hasHowValue(r.cell.value))) {
+    filled.push("fourFactors");
+  }
+  if (board.scoring.some((r) => hasHowValue(r.cell.value) || hasHowValue(r.pts.value))) {
+    filled.push("scoring");
+  }
+  if (board.playtype.some((r) => hasHowValue(r.freq.value) || hasHowValue(r.ppp.value))) {
+    filled.push("playtype");
+  }
+  if (board.shooting.some((r) => hasHowValue(r.cell.value))) filled.push("shooting");
+  if (board.clutch.some((r) => hasHowValue(r.cell.value))) filled.push("clutch");
+  if (board.defense.some((r) => hasHowValue(r.cell.value))) filled.push("defense");
+  if (board.hustle.some((r) => hasHowValue(r.cell.value))) filled.push("hustle");
+  if (board.rebounding.some((r) => hasHowValue(r.cell.value))) {
+    filled.push("rebounding");
+  }
+  if (board.tracking.some((r) => hasHowValue(r.cell.value))) filled.push("tracking");
+  return filled;
+}
+
+function logHowCell(
+  metric: NbaPlayerAdvancedLeaderMetric,
+  value: number
+): PlayerHowRow {
+  const def = playerAdvancedMetricDef(metric);
+  return {
+    id: metric,
+    short: def.short,
+    hint: def.hint,
+    cell: {
+      value,
+      display: formatPlayerAdvancedLeaderValue(metric, value),
+      rank: 0,
+    },
+  };
+}
+
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+/**
+ * 試合ログの box から期間の HOW THEY PLAY。
+ * playtype / shot zone / clutch / tracking はログに無いので空。
+ */
+export function playerHowTheyPlayFromGameLogs(
+  logs: readonly NbaPlayerGameLog[]
+): PlayerHowTheyPlay {
+  const empty = emptyPlayerHowTheyPlay();
+  if (logs.length === 0) return empty;
+
+  let pts = 0;
+  let fgm = 0;
+  let fga = 0;
+  let fg3m = 0;
+  let fg3a = 0;
+  let ftm = 0;
+  let fta = 0;
+  let tov = 0;
+  for (const g of logs) {
+    pts += g.pts;
+    fgm += g.fgm;
+    fga += g.fga;
+    fg3m += g.fg3m;
+    fg3a += g.fg3a;
+    ftm += g.ftm;
+    fta += g.fta;
+    tov += g.tov;
+  }
+  const n = logs.length;
+  const tsDen = 2 * (fga + 0.44 * fta);
+  const tovDen = fga + 0.44 * fta + tov;
+
+  const ratings: PlayerHowRow[] = [];
+  if (tsDen > 0 && pts > 0) {
+    ratings.push(logHowCell("ts_pct", round3(pts / tsDen)));
+  }
+
+  const fourFactors: PlayerHowRow[] = [];
+  if (fga > 0) {
+    fourFactors.push(logHowCell("efg_pct", round3((fgm + 0.5 * fg3m) / fga)));
+    fourFactors.push(logHowCell("fta_rate", round3(fta / fga)));
+  }
+  if (tovDen > 0) {
+    fourFactors.push(logHowCell("tov_pct", round3(tov / tovDen)));
+  }
+
+  const scoring: PlayerScoringRow[] = [];
+  if (pts > 0) {
+    const pct3 = round3((3 * fg3m) / pts);
+    const pctFt = round3(ftm / pts);
+    scoring.push({
+      id: "3",
+      short: "3PT",
+      label: HOW_THEY_PLAY_SCORING_LABELS.threes,
+      cell: {
+        value: pct3,
+        display: formatPlayerAdvancedLeaderValue("pct_pts_3", pct3),
+        rank: 0,
+      },
+      pts: howPtsCell(round1((3 * fg3m) / n)),
+    });
+    scoring.push({
+      id: "ft",
+      short: "FT",
+      label: HOW_THEY_PLAY_SCORING_LABELS.freeThrows,
+      cell: {
+        value: pctFt,
+        display: formatPlayerAdvancedLeaderValue("pct_pts_ft", pctFt),
+        rank: 0,
+      },
+      pts: howPtsCell(round1(ftm / n)),
+    });
+  }
+
+  return {
+    ...empty,
+    ratings,
+    fourFactors,
+    scoring,
   };
 }

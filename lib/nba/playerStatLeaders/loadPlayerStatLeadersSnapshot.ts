@@ -16,6 +16,7 @@ import {
   buildSeasonCountLeadersFromGameLogs,
   seasonCountBoardHasRows,
 } from "./buildSeasonCountLeadersFromGameLogs";
+import { writePlayerWindowSnapshotFromLogs } from "./loadPlayerWindowSnapshot";
 
 export const NBA_LEAGUE_PLAYER_STATS_COLLECTION = "nbaLeaguePlayerStats";
 
@@ -151,6 +152,12 @@ export async function rebuildPlayerLast10FromGameLogs(
   serverTimestamp: unknown
 ): Promise<{ playerCount: number; merged: boolean }> {
   const players = await listPlayerGameLogsForLeaders(db, seasonKey);
+  await writePlayerWindowSnapshotFromLogs(
+    db,
+    seasonKey,
+    players,
+    serverTimestamp
+  );
   const seasonCounts = buildSeasonCountLeadersFromGameLogs(players);
   const hasCounts = seasonCountBoardHasRows(seasonCounts);
   if (!hasCounts) {

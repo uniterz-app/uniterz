@@ -73,11 +73,38 @@ export type NbaTeamHeadToHeadStatRow = NbaTeamSplitStatRow & {
   oppAbbr: string;
 };
 
+/** 1 試合のチーム合計（liveStats.box の選手行を足したもの） */
+export type NbaTeamGameLogBoxTotals = {
+  fgm: number;
+  fga: number;
+  fg3m: number;
+  fg3a: number;
+  ftm: number;
+  fta: number;
+  reb: number;
+  oreb: number;
+  ast: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  pf: number;
+};
+
 export type NbaTeamGameLogDetailGame = NbaTeamRecentGame & {
   /** 前日（米国東部）にも試合があった連戦 2 日目 */
   b2b?: boolean;
   /** 東部暦日で 4 日のうち 3 試合目（3in4。B2B と重なることがある） */
   threeInFour?: boolean;
+  /** 自チーム box 合計。無い試合は省略 */
+  box?: NbaTeamGameLogBoxTotals;
+  /** 相手 box 合計 */
+  oppBox?: NbaTeamGameLogBoxTotals;
+  /** liveStats.teamStats のペイント得点 */
+  paint?: number;
+  /** liveStats.teamStats のファストブレイク得点 */
+  fb?: number;
+  oppPaint?: number;
+  oppFb?: number;
 };
 
 export type NbaTeamGameLogDetail = {
@@ -94,21 +121,7 @@ export type NbaTeamGameLogDetail = {
 
 type RawGame = Record<string, unknown> & { id?: string };
 
-type BoxTotals = {
-  fgm: number;
-  fga: number;
-  fg3m: number;
-  fg3a: number;
-  ftm: number;
-  fta: number;
-  reb: number;
-  oreb: number;
-  ast: number;
-  stl: number;
-  blk: number;
-  tov: number;
-  pf: number;
-};
+type BoxTotals = NbaTeamGameLogBoxTotals;
 
 type Acc = {
   wins: number;
@@ -169,6 +182,11 @@ function coercePlayers(side: unknown): Array<Record<string, unknown>> | null {
     if (Array.isArray(players)) return players as Array<Record<string, unknown>>;
   }
   return null;
+}
+
+/** box 片側 → チーム合計。シュート行が無ければ null */
+export function sumTeamGameLogBoxSide(side: unknown): NbaTeamGameLogBoxTotals | null {
+  return sumSide(side);
 }
 
 /** box 片側 → チーム合計。シュート行が無ければ null */
@@ -305,6 +323,10 @@ type FinalGame = {
   awayScore: number;
   homeBox: BoxTotals | null;
   awayBox: BoxTotals | null;
+  homePaint: number | null;
+  homeFb: number | null;
+  awayPaint: number | null;
+  awayFb: number | null;
   homePos: NbaPositionTotals | null;
   awayPos: NbaPositionTotals | null;
 };
@@ -323,8 +345,17 @@ function parseFinalGames(games: RawGame[]): FinalGame[] {
     const score = resolveGameScore(raw);
     if (!start || !score) continue;
     const startMs = start.getTime();
-    const box = (raw.liveStats as { box?: { home?: unknown; away?: unknown } } | undefined)
-      ?.box;
+    const live = raw.liveStats as
+      | {
+          box?: { home?: unknown; away?: unknown };
+          teamStats?: {
+            home?: Record<string, unknown>;
+            away?: Record<string, unknown>;
+          };
+        }
+      | undefined;
+    const box = live?.box;
+    const teamStats = live?.teamStats;
     const g: FinalGame = {
       id: typeof raw.id === "string" ? raw.id.trim() : "",
       startMs,
@@ -336,6 +367,10 @@ function parseFinalGames(games: RawGame[]): FinalGame[] {
       awayScore: score.away,
       homeBox: sumSide(box?.home),
       awayBox: sumSide(box?.away),
+      homePaint: finiteOrNull(teamStats?.home?.paint),
+      homeFb: finiteOrNull(teamStats?.home?.fb),
+      awayPaint: finiteOrNull(teamStats?.away?.paint),
+      awayFb: finiteOrNull(teamStats?.away?.fb),
       homePos: sumPositionTotals(coercePlayers(box?.home)),
       awayPos: sumPositionTotals(coercePlayers(box?.away)),
     };
@@ -478,6 +513,10 @@ export function buildTeamGameLogDetailsFromGames(input: {
       }
 
       const selfConf = nbaConferenceForTeam(s.teamId);
+      const paint = s.isHome ? g.homePaint : g.awayPaint;
+      const fb = s.isHome ? g.homeFb : g.awayFb;
+      const oppPaint = s.isHome ? g.awayPaint : g.homePaint;
+      const oppFb = s.isHome ? g.awayFb : g.homeFb;
       s.self.games.push({
         dateLabel: formatDateLabel(g.startMs),
         ...(g.id ? { gameId: g.id } : null),
@@ -491,6 +530,11 @@ export function buildTeamGameLogDetailsFromGames(input: {
         conferenceGame: selfConf != null && selfConf === oppConf,
         ...(b2b ? { b2b: true } : null),
         ...(threeInFour ? { threeInFour: true } : null),
+        ...(box && oppBox ? { box, oppBox } : null),
+        ...(paint != null ? { paint } : null),
+        ...(fb != null ? { fb } : null),
+        ...(oppPaint != null ? { oppPaint } : null),
+        ...(oppFb != null ? { oppFb } : null),
       });
     }
 
@@ -563,6 +607,34 @@ function resolveStatRow(raw: unknown): NbaTeamSplitStatRow {
   };
 }
 
+const BOX_TOTAL_KEYS: readonly (keyof NbaTeamGameLogBoxTotals)[] = [
+  "fgm",
+  "fga",
+  "fg3m",
+  "fg3a",
+  "ftm",
+  "fta",
+  "reb",
+  "oreb",
+  "ast",
+  "stl",
+  "blk",
+  "tov",
+  "pf",
+];
+
+function resolveBoxTotals(raw: unknown): NbaTeamGameLogBoxTotals | null {
+  if (!isRecord(raw)) return null;
+  const out = emptyBox();
+  for (const k of BOX_TOTAL_KEYS) {
+    const v = raw[k];
+    if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return null;
+    out[k] = v;
+  }
+  if (out.fga <= 0) return null;
+  return out;
+}
+
 function resolveDetailGame(raw: unknown): NbaTeamGameLogDetailGame | null {
   if (!isRecord(raw)) return null;
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
@@ -573,6 +645,12 @@ function resolveDetailGame(raw: unknown): NbaTeamGameLogDetailGame | null {
   if (!dateLabel || !oppTeamId || !oppAbbr || !result) return null;
   const gameId = str(raw.gameId);
   const startMs = finiteOrNull(raw.startMs);
+  const box = resolveBoxTotals(raw.box);
+  const oppBox = resolveBoxTotals(raw.oppBox);
+  const paint = finiteOrNull(raw.paint);
+  const fb = finiteOrNull(raw.fb);
+  const oppPaint = finiteOrNull(raw.oppPaint);
+  const oppFb = finiteOrNull(raw.oppFb);
   return {
     dateLabel,
     ...(gameId ? { gameId } : null),
@@ -586,6 +664,11 @@ function resolveDetailGame(raw: unknown): NbaTeamGameLogDetailGame | null {
     conferenceGame: raw.conferenceGame === true,
     ...(raw.b2b === true ? { b2b: true } : null),
     ...(raw.threeInFour === true ? { threeInFour: true } : null),
+    ...(box && oppBox ? { box, oppBox } : null),
+    ...(paint != null ? { paint } : null),
+    ...(fb != null ? { fb } : null),
+    ...(oppPaint != null ? { oppPaint } : null),
+    ...(oppFb != null ? { oppFb } : null),
   };
 }
 

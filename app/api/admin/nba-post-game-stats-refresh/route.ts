@@ -26,7 +26,9 @@ export async function POST(req: Request) {
       revalidateNbaDisciplineApiCache();
       revalidateNbaDocCache([
         "nbaLeagueTeamStats",
+        "nbaLeagueTeamWindow",
         "nbaLeaguePlayerStats",
+        "nbaLeaguePlayerWindow",
         "nbaPlayerSeasonMetrics",
         "nbaTeamGameLogs",
         "nbaStandings",

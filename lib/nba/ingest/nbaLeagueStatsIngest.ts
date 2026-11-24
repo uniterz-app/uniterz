@@ -28,6 +28,7 @@ import {
   seasonCountBoardHasRows,
 } from "@/lib/nba/playerStatLeaders/buildSeasonCountLeadersFromGameLogs";
 import { listPlayerGameLogsForLeaders } from "@/lib/nba/playerStatLeaders/buildLast10LeadersFromGameLogs";
+import { writePlayerWindowSnapshotFromLogs } from "@/lib/nba/playerStatLeaders/loadPlayerWindowSnapshot";
 import { writeLeagueTeamStatsSnapshot } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { writePlayerStatLeadersSnapshot } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
 import { writePlayerSeasonMetricsSnapshots } from "@/lib/nba/playerSeasonMetrics/loadPlayerSeasonMetricsSnapshot";
@@ -142,6 +143,8 @@ async function ingestOneLeagueStatsSeason(
   teamBundle.last10 = [];
 
   const logPlayers = await listPlayerGameLogsForLeaders(db, dataSeasonKey);
+  const ts = FieldValue.serverTimestamp();
+  await writePlayerWindowSnapshotFromLogs(db, dataSeasonKey, logPlayers, ts);
   const seasonCounts = buildSeasonCountLeadersFromGameLogs(logPlayers);
   if (seasonCountBoardHasRows(seasonCounts)) {
     for (const id of Object.keys(seasonCounts) as Array<
@@ -154,7 +157,6 @@ async function ingestOneLeagueStatsSeason(
     }
   }
 
-  const ts = FieldValue.serverTimestamp();
   await writeLeagueTeamStatsSnapshot(
     db,
     dataSeasonKey,

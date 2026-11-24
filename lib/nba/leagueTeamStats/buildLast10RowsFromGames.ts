@@ -2,6 +2,7 @@
  * シーズン `games` から各チーム last10（≤10 finals）を集計。
  *
  * - 実値: W–L / PPG / PAPG / diff（スコア）
+ * - box があれば 4FCT / 相手許した FG% / PAINT / FB も
  * - 3P%: liveStats.box の fg3 "m-a" をプール。無ければ teamStats.fg3（0–100）平均
  * - ORTG/DRTG/NET:
  *   1) liveStats.box から Dean Oliver 推定 poss（FGA+0.44*FTA−OREB+TOV）
@@ -15,12 +16,13 @@ import {
   resolveGameStatus,
 } from "../../../packages/shared/src/gameRow";
 import { NBA_ALL_TEAM_IDS } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
-import { nbaConferenceForTeam } from "@/lib/nba/nbaConferenceTeams";
-import { NBA_TEAM_NAME_BY_ID } from "@/lib/nba-team-names";
 import {
-  attachLeagueTeamAdvanced,
-  type NbaLeagueTeamStatRow,
-} from "@/lib/predict/nbaLeagueTeamStatsMocks";
+  aggregateLeagueTeamRowFromBoxGames,
+  estimateTeamPossessions,
+  type LeagueTeamBoxGame,
+} from "@/lib/nba/leagueTeamStats/aggregateLeagueTeamRowFromBoxes";
+import { sumTeamGameLogBoxSide } from "@/lib/nba/teamGameLog/teamGameLogDetail";
+import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 
 type RawGame = Record<string, unknown> & { id?: string };
 
@@ -30,22 +32,7 @@ export type BuildLast10RowsOptions = {
 };
 
 /** Dean Oliver 簡易推定（チーム合計） */
-export function estimatePossessions(input: {
-  fga: number;
-  fta: number;
-  oreb: number;
-  tov: number;
-}): number {
-  return input.fga + 0.44 * input.fta - input.oreb + input.tov;
-}
-
-function round1(n: number): number {
-  return Math.round(n * 10) / 10;
-}
-
-function round3(n: number): number {
-  return Math.round(n * 1000) / 1000;
-}
+export const estimatePossessions = estimateTeamPossessions;
 
 function paceFor(
   teamId: string,
@@ -101,98 +88,41 @@ function teamScoreInGame(
   return null;
 }
 
-function parseMakesAttempts(raw: unknown): { m: number; a: number } | null {
-  if (typeof raw !== "string") return null;
-  const m = raw.trim().match(/^(\d+)\s*-\s*(\d+)$/);
-  if (!m) return null;
-  const made = Number(m[1]);
-  const att = Number(m[2]);
-  if (!Number.isFinite(made) || !Number.isFinite(att) || att < 0) return null;
-  return { m: made, a: att };
-}
-
-function boxSideTotals(
-  players: Array<Record<string, unknown>> | undefined
-): {
-  fgm: number;
-  fga: number;
-  fg3m: number;
-  fg3a: number;
-  ftm: number;
-  fta: number;
-  oreb: number;
-  reb: number;
-  ast: number;
-  tov: number;
-} | null {
-  if (!Array.isArray(players) || players.length === 0) return null;
-  let fgm = 0;
-  let fga = 0;
-  let fg3m = 0;
-  let fg3a = 0;
-  let ftm = 0;
-  let fta = 0;
-  let oreb = 0;
-  let reb = 0;
-  let ast = 0;
-  let tov = 0;
-  let hasShot = false;
-  for (const p of players) {
-    const fg = parseMakesAttempts(p.fg);
-    const fg3 = parseMakesAttempts(p.fg3);
-    const ft = parseMakesAttempts(p.ft);
-    if (fg) {
-      fgm += fg.m;
-      fga += fg.a;
-      hasShot = true;
-    }
-    if (fg3) {
-      fg3m += fg3.m;
-      fg3a += fg3.a;
-    }
-    if (ft) {
-      ftm += ft.m;
-      fta += ft.a;
-      hasShot = true;
-    }
-    if (typeof p.oreb === "number" && Number.isFinite(p.oreb)) oreb += p.oreb;
-    if (typeof p.reb === "number" && Number.isFinite(p.reb)) reb += p.reb;
-    if (typeof p.ast === "number" && Number.isFinite(p.ast)) ast += p.ast;
-    if (typeof p.tov === "number" && Number.isFinite(p.tov)) tov += p.tov;
-  }
-  if (!hasShot || fga <= 0) return null;
-  return { fgm, fga, fg3m, fg3a, ftm, fta, oreb, reb, ast, tov };
-}
-
-/**
- * 両サイドの推定 poss の平均（チーム公式に近い）。
- * box が片側でも欠けていれば null。
- */
-function estimateGamePossessions(
-  raw: RawGame
-): { home: number; away: number; avg: number } | null {
+function boxSideFromGame(raw: RawGame, isHome: boolean) {
   const live = raw.liveStats;
   if (!live || typeof live !== "object") return null;
-  const box = (live as { box?: { home?: unknown[]; away?: unknown[] } }).box;
-  const homeT = boxSideTotals(box?.home as Array<Record<string, unknown>>);
-  const awayT = boxSideTotals(box?.away as Array<Record<string, unknown>>);
-  if (!homeT || !awayT) return null;
-  const home = estimatePossessions(homeT);
-  const away = estimatePossessions(awayT);
-  if (home < 60 || away < 60) return null;
-  return { home, away, avg: (home + away) / 2 };
+  const box = (live as { box?: { home?: unknown; away?: unknown } }).box;
+  return sumTeamGameLogBoxSide(isHome ? box?.home : box?.away);
 }
 
-function boxSideFromGame(
+function finiteStat(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null;
+}
+
+function extrasFromGame(
   raw: RawGame,
   isHome: boolean
-): ReturnType<typeof boxSideTotals> {
+): Pick<LeagueTeamBoxGame, "paint" | "fb" | "oppPaint" | "oppFb"> {
   const live = raw.liveStats;
-  if (!live || typeof live !== "object") return null;
-  const box = (live as { box?: { home?: unknown[]; away?: unknown[] } }).box;
-  return boxSideTotals(
-    (isHome ? box?.home : box?.away) as Array<Record<string, unknown>>
-  );
+  if (!live || typeof live !== "object") {
+    return { paint: null, fb: null, oppPaint: null, oppFb: null };
+  }
+  const ts = (
+    live as {
+      teamStats?: {
+        home?: Record<string, unknown>;
+        away?: Record<string, unknown>;
+      };
+    }
+  ).teamStats;
+  const side = isHome ? ts?.home : ts?.away;
+  const opp = isHome ? ts?.away : ts?.home;
+  return {
+    paint: finiteStat(side?.paint),
+    fb: finiteStat(side?.fb),
+    oppPaint: finiteStat(opp?.paint),
+    oppFb: finiteStat(opp?.fb),
+  };
 }
 
 /** liveStats から自サイドの 3P made/att（優先）または %（0–1） — box 無いときの補助 */
@@ -218,191 +148,35 @@ function fg3SampleFromGame(
   return null;
 }
 
-function emptyLast10Row(teamId: string): NbaLeagueTeamStatRow {
-  const conference = nbaConferenceForTeam(teamId);
-  const core = {
-    teamId,
-    teamName: NBA_TEAM_NAME_BY_ID[teamId] ?? teamId,
-    conference: conference ?? "west",
-    wins: 0,
-    losses: 0,
-    winPct: 0,
-    ppg: 0,
-    papg: 0,
-    diff: 0,
-    ortg: 0,
-    drtg: 0,
-    netrtg: 0,
-    pace: 0,
-    efgPct: 0,
-    fg3Pct: 0,
-    fg3a: 0,
-    tovPct: 0,
-    oppFgPct: 0,
-    oppFg3Pct: 0,
-    oppFtPct: 0,
-    oppReb: 0,
-    oppAst: 0,
-    oppTov: 0,
-    oppOreb: 0,
-    oppEfgPct: 0,
-  };
-  return attachLeagueTeamAdvanced(core, "last10");
-}
-
 function buildTeamLast10Row(
   teamId: string,
   finals: RawGame[],
   opts?: BuildLast10RowsOptions
 ): NbaLeagueTeamStatRow {
-  const conference = nbaConferenceForTeam(teamId);
-  if (!conference || finals.length === 0) {
-    return emptyLast10Row(teamId);
-  }
-
-  let wins = 0;
-  let losses = 0;
-  let ptsFor = 0;
-  let ptsAgainst = 0;
-  let fg3Made = 0;
-  let fg3Att = 0;
-  const fg3PctSamples: number[] = [];
-
-  let boxFgm = 0;
-  let boxFga = 0;
-  let boxFg3m = 0;
-  let boxFg3a = 0;
-  let boxFtm = 0;
-  let boxFta = 0;
-  let boxTov = 0;
-  let boxGames = 0;
-
-  let possPtsFor = 0;
-  let possPtsAgainst = 0;
-  let possSum = 0;
-  let possGames = 0;
-
+  const mapped: LeagueTeamBoxGame[] = [];
   for (const g of finals) {
     const scored = teamScoreInGame(g, teamId);
     if (!scored) continue;
-    ptsFor += scored.teamScore;
-    ptsAgainst += scored.oppScore;
-    if (scored.teamScore > scored.oppScore) wins += 1;
-    else losses += 1;
-
-    const poss = estimateGamePossessions(g);
-    if (poss) {
-      possPtsFor += scored.teamScore;
-      possPtsAgainst += scored.oppScore;
-      possSum += poss.avg;
-      possGames += 1;
-    }
-
     const box = boxSideFromGame(g, scored.isHome);
-    if (box) {
-      boxFgm += box.fgm;
-      boxFga += box.fga;
-      boxFg3m += box.fg3m;
-      boxFg3a += box.fg3a;
-      boxFtm += box.ftm;
-      boxFta += box.fta;
-      boxTov += box.tov;
-      boxGames += 1;
-    } else {
-      const fg3 = fg3SampleFromGame(g, scored.isHome);
-      if (fg3) {
-        if ("made" in fg3) {
-          fg3Made += fg3.made;
-          fg3Att += fg3.att;
-        } else {
-          fg3PctSamples.push(fg3.pct01);
-        }
-      }
-    }
+    const oppBox = boxSideFromGame(g, !scored.isHome);
+    const extras = extrasFromGame(g, scored.isHome);
+    const fg3Fallback =
+      box && oppBox ? undefined : fg3SampleFromGame(g, scored.isHome) ?? undefined;
+    mapped.push({
+      teamScore: scored.teamScore,
+      oppScore: scored.oppScore,
+      result: scored.teamScore > scored.oppScore ? "W" : "L",
+      box,
+      oppBox,
+      ...extras,
+      ...(fg3Fallback ? { fg3Fallback } : null),
+    });
   }
-
-  const games = wins + losses;
-  if (games === 0) return emptyLast10Row(teamId);
-
-  const winPct = wins / games;
-  const ppg = ptsFor / games;
-  const papg = ptsAgainst / games;
-  const diff = ppg - papg;
-  const paceSeason = paceFor(teamId, opts);
-
-  let ortg: number;
-  let drtg: number;
-  let pace: number;
-  if (possGames >= 2 && possSum > 0) {
-    ortg = round1((possPtsFor / possSum) * 100);
-    drtg = round1((possPtsAgainst / possSum) * 100);
-    pace = round1(possSum / possGames);
-  } else {
-    ortg = round1((ppg / paceSeason) * 100);
-    drtg = round1((papg / paceSeason) * 100);
-    pace = round1(paceSeason);
-  }
-  const netrtg = round1(ortg - drtg);
-
-  let fg3Pct = 0;
-  let fg3a = 0;
-  let efgPct = 0;
-  let tovPct = 0;
-  let fgPct = 0;
-  let ftPct = 0;
-
-  if (boxFga > 0) {
-    fgPct = round3(boxFgm / boxFga);
-    efgPct = round3((boxFgm + 0.5 * boxFg3m) / boxFga);
-    if (boxFg3a > 0) {
-      fg3Pct = round3(boxFg3m / boxFg3a);
-      fg3a = round1(boxFg3a / Math.max(1, boxGames || games));
-    }
-    if (boxFta > 0) ftPct = round3(boxFtm / boxFta);
-    const tovDen = boxFga + 0.44 * boxFta + boxTov;
-    if (tovDen > 0) tovPct = round3(boxTov / tovDen);
-  } else if (fg3Att > 0) {
-    fg3Pct = round3(fg3Made / fg3Att);
-    fg3a = round1(fg3Att / games);
-  } else if (fg3PctSamples.length > 0) {
-    fg3Pct = round3(
-      fg3PctSamples.reduce((a, b) => a + b, 0) / fg3PctSamples.length
-    );
-  }
-
-  const core = {
+  return aggregateLeagueTeamRowFromBoxGames({
     teamId,
-    teamName: NBA_TEAM_NAME_BY_ID[teamId] ?? teamId,
-    conference,
-    wins,
-    losses,
-    winPct: round3(winPct),
-    ppg: round1(ppg),
-    papg: round1(papg),
-    diff: round1(diff),
-    ortg,
-    drtg,
-    netrtg,
-    pace,
-    efgPct,
-    fg3Pct,
-    fg3a,
-    tovPct,
-    oppFgPct: 0,
-    oppFg3Pct: 0,
-    oppFtPct: 0,
-    oppReb: 0,
-    oppAst: 0,
-    oppTov: 0,
-    oppOreb: 0,
-    oppEfgPct: 0,
-  };
-  const row = attachLeagueTeamAdvanced(core, "last10");
-  return {
-    ...row,
-    ...(fgPct > 0 ? { fgPct } : null),
-    ...(ftPct > 0 ? { ftPct } : null),
-  };
+    games: mapped,
+    seasonPace: paceFor(teamId, opts),
+  });
 }
 
 /**

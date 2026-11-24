@@ -1,5 +1,5 @@
 /** Team Detail 再構築 — 参考ダッシュボード UI をそのまま再現（微調整前提） */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Animated as RNAnimated, Modal, Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
 import DetailStickyTitleNative, {
   useDetailStickyTitleNative,
@@ -97,7 +97,13 @@ import {
 import { draftTextSegmentsWithTeamColors } from "../../../../../../lib/nba/draftPicks/draftTextTeamColors";
 import { useLeagueTeamStatsBundle } from "../../../../../../lib/nba/useLeagueTeamStatsBundle";
 import { leagueTeamCleanNetRank } from "../../../../../../lib/nba/cleanRatings/leagueTeamCleanRatings";
-import { formatMetricValue } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
+import {
+  formatMetricValue,
+  metricValue,
+  type NbaLeagueTeamStatRow,
+} from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
+import { fetchLeagueTeamWindow } from "../../../../../../lib/nba/leagueTeamStats/fetchLeagueTeamWindowClient";
+import { fillWindowRatingsFromSeasonPace } from "../../../../../../lib/nba/leagueTeamStats/buildTeamWindowRowsFromGameLogs";
 import { useNbaTeamDetailLiveOverlay } from "../../../../../../lib/nba/teamDetail/useNbaTeamDetailLiveOverlay";
 import type { NbaTeamDetailShapeEdges } from "../../../../../../lib/nba/teamShapes/fetchTeamShapeEdgesClient";
 import {
@@ -116,6 +122,13 @@ import type { DetailTrendDelta } from "../../../../../../lib/nba/detailInsights/
 import { playerCardName, type NbaRosterTeamBlock } from "../../../../../../lib/predict/nbaRoster";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
 import NbaGameBoxScoreModalNative from "../live/NbaGameBoxScoreModalNative";
+import NbaStatsWindowChipsNative from "../stats/NbaStatsWindowChipsNative";
+import {
+  filterLogsByWindow,
+  nbaStatsWindowId,
+  nbaStatsWindowsForLogs,
+  type NbaStatsWindow,
+} from "../../../../../../lib/nba/nbaStatsWindow";
 import { getNbaTeamDraftCapital } from "../../../../../../lib/nba/draftPicks/nbaDraftCapitalData";
 import { resolveDraftPickOrigin } from "../../../../../../lib/nba/draftPicks/nbaDraftPickViaTrade";
 import type {
@@ -142,6 +155,30 @@ const METRIC_OFFENSE_GLOW = "rgba(255,61,90,0.34)";
 const METRIC_DEFENSE_GLOW = "rgba(59,160,255,0.34)";
 /** キャップ余裕・勝率など「良い」系 */
 const POSITIVE_TEAL = "#5cf0b5";
+
+function windowTeamMetric(
+  rows: readonly NbaLeagueTeamStatRow[],
+  teamId: string,
+  metric: "ortg" | "drtg" | "netrtg",
+  higherIsBetter: boolean
+): { display: string; leagueRank: number } | null {
+  const team = rows.find((r) => r.teamId === teamId);
+  if (!team) return null;
+  const value = metricValue(team, metric);
+  if (!Number.isFinite(value)) return null;
+  if (metric !== "netrtg" && value <= 0) return null;
+  const sorted = [...rows].sort((a, b) => {
+    const va = metricValue(a, metric);
+    const vb = metricValue(b, metric);
+    if (va === vb) return a.teamId.localeCompare(b.teamId);
+    return higherIsBetter ? vb - va : va - vb;
+  });
+  const rank = sorted.findIndex((r) => r.teamId === teamId) + 1;
+  return {
+    display: formatMetricValue(metric, value),
+    leagueRank: rank > 0 ? rank : rows.length,
+  };
+}
 
 function hexToRgba(hex: string, alpha: number): string {
   const raw = hex.replace("#", "");
@@ -453,6 +490,8 @@ export function GameLogsSection({
   accent,
   ui,
   language,
+  statsWindow: statsWindowProp,
+  onStatsWindowChange,
   onSelectPlayer,
   onSelectTeam,
 }: {
@@ -461,15 +500,43 @@ export function GameLogsSection({
   accent: string;
   ui: NbaTeamDetailUiCopy;
   language: string;
+  statsWindow?: NbaStatsWindow;
+  onStatsWindowChange?: (next: NbaStatsWindow) => void;
   onSelectPlayer?: (playerId: string) => void;
   onSelectTeam?: (teamId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [boxGameId, setBoxGameId] = useState<string | null>(null);
-  const anyOpenable = games.some((g) => Boolean(g.gameId));
-  const canExpand = games.length > GAME_LOGS_COLLAPSED;
+  const windows = useMemo(() => nbaStatsWindowsForLogs(games), [games]);
+  const [innerWindow, setInnerWindow] = useState<NbaStatsWindow>({
+    kind: "season",
+  });
+  const statsWindow = statsWindowProp ?? innerWindow;
+  const filtered = useMemo(
+    () => filterLogsByWindow(games, statsWindow),
+    [games, statsWindow]
+  );
+  const windowRecord = useMemo(() => {
+    let wins = 0;
+    let pts = 0;
+    let opp = 0;
+    for (const g of filtered) {
+      if (g.result === "W") wins += 1;
+      pts += g.teamScore;
+      opp += g.oppScore;
+    }
+    const n = filtered.length;
+    return {
+      wins,
+      losses: n - wins,
+      ppg: n > 0 ? Math.round((pts / n) * 10) / 10 : 0,
+      papg: n > 0 ? Math.round((opp / n) * 10) / 10 : 0,
+    };
+  }, [filtered]);
+  const anyOpenable = filtered.some((g) => Boolean(g.gameId));
+  const canExpand = filtered.length > GAME_LOGS_COLLAPSED;
   const list =
-    expanded || !canExpand ? games : games.slice(0, GAME_LOGS_COLLAPSED);
+    expanded || !canExpand ? filtered : filtered.slice(0, GAME_LOGS_COLLAPSED);
   const frame = hexToRgba(accent, 0.3);
   const line = hexToRgba(accent, 0.12);
   const emptyCopy = ui.noData;
@@ -480,11 +547,24 @@ export function GameLogsSection({
           list.length === 0
             ? "GAME LOGS"
             : expanded && canExpand
-              ? `GAME LOGS (${games.length})`
-              : `GAME LOGS (LAST ${list.length})`
+              ? `GAME LOGS (${filtered.length})`
+              : `GAME LOGS (${list.length})`
         }
         accent={accent}
       />
+      <NbaStatsWindowChipsNative
+        windows={windows}
+        value={statsWindow}
+        onChange={onStatsWindowChange ?? setInnerWindow}
+        accent={accent}
+        language={language}
+      />
+      {filtered.length > 0 ? (
+        <Text style={[styles.formRecord, { textAlign: "left", minWidth: 0, marginTop: 8 }]}>
+          {windowRecord.wins}-{windowRecord.losses}
+          {`  ·  ${windowRecord.ppg} PPG  ·  ${windowRecord.papg} PAPG`}
+        </Text>
+      ) : null}
       {anyOpenable ? (
         <Text style={styles.splitStatsHint}>{ui.gameLogsTapHint}</Text>
       ) : null}
@@ -560,7 +640,7 @@ export function GameLogsSection({
           ]}
         >
           <Text style={[styles.gameLogsToggleText, { color: accent }]}>
-            {expanded ? ui.showFewerGames : ui.showAllGames(games.length)}
+            {expanded ? ui.showFewerGames : ui.showAllGames(filtered.length)}
           </Text>
         </Pressable>
       ) : null}
@@ -1970,12 +2050,77 @@ export default function NbaTeamDetailPanelNative({
   const dividerColor = hexToRgba(accent, 0.22);
   const frameColor = hexToRgba(accent, 0.4);
 
+  const logGames = gameLogDetail?.games.length
+    ? gameLogDetail.games
+    : detail.recentGames;
+  const statsWindows = useMemo(
+    () => nbaStatsWindowsForLogs(logGames),
+    [logGames]
+  );
+  const [statsWindow, setStatsWindow] = useState<NbaStatsWindow>({
+    kind: "season",
+  });
+  const [windowRows, setWindowRows] = useState<NbaLeagueTeamStatRow[] | null>(
+    null
+  );
+  const useWindowRows = statsWindow.kind !== "season";
+  const windowId = nbaStatsWindowId(statsWindow);
+
+  useEffect(() => {
+    if (!useWindowRows) {
+      setWindowRows(null);
+      return;
+    }
+    let cancelled = false;
+    const abort = new AbortController();
+    void fetchLeagueTeamWindow({
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      season: CURRENT_NBA_SEASON_KEY,
+      window: statsWindow,
+      signal: abort.signal,
+    })
+      .then((payload) => {
+        if (cancelled) return;
+        setWindowRows(
+          fillWindowRatingsFromSeasonPace(payload.rows, bundle.season)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setWindowRows([]);
+      });
+    return () => {
+      cancelled = true;
+      abort.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useWindowRows, windowId, bundle.season]);
+
   const seasonMetrics = detail.metrics.season;
-  const ortg = seasonMetrics.find((m) => m.id === "ortg");
-  const drtg = seasonMetrics.find((m) => m.id === "drtg");
-  const netrtg = seasonMetrics.find((m) => m.id === "netrtg");
+  const windowReady = Boolean(
+    useWindowRows && windowRows && windowRows.length > 0
+  );
+  const windowOrtg = windowReady
+    ? windowTeamMetric(windowRows ?? [], detail.teamId, "ortg", true)
+    : null;
+  const windowDrtg = windowReady
+    ? windowTeamMetric(windowRows ?? [], detail.teamId, "drtg", false)
+    : null;
+  const windowNetr = windowReady
+    ? windowTeamMetric(windowRows ?? [], detail.teamId, "netrtg", true)
+    : null;
+  const ortg = windowReady
+    ? windowOrtg
+    : seasonMetrics.find((m) => m.id === "ortg");
+  const drtg = windowReady
+    ? windowDrtg
+    : seasonMetrics.find((m) => m.id === "drtg");
+  const netrtg = windowReady
+    ? windowNetr
+    : seasonMetrics.find((m) => m.id === "netrtg");
   const leagueRow = bundle.season.find((r) => r.teamId === detail.teamId);
-  const cleanNetRank = leagueTeamCleanNetRank(bundle.season, detail.teamId);
+  const cleanNetRank = windowReady
+    ? null
+    : leagueTeamCleanNetRank(bundle.season, detail.teamId);
 
   const confLine =
     detail.conference === "east"
@@ -2120,6 +2265,15 @@ export default function NbaTeamDetailPanelNative({
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <SectionHeader title="PERFORMANCE METRICS" accent={accent} />
+        <View style={{ marginBottom: 10 }}>
+          <NbaStatsWindowChipsNative
+            windows={statsWindows}
+            value={statsWindow}
+            onChange={setStatsWindow}
+            accent={accent}
+            language={language}
+          />
+        </View>
         <View style={[styles.perfCard, { borderColor: frameColor }]}>
           {ortg ? (
             <RatingRow
@@ -2149,7 +2303,20 @@ export default function NbaTeamDetailPanelNative({
               replayKey={`${detail.teamId}-drtg`}
             />
           ) : null}
-          {netrtg && leagueRow && cleanNetRank != null ? (
+          {netrtg && windowReady ? (
+            <RatingRow
+              label="NET RATING"
+              value={netrtg.display}
+              rank={netrtg.leagueRank}
+              color={POSITIVE_TEAL}
+              barAccent={{
+                border: POSITIVE_TEAL,
+                glow: "rgba(92,240,181,0.34)",
+                bg: POSITIVE_TEAL,
+              }}
+              replayKey={`${detail.teamId}-netrtg-window`}
+            />
+          ) : netrtg && leagueRow && cleanNetRank != null ? (
             <NetRatingCompare
               cells={[
                 { key: ui.netCompareAll, value: netrtg.display, rank: netrtg.leagueRank, strong: false },
@@ -2196,6 +2363,7 @@ export default function NbaTeamDetailPanelNative({
           accent={accent}
           language={language}
           bundle={bundle}
+          rows={windowReady ? windowRows ?? [] : undefined}
         />
 
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
@@ -2302,10 +2470,12 @@ export default function NbaTeamDetailPanelNative({
         <View style={[styles.divider, { backgroundColor: dividerColor }]} />
 
         <GameLogsSection
-          games={gameLogDetail?.games.length ? gameLogDetail.games : detail.recentGames}
+          games={logGames}
           accent={accent}
           ui={ui}
           language={language}
+          statsWindow={statsWindow}
+          onStatsWindowChange={setStatsWindow}
           onSelectPlayer={onSelectPlayer}
           onSelectTeam={onSelectTeam}
         />
