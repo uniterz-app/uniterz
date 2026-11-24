@@ -4,6 +4,9 @@
  */
 import type { UiStrings } from "@/lib/i18n/ui";
 import {
+  HOW_THEY_PLAY_BOX_DEFENSE_HINTS,
+  HOW_THEY_PLAY_BOX_REBOUND_HINTS,
+  HOW_THEY_PLAY_BOX_SHOT_LABELS,
   HOW_THEY_PLAY_HUSTLE_HINTS,
   HOW_THEY_PLAY_SCORING_LABELS,
   HOW_THEY_PLAY_TRACKING_HINTS,
@@ -768,9 +771,47 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+function logBoxPerGameRow(
+  id: string,
+  short: string,
+  hint: UiStrings,
+  perGame: number
+): PlayerHowRow {
+  return {
+    id,
+    short,
+    hint,
+    cell: {
+      value: perGame,
+      display: perGame.toFixed(1),
+      rank: 0,
+    },
+  };
+}
+
+function logShotRow(
+  id: string,
+  short: string,
+  label: UiStrings,
+  pct: number,
+  ptsPerGame: number
+): PlayerShotRow {
+  return {
+    id,
+    short,
+    label,
+    cell: {
+      value: pct,
+      display: formatPlayerAdvancedLeaderValue("efg_pct", pct),
+      rank: 0,
+    },
+    pts: howPtsCell(ptsPerGame),
+  };
+}
+
 /**
  * 試合ログの box から期間の HOW THEY PLAY。
- * playtype / shot zone / clutch / tracking はログに無いので空。
+ * playtype / shot zone / clutch / tracking / hustle はログに無いので空。
  */
 export function playerHowTheyPlayFromGameLogs(
   logs: readonly NbaPlayerGameLog[]
@@ -786,6 +827,14 @@ export function playerHowTheyPlayFromGameLogs(
   let ftm = 0;
   let fta = 0;
   let tov = 0;
+  let ast = 0;
+  let stl = 0;
+  let blk = 0;
+  let reb = 0;
+  let oreb = 0;
+  let dreb = 0;
+  let orebGames = 0;
+  let drebGames = 0;
   for (const g of logs) {
     pts += g.pts;
     fgm += g.fgm;
@@ -795,14 +844,30 @@ export function playerHowTheyPlayFromGameLogs(
     ftm += g.ftm;
     fta += g.fta;
     tov += g.tov;
+    ast += g.ast;
+    stl += g.stl;
+    blk += g.blk;
+    reb += g.reb;
+    if (typeof g.oreb === "number" && Number.isFinite(g.oreb)) {
+      oreb += g.oreb;
+      orebGames += 1;
+    }
+    if (typeof g.dreb === "number" && Number.isFinite(g.dreb)) {
+      dreb += g.dreb;
+      drebGames += 1;
+    }
   }
   const n = logs.length;
   const tsDen = 2 * (fga + 0.44 * fta);
   const tovDen = fga + 0.44 * fta + tov;
+  const pts2 = Math.max(0, pts - 3 * fg3m - ftm);
 
   const ratings: PlayerHowRow[] = [];
   if (tsDen > 0 && pts > 0) {
     ratings.push(logHowCell("ts_pct", round3(pts / tsDen)));
+  }
+  if (tov > 0) {
+    ratings.push(logHowCell("ast_to", round3(ast / tov)));
   }
 
   const fourFactors: PlayerHowRow[] = [];
@@ -817,6 +882,7 @@ export function playerHowTheyPlayFromGameLogs(
   const scoring: PlayerScoringRow[] = [];
   if (pts > 0) {
     const pct3 = round3((3 * fg3m) / pts);
+    const pct2 = round3(pts2 / pts);
     const pctFt = round3(ftm / pts);
     scoring.push({
       id: "3",
@@ -829,6 +895,19 @@ export function playerHowTheyPlayFromGameLogs(
       },
       pts: howPtsCell(round1((3 * fg3m) / n)),
     });
+    if (pts2 > 0) {
+      scoring.push({
+        id: "2",
+        short: "2PT",
+        label: HOW_THEY_PLAY_SCORING_LABELS.twos,
+        cell: {
+          value: pct2,
+          display: formatPlayerAdvancedLeaderValue("pct_pts_3", pct2),
+          rank: 0,
+        },
+        pts: howPtsCell(round1(pts2 / n)),
+      });
+    }
     scoring.push({
       id: "ft",
       short: "FT",
@@ -842,10 +921,102 @@ export function playerHowTheyPlayFromGameLogs(
     });
   }
 
+  const shooting: PlayerShotRow[] = [];
+  if (fga > 0) {
+    shooting.push(
+      logShotRow(
+        "fg",
+        "FG",
+        HOW_THEY_PLAY_BOX_SHOT_LABELS.fg,
+        round3(fgm / fga),
+        round1((pts - ftm) / n)
+      )
+    );
+  }
+  if (fg3a > 0) {
+    shooting.push(
+      logShotRow(
+        "fg3",
+        "3P",
+        HOW_THEY_PLAY_BOX_SHOT_LABELS.fg3,
+        round3(fg3m / fg3a),
+        round1((3 * fg3m) / n)
+      )
+    );
+  }
+  if (fta > 0) {
+    shooting.push(
+      logShotRow(
+        "ft",
+        "FT",
+        HOW_THEY_PLAY_BOX_SHOT_LABELS.ft,
+        round3(ftm / fta),
+        round1(ftm / n)
+      )
+    );
+  }
+
+  const defense: PlayerHowRow[] = [];
+  if (stl > 0) {
+    defense.push(
+      logBoxPerGameRow(
+        "stl",
+        "STL",
+        HOW_THEY_PLAY_BOX_DEFENSE_HINTS.stl,
+        round1(stl / n)
+      )
+    );
+  }
+  if (blk > 0) {
+    defense.push(
+      logBoxPerGameRow(
+        "blk",
+        "BLK",
+        HOW_THEY_PLAY_BOX_DEFENSE_HINTS.blk,
+        round1(blk / n)
+      )
+    );
+  }
+
+  const rebounding: PlayerHowRow[] = [];
+  if (reb > 0) {
+    rebounding.push(
+      logBoxPerGameRow(
+        "reb",
+        "REB",
+        HOW_THEY_PLAY_BOX_REBOUND_HINTS.reb,
+        round1(reb / n)
+      )
+    );
+  }
+  if (orebGames === n && oreb > 0) {
+    rebounding.push(
+      logBoxPerGameRow(
+        "oreb",
+        "OREB",
+        HOW_THEY_PLAY_BOX_REBOUND_HINTS.oreb,
+        round1(oreb / n)
+      )
+    );
+  }
+  if (drebGames === n && dreb > 0) {
+    rebounding.push(
+      logBoxPerGameRow(
+        "dreb",
+        "DREB",
+        HOW_THEY_PLAY_BOX_REBOUND_HINTS.dreb,
+        round1(dreb / n)
+      )
+    );
+  }
+
   return {
     ...empty,
     ratings,
     fourFactors,
     scoring,
+    shooting,
+    defense,
+    rebounding,
   };
 }

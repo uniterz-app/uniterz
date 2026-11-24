@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import {
-  TEAM_HOW_THEY_PLAY_TABS,
+  TEAM_HOW_THEY_PLAY_NATIVE_TABS,
   TEAM_TRACK_GROUPS,
   getTeamHowTheyPlay,
   teamHowTheyPlayTabsWithData,
@@ -129,16 +129,18 @@ export default function NbaTeamHowTheyPlayNative({
     [teamId, bundle, rows]
   );
   const tabs = useMemo(() => {
-    if (!board) return TEAM_HOW_THEY_PLAY_TABS;
-    if (!rows) return TEAM_HOW_THEY_PLAY_TABS;
+    if (!board) return TEAM_HOW_THEY_PLAY_NATIVE_TABS;
+    if (!rows) return TEAM_HOW_THEY_PLAY_NATIVE_TABS;
     const filled = teamHowTheyPlayTabsWithData(board);
     if (filled.length === 0) {
-      return TEAM_HOW_THEY_PLAY_TABS.filter((t) => t.id === "fourFactors");
+      return TEAM_HOW_THEY_PLAY_NATIVE_TABS.filter((t) => t.id === "fourFactors");
     }
-    return TEAM_HOW_THEY_PLAY_TABS.filter((t) => filled.includes(t.id));
+    return TEAM_HOW_THEY_PLAY_NATIVE_TABS.filter((t) => filled.includes(t.id));
   }, [board, rows]);
   const [tab, setTab] = useState<TeamHowTheyPlayTab>(
-    initialTab && TEAM_HOW_THEY_PLAY_TABS.some((t) => t.id === initialTab) ? initialTab : "fourFactors"
+    initialTab && TEAM_HOW_THEY_PLAY_NATIVE_TABS.some((t) => t.id === initialTab)
+      ? initialTab
+      : "fourFactors"
   );
   useEffect(() => {
     if (!tabs.some((t) => t.id === tab)) {
@@ -153,12 +155,13 @@ export default function NbaTeamHowTheyPlayNative({
     initialTrackGroup && TEAM_TRACK_GROUPS.some((g) => g.id === initialTrackGroup) ? initialTrackGroup : "drive"
   );
   const [rebId, setRebId] = useState("boxOuts");
+  const [defenseId, setDefenseId] = useState("fgPctAllowed");
   if (!board) return null;
 
   const tabMeta =
     tabs.find((t) => t.id === tab) ??
     tabs[0] ??
-    TEAM_HOW_THEY_PLAY_TABS[0]!;
+    TEAM_HOW_THEY_PLAY_NATIVE_TABS[0]!;
   const scoringRows = rows
     ? board.scoring.filter(
         (r) => Math.abs(r.cell.value) > 1e-9 || Math.abs(r.pts.value) > 1e-9
@@ -173,14 +176,21 @@ export default function NbaTeamHowTheyPlayNative({
   const tracking = trackRows.find((r) => r.id === trackId) ?? trackRows[0]!;
   const rebound =
     board.rebounding.find((r) => r.id === rebId) ?? board.rebounding[0]!;
+  const defenseRows = rows
+    ? board.defense.filter((r) => Math.abs(r.cell.value) > 1e-9)
+    : board.defense;
+  const defense =
+    defenseRows.find((r) => r.id === defenseId) ?? defenseRows[0];
   const list =
     tab === "hustle"
       ? { rows: board.hustle, selected: hustle, select: setHustleId }
-      : tab === "rebounding"
-        ? { rows: board.rebounding, selected: rebound, select: setRebId }
-        : tab === "tracking"
-          ? { rows: trackRows, selected: tracking, select: setTrackId }
-          : null;
+      : tab === "defense" && defense
+        ? { rows: defenseRows, selected: defense, select: setDefenseId }
+        : tab === "rebounding"
+          ? { rows: board.rebounding, selected: rebound, select: setRebId }
+          : tab === "tracking"
+            ? { rows: trackRows, selected: tracking, select: setTrackId }
+            : null;
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
 

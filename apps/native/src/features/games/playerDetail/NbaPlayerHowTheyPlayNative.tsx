@@ -407,18 +407,32 @@ export default function NbaPlayerHowTheyPlayNative({
                   accent={accent}
                 />
               </View>
-              <CyberSlantedSegBarNative
-                pct={leagueRankSegPct(row.cell.rank)}
-                segments={LEAGUE_RANK_SEGMENTS}
-                compact
-                accent={{
-                  border: accent,
-                  glow: hexToRgba(accent, 0.34),
-                  bg: accent,
-                }}
-                forceStatic
-                replayKey={`${playerId}-${row.id}`}
-              />
+              {isPlayerDetailRankShown(row.cell.rank) ? (
+                <CyberSlantedSegBarNative
+                  pct={leagueRankSegPct(row.cell.rank)}
+                  segments={LEAGUE_RANK_SEGMENTS}
+                  compact
+                  accent={{
+                    border: accent,
+                    glow: hexToRgba(accent, 0.34),
+                    bg: accent,
+                  }}
+                  forceStatic
+                  replayKey={`${playerId}-${row.id}`}
+                />
+              ) : (
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      {
+                        width: `${Math.max(4, Math.min(100, row.cell.value * 100))}%`,
+                        backgroundColor: accent,
+                      },
+                    ]}
+                  />
+                </View>
+              )}
             </View>
           ))}
         </View>
