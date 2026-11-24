@@ -305,6 +305,16 @@ export function buildPlayerWindowLeadersFromGameLogs(
     .map((a) => toRow(a, round3(a.ftm / a.pts)));
   fillBoard(board, "pct_pts_ft", shareFt);
 
+  const astToRows = aggs
+    .filter((a) => a.tov > 0)
+    .map((a) => toRow(a, round3(a.ast / a.tov)));
+  fillBoard(
+    board,
+    "ast_to",
+    astToRows,
+    playerAdvancedMetricDef("ast_to").higherIsBetter
+  );
+
   for (const { player, logs } of slicedByPlayer) {
     if (logs.length < MIN_GAMES) continue;
     const counts = countPlayerSeasonStatMilestones(logs);

@@ -156,4 +156,95 @@ export const HOW_THEY_PLAY_SCORING_LABELS = {
     pt: "Contra-ataque",
     fr: "Contre-attaque",
   },
+  twos: {
+    ja: "2P",
+    en: "Twos",
+    ko: "2점",
+    zh: "两分",
+    es: "De dos",
+    pt: "Cestas de 2",
+    fr: "2 points",
+  },
+} as const satisfies Record<string, UiStrings>;
+
+/** 期間窓の SHOT（box の FG / 3P / FT） */
+export const HOW_THEY_PLAY_BOX_SHOT_LABELS = {
+  fg: {
+    ja: "FG%",
+    en: "FG%",
+    ko: "FG%",
+    zh: "投篮命中率",
+    es: "FG%",
+    pt: "FG%",
+    fr: "FG%",
+  },
+  fg3: {
+    ja: "3P%",
+    en: "3P%",
+    ko: "3P%",
+    zh: "三分命中率",
+    es: "3P%",
+    pt: "3P%",
+    fr: "3P%",
+  },
+  ft: {
+    ja: "FT%",
+    en: "FT%",
+    ko: "FT%",
+    zh: "罚球命中率",
+    es: "TL%",
+    pt: "LL%",
+    fr: "LF%",
+  },
+} as const satisfies Record<string, UiStrings>;
+
+export const HOW_THEY_PLAY_BOX_DEFENSE_HINTS = {
+  stl: {
+    ja: "1試合あたりのスティール。",
+    en: "Steals per game.",
+    ko: "경기당 스틸.",
+    zh: "场均抢断。",
+    es: "Robos por partido.",
+    pt: "Roubos por jogo.",
+    fr: "Interceptions par match.",
+  },
+  blk: {
+    ja: "1試合あたりのブロック。",
+    en: "Blocks per game.",
+    ko: "경기당 블록.",
+    zh: "场均盖帽。",
+    es: "Tapones por partido.",
+    pt: "Tocos por jogo.",
+    fr: "Contres par match.",
+  },
+} as const satisfies Record<string, UiStrings>;
+
+export const HOW_THEY_PLAY_BOX_REBOUND_HINTS = {
+  reb: {
+    ja: "1試合あたりのリバウンド。",
+    en: "Rebounds per game.",
+    ko: "경기당 리바운드.",
+    zh: "场均篮板。",
+    es: "Rebotes por partido.",
+    pt: "Rebotes por jogo.",
+    fr: "Rebonds par match.",
+  },
+  oreb: {
+    ja: "1試合あたりのオフェンスリバウンド。",
+    en: "Offensive rebounds per game.",
+    ko: "경기당 공격 리바운드.",
+    zh: "场均进攻篮板。",
+    es: "Rebotes ofensivos por partido.",
+    pt: "Rebotes ofensivos por jogo.",
+    fr: "Rebonds offensifs par match.",
+  },
+  dreb: {
+    ja: "1試合あたりのディフェンスリバウンド。",
+    en: "Defensive rebounds per game.",
+    ko: "경기당 수비 리바운드.",
+    zh: "场均防守篮板。",
+    es: "Rebotes defensivos por partido.",
+    pt: "Rebotes defensivos por jogo.",
+    fr: "Rebonds défensifs par match.",
+  },
 } as const satisfies Record<string, UiStrings>;

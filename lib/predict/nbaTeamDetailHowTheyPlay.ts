@@ -25,17 +25,20 @@ import {
 export type TeamHowTheyPlayTab =
   | "fourFactors"
   | "scoring"
+  | "defense"
   | "playtype"
   | "clutch"
   | "hustle"
   | "rebounding"
   | "tracking";
 
-export const TEAM_HOW_THEY_PLAY_TABS: readonly {
+export type TeamHowTheyPlayTabDef = {
   id: TeamHowTheyPlayTab;
   short: string;
   hint: UiStrings;
-}[] = [
+};
+
+export const TEAM_HOW_THEY_PLAY_TABS: readonly TeamHowTheyPlayTabDef[] = [
   {
     id: "fourFactors",
     short: "4FCT",
@@ -129,6 +132,28 @@ export const TEAM_HOW_THEY_PLAY_TABS: readonly {
   },
 ];
 
+/** Native だけ。凍結 Web の HOW THEY PLAY タブには足さない */
+export const TEAM_HOW_THEY_PLAY_DEFENSE_TAB: TeamHowTheyPlayTabDef = {
+  id: "defense",
+  short: "DEFENSE",
+  hint: {
+    ja: "相手に許した FG% / 3P% / REB / AST と、誘発した TO。",
+    en: "FG% / 3P% / REB / AST allowed, and turnovers forced.",
+    ko: "허용 FG% / 3P% / REB / AST와 유도한 턴오버.",
+    zh: "对手命中率、篮板、助攻，以及造成的失误。",
+    es: "FG% / 3P% / REB / AST concedidos, y pérdidas forzadas.",
+    pt: "FG% / 3P% / REB / AST concedidos, e turnovers forçados.",
+    fr: "FG% / 3P% / REB / AST concédés, et pertes provoquées.",
+  },
+};
+
+export const TEAM_HOW_THEY_PLAY_NATIVE_TABS: readonly TeamHowTheyPlayTabDef[] = [
+  TEAM_HOW_THEY_PLAY_TABS[0]!,
+  TEAM_HOW_THEY_PLAY_TABS[1]!,
+  TEAM_HOW_THEY_PLAY_DEFENSE_TAB,
+  ...TEAM_HOW_THEY_PLAY_TABS.slice(2),
+];
+
 export type TeamHowCell = {
   display: string;
   rank: number;
@@ -178,6 +203,7 @@ export type TeamHustleRow = {
 export type TeamHowTheyPlay = {
   fourFactors: TeamFourFactorRow[];
   scoring: TeamScoringRow[];
+  defense: TeamHustleRow[];
   playtype: TeamPlaytypeRow[];
   clutch: TeamClutchRow[];
   hustle: TeamHustleRow[];
@@ -289,6 +315,56 @@ const SCORING_ROWS: readonly {
     short: "FB",
     label: HOW_THEY_PLAY_SCORING_LABELS.fastBreak,
     metric: "pctPtsFb",
+  },
+];
+
+const DEFENSE_ROWS: readonly {
+  id: string;
+  short: string;
+  hint: UiStrings;
+  metric: NbaLeagueTeamStatMetric;
+  higherIsBetter: boolean;
+}[] = [
+  {
+    id: "fgPctAllowed",
+    short: "FG%",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "fgPctAllowed")!
+      .hint,
+    metric: "fgPctAllowed",
+    higherIsBetter: false,
+  },
+  {
+    id: "fg3PctAllowed",
+    short: "3P%",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find(
+      (d) => d.id === "fg3PctAllowed"
+    )!.hint,
+    metric: "fg3PctAllowed",
+    higherIsBetter: false,
+  },
+  {
+    id: "rebAllowed",
+    short: "REB",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "rebAllowed")!
+      .hint,
+    metric: "rebAllowed",
+    higherIsBetter: false,
+  },
+  {
+    id: "astAllowed",
+    short: "AST",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "astAllowed")!
+      .hint,
+    metric: "astAllowed",
+    higherIsBetter: false,
+  },
+  {
+    id: "tovForced",
+    short: "TOV",
+    hint: NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.find((d) => d.id === "tovForced")!
+      .hint,
+    metric: "tovForced",
+    higherIsBetter: true,
   },
 ];
 
@@ -558,6 +634,12 @@ export function emptyTeamHowTheyPlay(): TeamHowTheyPlay {
       cell: zeroHowCell(row.metric),
       pts: zPts,
     })),
+    defense: DEFENSE_ROWS.map((row) => ({
+      id: row.id,
+      short: row.short,
+      hint: row.hint,
+      cell: zeroHowCell(row.metric),
+    })),
     playtype: PLAYTYPE_ROWS.map((row) => ({
       id: row.id,
       short: row.short,
@@ -619,6 +701,45 @@ export function getTeamHowTheyPlay(
       pts: howPtsCell(ptsFromShare(team.ppg, share.value)),
     };
   });
+  const paintShare = metricValue(team, "pctPtsPaint");
+  const fbShare = metricValue(team, "pctPtsFb");
+  if (
+    !(Math.abs(paintShare) > 1e-9) &&
+    !(Math.abs(fbShare) > 1e-9) &&
+    team.ppg > 0
+  ) {
+    const pts2 = Math.max(0, team.ppg - team.pts3 - team.ptsFt);
+    if (pts2 > 1e-9) {
+      const shareVal = pts2 / team.ppg;
+      const sorted = [...rows].sort((a, b) => {
+        const sa =
+          a.ppg > 0 ? Math.max(0, a.ppg - a.pts3 - a.ptsFt) / a.ppg : 0;
+        const sb =
+          b.ppg > 0 ? Math.max(0, b.ppg - b.pts3 - b.ptsFt) / b.ppg : 0;
+        if (sa === sb) return a.teamId.localeCompare(b.teamId);
+        return sb - sa;
+      });
+      const rank = (sorted.findIndex((r) => r.teamId === team.teamId) ?? 29) + 1;
+      scoring.splice(1, 0, {
+        id: "2",
+        short: "2PT",
+        label: HOW_THEY_PLAY_SCORING_LABELS.twos,
+        cell: {
+          value: shareVal,
+          display: formatMetricValue("pctPts3", shareVal),
+          rank,
+        },
+        pts: howPtsCell(pts2),
+      });
+    }
+  }
+
+  const defense: TeamHustleRow[] = DEFENSE_ROWS.map((row) => ({
+    id: row.id,
+    short: row.short,
+    hint: row.hint,
+    cell: cell(rows, team, row.metric, row.higherIsBetter),
+  }));
 
   const playtype: TeamPlaytypeRow[] = PLAYTYPE_ROWS.map((row) => {
     const ppp = cell(rows, team, row.ppp, true);
@@ -673,7 +794,16 @@ export function getTeamHowTheyPlay(
     };
   });
 
-  return { fourFactors, scoring, playtype, clutch, hustle, rebounding, tracking };
+  return {
+    fourFactors,
+    scoring,
+    defense,
+    playtype,
+    clutch,
+    hustle,
+    rebounding,
+    tracking,
+  };
 }
 
 function hasCell(value: number): boolean {
@@ -691,6 +821,7 @@ export function teamHowTheyPlayTabsWithData(
   if (board.scoring.some((r) => hasCell(r.cell.value) || hasCell(r.pts.value))) {
     filled.push("scoring");
   }
+  if (board.defense.some((r) => hasCell(r.cell.value))) filled.push("defense");
   if (board.playtype.some((r) => hasCell(r.freq.value) || hasCell(r.ppp.value))) {
     filled.push("playtype");
   }
