@@ -47,6 +47,7 @@ type Agg = {
   fg3a: number;
   ftm: number;
   fta: number;
+  plusMinus: number;
   effSum: number;
 };
 
@@ -93,6 +94,7 @@ function aggregateLogs(
   let fg3a = 0;
   let ftm = 0;
   let fta = 0;
+  let plusMinus = 0;
   let effSum = 0;
   let hasOreb = false;
   let hasDreb = false;
@@ -122,6 +124,7 @@ function aggregateLogs(
     fg3a += g.fg3a;
     ftm += g.ftm;
     fta += g.fta;
+    plusMinus += g.plusMinus;
     const missedFg = Math.max(0, g.fga - g.fgm);
     const missedFt = Math.max(0, g.fta - g.ftm);
     effSum +=
@@ -148,6 +151,7 @@ function aggregateLogs(
     fg3a,
     ftm,
     fta,
+    plusMinus,
     effSum,
   };
 }
@@ -230,6 +234,12 @@ export function buildPlayerWindowLeadersFromGameLogs(
   perGame("ftm", (a) => a.ftm);
   perGame("fta", (a) => a.fta);
   perGame("eff", (a) => a.effSum);
+  fillBoard(
+    board,
+    "plus_minus",
+    aggs.map((a) => toRow(a, round1(a.plusMinus / a.gp))),
+    playerAdvancedMetricDef("plus_minus").higherIsBetter
+  );
 
   fillBoard(
     board,
@@ -276,7 +286,11 @@ export function buildPlayerWindowLeadersFromGameLogs(
   );
 
   const tovRows = aggs
-    .filter((a) => a.fga + a.fta + a.tov > 0)
+    .filter(
+      (a) =>
+        a.tov > 0 &&
+        a.fga + 0.44 * a.fta + a.tov >= Math.max(8, a.gp * 2)
+    )
     .map((a) =>
       toRow(a, round3(a.tov / (a.fga + 0.44 * a.fta + a.tov)))
     );
@@ -291,6 +305,10 @@ export function buildPlayerWindowLeadersFromGameLogs(
     .filter((a) => a.fg3m > 0)
     .map((a) => toRow(a, round1((3 * a.fg3m) / a.gp)));
   fillBoard(board, "pts_3", pts3Rows);
+  const pts2Rows = aggs
+    .filter((a) => a.fgm > a.fg3m)
+    .map((a) => toRow(a, round1((2 * (a.fgm - a.fg3m)) / a.gp)));
+  fillBoard(board, "pts_2", pts2Rows);
   const ptsFtRows = aggs
     .filter((a) => a.ftm > 0)
     .map((a) => toRow(a, round1(a.ftm / a.gp)));
@@ -300,6 +318,10 @@ export function buildPlayerWindowLeadersFromGameLogs(
     .filter((a) => a.pts > 0)
     .map((a) => toRow(a, round3((3 * a.fg3m) / a.pts)));
   fillBoard(board, "pct_pts_3", share3);
+  const share2 = aggs
+    .filter((a) => a.pts > 0 && a.fgm > a.fg3m)
+    .map((a) => toRow(a, round3((2 * (a.fgm - a.fg3m)) / a.pts)));
+  fillBoard(board, "pct_pts_2", share2);
   const shareFt = aggs
     .filter((a) => a.pts > 0)
     .map((a) => toRow(a, round3(a.ftm / a.pts)));

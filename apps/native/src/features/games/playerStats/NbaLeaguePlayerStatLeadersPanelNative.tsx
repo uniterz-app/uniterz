@@ -199,6 +199,8 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
     if (useWindowBoard) {
       const filled = leaguePlayerRailGroupsForFilledBoard(windowBoard ?? {});
       if (filled.length > 0) return filled;
+      const last10Filled = leaguePlayerRailGroupsForFilledBoard(bundle.last10);
+      if (last10Filled.length > 0) return last10Filled;
       return leaguePlayerRailGroupsForMode("last10");
     }
     return leaguePlayerRailGroupsForMode(nextMode);
@@ -206,7 +208,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   const groups = useMemo(
     () => railGroupsFor(mode),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, useWindowBoard, windowBoard]
+    [mode, useWindowBoard, windowBoard, bundle.last10]
   );
   const [metricState, setMetric] = useState<NbaPlayerStatLeaderMetric>("pts");
   const [sortDir, setSortDir] = useState<SortDir>(() =>
@@ -349,7 +351,12 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
           >
             {groups.map((group, index) => {
               const groupActive = group.id === activeGroupId;
-              const showAdvancedLabel = index === 1;
+              const showAdvancedLabel =
+                group.id !== "basic" &&
+                group.id !== "count" &&
+                !groups
+                  .slice(0, index)
+                  .some((g) => g.id !== "basic" && g.id !== "count");
               return (
                 <View key={group.id} style={styles.railGroup}>
                   {showAdvancedLabel ? (

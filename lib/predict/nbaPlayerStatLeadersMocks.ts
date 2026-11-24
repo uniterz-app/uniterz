@@ -580,20 +580,53 @@ export function leaguePlayerRailGroupsForMode(
   return [{ id: "basic", short: "BASIC", metrics: basic }];
 }
 
-/** 期間窓など、値が入っている指標だけレールに出す */
+/** 期間窓など、値が入っている指標だけレールに出す（詳細専用も値があれば出す） */
 export function leaguePlayerRailGroupsForFilledBoard(
   board: Partial<
     Record<NbaPlayerLeaderMetricId, readonly NbaPlayerStatLeaderRow[]>
   >
 ): NbaPlayerRailGroup[] {
-  return leaguePlayerRailGroups()
-    .map((g) => ({
-      ...g,
-      metrics: g.metrics.filter((m) =>
-        (board[m.id] ?? []).some((r) => Math.abs(r.value) > 1e-9)
-      ),
-    }))
-    .filter((g) => g.metrics.length > 0);
+  const hasData = (id: NbaPlayerLeaderMetricId) =>
+    (board[id] ?? []).some((r) => Math.abs(r.value) > 1e-9);
+  return [
+    {
+      id: "basic",
+      short: "BASIC",
+      metrics: NBA_PLAYER_STAT_LEADER_CHIP_METRICS.map((m) => ({
+        id: m.id,
+        label: m.label,
+        short: m.short,
+        higherIsBetter: m.higherIsBetter,
+        hint: m.hint,
+      })).filter((m) => hasData(m.id)),
+    },
+    {
+      id: "count",
+      short: "COUNT",
+      metrics: NBA_PLAYER_COUNT_LEADER_METRICS.map((m) => ({
+        id: m.id,
+        label: m.label,
+        short: m.short,
+        higherIsBetter: m.higherIsBetter,
+        hint: m.hint,
+      })).filter((m) => hasData(m.id)),
+    },
+    ...NBA_LEAGUE_ADVANCED_CATEGORIES.map((c) => ({
+      id: c.id,
+      short: c.short,
+      metrics: NBA_PLAYER_ADVANCED_LEADER_METRICS.filter(
+        (m) => m.category === c.id
+      )
+        .map((m) => ({
+          id: m.id,
+          label: m.label,
+          short: m.short,
+          higherIsBetter: m.higherIsBetter,
+          hint: m.hint,
+        }))
+        .filter((m) => hasData(m.id)),
+    })),
+  ].filter((g) => g.metrics.length > 0);
 }
 
 export function isPlayerAdvancedLeaderMetric(

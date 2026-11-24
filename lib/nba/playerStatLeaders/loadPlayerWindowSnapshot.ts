@@ -4,10 +4,13 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
+  filterLogsByWindow,
   nbaStatsPeriodWindows,
   nbaStatsWindowId,
   type NbaStatsWindow,
 } from "@/lib/nba/nbaStatsWindow";
+import { loadWindowGameKits } from "@/lib/nba/leagueWindows/loadWindowGameKits";
+import { enrichPlayerWindowBoardFromKits } from "@/lib/nba/leagueWindows/applyWindowGameKits";
 import type { PlayerGameLogsForLeaders } from "@/lib/nba/playerStatLeaders/buildLast10LeadersFromGameLogs";
 import {
   buildPlayerWindowLeadersFromGameLogs,
@@ -40,14 +43,22 @@ export async function writePlayerWindowSnapshotFromLogs(
   serverTimestamp: unknown
 ): Promise<{ windowCount: number }> {
   const season = normalizePlayerWindowSeasonKey(seasonKey);
+  const kits = await loadWindowGameKits(db, season);
   const boards: Record<
     string,
     Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
   > = {};
   for (const window of nbaStatsPeriodWindows()) {
-    boards[nbaStatsWindowId(window)] = buildPlayerWindowLeadersFromGameLogs(
-      players,
-      window
+    const sliced = players.map((p) => ({
+      playerId: p.playerId,
+      playerName: p.playerName,
+      teamId: p.teamId,
+      gameLogs: filterLogsByWindow(p.gameLogs, window),
+    }));
+    boards[nbaStatsWindowId(window)] = enrichPlayerWindowBoardFromKits(
+      buildPlayerWindowLeadersFromGameLogs(players, window),
+      sliced,
+      kits
     );
   }
   const windows: Record<string, Record<string, unknown>> = {};

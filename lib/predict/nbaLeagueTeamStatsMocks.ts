@@ -12,6 +12,7 @@ import {
 import type { NbaLeagueAdvancedCategory } from "@/lib/predict/nbaLeagueStatBoard";
 import {
   chunkForChipGrid,
+  NBA_LEAGUE_ADVANCED_CATEGORIES,
   NBA_LEAGUE_STAT_CHIP_COLS,
   NBA_LEAGUE_TEAM_ADVANCED_CATEGORIES,
 } from "@/lib/predict/nbaLeagueStatBoard";
@@ -380,6 +381,24 @@ export function teamBoardMetricsForCategory(
   return [...core, ...extra];
 }
 
+/** 期間窓: showInLeague で隠している箱スタッツも、値があれば出す */
+function teamBoardMetricsForFilledCategory(
+  category: NbaLeagueAdvancedCategory
+): NbaLeagueTeamStatMetricDef[] {
+  const core = TEAM_ADVANCED_CORE_BY_CATEGORY[category].map(coreDef);
+  const extra = NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS.filter(
+    (m) => m.category === category
+  ).map((m) => advAsBoardDef(m.id));
+  const seen = new Set<string>();
+  const out: NbaLeagueTeamStatMetricDef[] = [];
+  for (const m of [...core, ...extra]) {
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
+    out.push(m);
+  }
+  return out;
+}
+
 export function teamBoardMetricChipRows(category: NbaLeagueAdvancedCategory) {
   return chunkForChipGrid(
     teamBoardMetricsForCategory(category),
@@ -708,14 +727,22 @@ export function metricValue(
 export function leagueTeamRailGroupsForFilledRows(
   rows: readonly NbaLeagueTeamStatRow[]
 ): NbaLeagueTeamRailGroup[] {
-  return leagueTeamRailGroups()
-    .map((g) => ({
-      ...g,
-      metrics: g.metrics.filter((m) =>
-        rows.some((r) => Math.abs(metricValue(r, m.id)) > 1e-9)
+  const hasData = (id: NbaLeagueTeamStatMetric) =>
+    rows.some((r) => Math.abs(metricValue(r, id)) > 1e-9);
+  return [
+    {
+      id: "basic",
+      short: "BASIC",
+      metrics: NBA_LEAGUE_TEAM_BASIC_METRICS.filter((m) => hasData(m.id)),
+    },
+    ...NBA_LEAGUE_ADVANCED_CATEGORIES.map((c) => ({
+      id: c.id,
+      short: c.short,
+      metrics: teamBoardMetricsForFilledCategory(c.id).filter((m) =>
+        hasData(m.id)
       ),
-    }))
-    .filter((g) => g.metrics.length > 0);
+    })),
+  ].filter((g) => g.metrics.length > 0);
 }
 
 export function formatMetricValue(

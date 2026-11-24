@@ -898,6 +898,35 @@ export function formatMetricDisplay(
   return value.toFixed(1);
 }
 
+const PCT_SEASON_IDS: ReadonlySet<NbaPlayerSeasonMetricId> = new Set([
+  "fg_pct",
+  "fg3_pct",
+  "ft_pct",
+]);
+
+/** 期間平均 − シーズン平均。% はポイント差 */
+export function formatPlayerDetailWindowDelta(
+  id: NbaPlayerSeasonMetricId,
+  windowValue: number,
+  seasonValue: number
+): { text: string; up: boolean; flat: boolean } | null {
+  if (!Number.isFinite(windowValue) || !Number.isFinite(seasonValue)) {
+    return null;
+  }
+  const pct = PCT_SEASON_IDS.has(id);
+  const raw = windowValue - seasonValue;
+  const shown = pct ? raw * 100 : raw;
+  if (Math.abs(shown) < 0.05) {
+    return { text: pct ? "0.0%" : "0.0", up: false, flat: true };
+  }
+  const sign = shown > 0 ? "+" : "";
+  return {
+    text: pct ? `${sign}${shown.toFixed(1)}%` : `${sign}${shown.toFixed(1)}`,
+    up: shown > 0,
+    flat: false,
+  };
+}
+
 export function formatSalaryUsd(amount: number): string {
   const sign = amount < 0 ? "-" : "";
   const abs = Math.abs(amount);

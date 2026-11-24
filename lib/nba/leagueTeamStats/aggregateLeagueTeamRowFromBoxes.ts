@@ -382,5 +382,39 @@ export function aggregateLeagueTeamRowFromBoxGames(input: {
     ...(oppReb > 0 ? { rebAllowed: oppReb } : null),
     ...(oppAst > 0 ? { astAllowed: oppAst } : null),
     ...(oppTov > 0 ? { tovForced: oppTov } : null),
+    ...(boxGames > 0
+      ? (() => {
+          const pts2 = round1((2 * Math.max(0, own.fgm - own.fg3m)) / boxGames);
+          const pctPts2 = boxPts > 0 ? round3(pts2 / (boxPts / boxGames)) : 0;
+          const dreb = Math.max(0, own.reb - own.oreb);
+          return {
+            pts2,
+            ...(pctPts2 > 0 ? { pctPts2 } : null),
+            reb: round1(own.reb / boxGames),
+            oreb: round1(own.oreb / boxGames),
+            dreb: round1(dreb / boxGames),
+            ast: round1(own.ast / boxGames),
+            blk: round1(own.blk / boxGames),
+          };
+        })()
+      : withDerivedTwoPointScoring({
+          ppg: round1(ppg),
+          pts3,
+          ptsFt,
+        })),
   };
+}
+
+export function withDerivedTwoPointScoring<
+  T extends { ppg: number; pts3?: number; ptsFt?: number; pts2?: number; pctPts2?: number },
+>(row: T): T {
+  if (typeof row.pts2 === "number" && Number.isFinite(row.pts2) && row.pts2 > 0) {
+    return row;
+  }
+  const pts3 = typeof row.pts3 === "number" && Number.isFinite(row.pts3) ? row.pts3 : 0;
+  const ptsFt = typeof row.ptsFt === "number" && Number.isFinite(row.ptsFt) ? row.ptsFt : 0;
+  const pts2 = round1(Math.max(0, row.ppg - pts3 - ptsFt));
+  if (pts2 <= 0) return row;
+  const pctPts2 = row.ppg > 0 ? round3(pts2 / row.ppg) : 0;
+  return { ...row, pts2, pctPts2 };
 }

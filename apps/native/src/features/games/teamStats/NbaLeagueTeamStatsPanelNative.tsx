@@ -229,18 +229,6 @@ export default function NbaLeagueTeamStatsPanelNative({
       setWindowLoading(false);
       return;
     }
-    if (
-      statsWindow.kind === "last" &&
-      statsWindow.n === 10 &&
-      bundle.last10.length > 0
-    ) {
-      setWindowRows(
-        fillWindowRatingsFromSeasonPace(bundle.last10, bundle.season)
-      );
-      setWindowError(null);
-      setWindowLoading(false);
-      return;
-    }
     let cancelled = false;
     const abort = new AbortController();
     setWindowLoading(true);
@@ -392,7 +380,9 @@ export default function NbaLeagueTeamStatsPanelNative({
           >
           {groups.map((group, index) => {
             const groupActive = group.id === activeGroupId;
-            const showAdvancedLabel = index === 1;
+            const showAdvancedLabel =
+              group.id !== "basic" &&
+              !groups.slice(0, index).some((g) => g.id !== "basic");
             return (
               <View key={group.id} style={styles.railGroup}>
                 {showAdvancedLabel ? (

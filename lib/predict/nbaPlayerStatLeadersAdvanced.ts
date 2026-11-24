@@ -18,6 +18,7 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "ast_pct"
   | "reb_pct"
   | "ast_to"
+  | "plus_minus"
   | "ortg"
   | "drtg"
   | "efg_pct"
@@ -31,6 +32,8 @@ export type NbaPlayerAdvancedLeaderMetric =
   | "pct_pts_fb"
   | "pct_pts_tov"
   | "pts_3"
+  | "pts_2"
+  | "pct_pts_2"
   | "pts_paint"
   | "pts_mid"
   | "pts_ft"
@@ -518,6 +521,15 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
       pt: "Fatia dos rebotes disponíveis conquistados. Maior = domina as tabelas.",
       fr: "Part des rebonds disponibles pris. Plus haut = maîtrise le rebond.",
     }),
+    def("plus_minus", "+/-", "Plus minus / G", "ratings", true, "perGame", {
+      ja: "コートにいるあいだの得失点差（1試合平均）。",
+      en: "On-court plus-minus per game.",
+      ko: "코트에 있는 동안의 득실 차(경기당).",
+      zh: "在场时的正负值（场均）。",
+      es: "Plus-minus en pista por partido.",
+      pt: "Plus-minus em quadra por jogo.",
+      fr: "Plus-minus sur le terrain par match.",
+    }, false),
     def("ast_to", "A/TO", "AST / TO", "ratings", true, "ratio", {
       ja: "ミス1回あたり何回アシストできたか。高いほどパスが安定している。",
       en: "Assists per turnover. Higher = cleaner passer.",
@@ -698,6 +710,33 @@ export const NBA_PLAYER_ADVANCED_LEADER_METRICS: readonly NbaPlayerAdvancedLeade
       pt: "Pontos por jogo em bolas de 3.",
       fr: "Points par match à 3 pts.",
     }),
+    def("pts_2", "2PT", "Points from 2 / G", "scoring", true, "perGame", {
+      ja: "1試合あたりの2P得点。",
+      en: "Points per game from twos.",
+      ko: "경기당 2점 득점.",
+      zh: "场均两分得分。",
+      es: "Puntos por partido de doble.",
+      pt: "Pontos por jogo em bolas de 2.",
+      fr: "Points par match à 2 pts.",
+    }, false),
+    def(
+      "pct_pts_2",
+      "2PT%",
+      "% PTS from 2",
+      "scoring",
+      true,
+      "pct",
+      {
+        ja: "得点のうち 2P。",
+        en: "Share of points from twos.",
+        ko: "득점 중 2점 비중.",
+        zh: "两分得分占比。",
+        es: "Cuota de puntos de doble.",
+        pt: "Fatia de pontos em bolas de 2.",
+        fr: "Part des points à 2 pts.",
+      },
+      false
+    ),
     def("pts_paint", "PAINT", "Paint points / G", "scoring", true, "perGame", {
       ja: "1試合あたりのペイント得点。",
       en: "Points per game in the paint.",
@@ -1379,6 +1418,8 @@ export function buildPlayerAdvancedMetricValue(
       return pct(0.08 + rnd() * 0.32);
     case "reb_pct":
       return pct(0.05 + rnd() * 0.18);
+    case "plus_minus":
+      return round1((rnd() - 0.45) * 16);
     case "ast_to":
       return round1(0.8 + rnd() * 3.2);
     case "ortg":
@@ -1407,6 +1448,10 @@ export function buildPlayerAdvancedMetricValue(
       return pct(0.06 + rnd() * 0.12);
     case "pts_3":
       return round1(1 + rnd() * 12);
+    case "pts_2":
+      return round1(4 + rnd() * 16);
+    case "pct_pts_2":
+      return pct(0.2 + rnd() * 0.4);
     case "pts_paint":
       return round1(2 + rnd() * 16);
     case "pts_mid":
@@ -1568,6 +1613,13 @@ export function formatPlayerAdvancedLeaderValue(
   value: number | null | undefined
 ): string {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  if (metric === "plus_minus") {
+    const body =
+      Math.abs(value - Math.round(value)) < 1e-9
+        ? String(Math.round(value))
+        : value.toFixed(1);
+    return `${value > 0 ? "+" : ""}${body}`;
+  }
   const kind = playerAdvancedMetricDef(metric).kind;
   if (kind === "pct") return `${(value * 100).toFixed(1)}%`;
   if (kind === "ppp") return value.toFixed(2);

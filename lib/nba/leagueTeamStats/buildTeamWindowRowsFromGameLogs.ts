@@ -5,6 +5,7 @@
 import { NBA_ALL_TEAM_IDS } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
 import {
   aggregateLeagueTeamRowFromBoxGames,
+  withDerivedTwoPointScoring,
   type LeagueTeamBoxGame,
 } from "@/lib/nba/leagueTeamStats/aggregateLeagueTeamRowFromBoxes";
 import {
@@ -107,17 +108,19 @@ export function fillWindowRatingsFromSeasonPace(
     }
   }
   return rows.map((row) => {
-    if (row.ortg >= 80 && row.drtg >= 80) return row;
+    if (row.ortg >= 80 && row.drtg >= 80) {
+      return withDerivedTwoPointScoring(row);
+    }
     const pace = round1(paceFor(row.teamId, { seasonPaceByTeamId: paceMap }));
     const ortg = round1((row.ppg / pace) * 100);
     const drtg = round1((row.papg / pace) * 100);
-    return {
+    return withDerivedTwoPointScoring({
       ...row,
       pace,
       ortg,
       drtg,
       netrtg: round1(ortg - drtg),
-    };
+    });
   });
 }
 

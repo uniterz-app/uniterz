@@ -3,6 +3,7 @@
  * 未処理のレギュラー終了試合だけ取りに行く（日次・試合後は数試合、今季の初回は全試合）。
  */
 import type { Firestore } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import { bdlSeasonYearFromSeasonKey } from "@/lib/nba/bdl/bdlNbaEnv";
 import { fetchBdlGames, type BdlGame } from "@/lib/nba/bdl/fetchBdlGames";
@@ -18,6 +19,10 @@ import {
   type NbaGameCleanRatingsDoc,
   type NbaTeamCleanRatingsDoc,
 } from "@/lib/nba/cleanRatings/nbaCleanRatingsTypes";
+import { writeTeamWindowSnapshotFromStored } from "@/lib/nba/leagueTeamStats/loadTeamWindowSnapshot";
+import { rebuildPlayerLast10FromGameLogs } from "@/lib/nba/playerStatLeaders/loadPlayerStatLeadersSnapshot";
+import { computeNbaGamePbpExtras } from "@/lib/nba/pbpExtras/computeNbaGamePbpExtras";
+import { NBA_GAME_PBP_EXTRAS_COLLECTION } from "@/lib/nba/pbpExtras/nbaPbpExtrasTypes";
 
 export type NbaCleanRatingsIngestInput = {
   seasonKey?: string;
@@ -114,6 +119,17 @@ async function processGame(
     builtAtMs: nowMs,
   };
   await db.collection(NBA_GAME_CLEAN_RATINGS_COLLECTION).doc(String(game.id)).set(doc);
+  const extras = computeNbaGamePbpExtras({
+    plays,
+    seasonKey,
+    date,
+    homeBdlTeamId: homeBdl,
+    awayBdlTeamId: awayBdl,
+    homeTeamId,
+    awayTeamId,
+    nowMs,
+  });
+  await db.collection(NBA_GAME_PBP_EXTRAS_COLLECTION).doc(String(game.id)).set(extras);
   return matches ? "ok" : "incomplete";
 }
 
@@ -152,13 +168,23 @@ export async function ingestNbaCleanRatingsFromBdl(
 
   let pending = games;
   if (!input.force) {
-    const done = await db
-      .collection(NBA_GAME_CLEAN_RATINGS_COLLECTION)
-      .where("seasonKey", "==", seasonKey)
-      .select()
-      .get();
+    const [done, extrasDone] = await Promise.all([
+      db
+        .collection(NBA_GAME_CLEAN_RATINGS_COLLECTION)
+        .where("seasonKey", "==", seasonKey)
+        .select()
+        .get(),
+      db
+        .collection(NBA_GAME_PBP_EXTRAS_COLLECTION)
+        .where("seasonKey", "==", seasonKey)
+        .select()
+        .get(),
+    ]);
     const doneIds = new Set(done.docs.map((d) => d.id));
-    pending = games.filter((g) => !doneIds.has(String(g.id)));
+    const extrasIds = new Set(extrasDone.docs.map((d) => d.id));
+    pending = games.filter(
+      (g) => !doneIds.has(String(g.id)) || !extrasIds.has(String(g.id))
+    );
   }
   pending.sort((a, b) => String(a.date ?? "").localeCompare(String(b.date ?? "")));
   const limit =
@@ -196,6 +222,17 @@ export async function ingestNbaCleanRatingsFromBdl(
     if (existing.exists) snapshot = existing.data() as NbaTeamCleanRatingsDoc;
   }
   snapshot ??= await rebuildNbaTeamCleanRatings(db, seasonKey);
+  const ts = FieldValue.serverTimestamp();
+  try {
+    await writeTeamWindowSnapshotFromStored(db, seasonKey, ts);
+  } catch (e) {
+    console.error("[nba-clean-ratings-ingest] team window rewrite", e);
+  }
+  try {
+    await rebuildPlayerLast10FromGameLogs(db, seasonKey, ts);
+  } catch (e) {
+    console.error("[nba-clean-ratings-ingest] player window rewrite", e);
+  }
   return {
     ok: true,
     seasonKey,

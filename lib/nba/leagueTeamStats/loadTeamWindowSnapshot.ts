@@ -4,6 +4,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 import {
+  filterLogsByWindow,
   nbaStatsPeriodWindows,
   nbaStatsWindowId,
   type NbaStatsWindow,
@@ -12,12 +13,17 @@ import {
   buildTeamWindowRowsFromDetails,
   fillWindowRatingsFromSeasonPace,
 } from "@/lib/nba/leagueTeamStats/buildTeamWindowRowsFromGameLogs";
+import { loadWindowGameKits } from "@/lib/nba/leagueWindows/loadWindowGameKits";
+import { enrichTeamWindowRowFromKits } from "@/lib/nba/leagueWindows/applyWindowGameKits";
+import { withDerivedTwoPointScoring } from "@/lib/nba/leagueTeamStats/aggregateLeagueTeamRowFromBoxes";
 import {
+  loadLeagueTeamStatsSnapshot,
   normalizeLeagueTeamStatsSeasonKey,
   teamRowForFirestore,
 } from "@/lib/nba/leagueTeamStats/loadLeagueTeamStatsSnapshot";
 import { parseLeagueTeamWindowRows } from "@/lib/nba/leagueTeamStats/normalizeLeagueTeamStatsSnapshot";
 import { NBA_ALL_TEAM_IDS } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
+import { loadAllTeamGameLogDetails } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
 import type { NbaTeamGameLogDetail } from "@/lib/nba/teamGameLog/teamGameLogDetail";
 import type { NbaLeagueTeamStatRow } from "@/lib/predict/nbaLeagueTeamStatsMocks";
 
@@ -40,10 +46,17 @@ export async function writeTeamWindowSnapshotFromDetails(
   const detailsMap = new Map<string, NbaTeamGameLogDetail | null>(
     NBA_ALL_TEAM_IDS.map((id) => [id, details[id] ?? null])
   );
+  const kits = await loadWindowGameKits(db, season);
   const windows: Record<string, ReturnType<typeof teamRowForFirestore>[]> = {};
   for (const window of nbaStatsPeriodWindows()) {
     const rows = fillWindowRatingsFromSeasonPace(
-      buildTeamWindowRowsFromDetails(detailsMap, window),
+      buildTeamWindowRowsFromDetails(detailsMap, window).map((row) =>
+        enrichTeamWindowRowFromKits(
+          row,
+          filterLogsByWindow(detailsMap.get(row.teamId)?.games ?? [], window),
+          kits
+        )
+      ),
       seasonRows
     );
     if (rows.length === 0) continue;
@@ -56,6 +69,28 @@ export async function writeTeamWindowSnapshotFromDetails(
     updatedAt: serverTimestamp,
   });
   return { windowCount: Object.keys(windows).length };
+}
+
+/** clean / extras / shot のあとに期間表を作り直す（公開 GET は 1 doc のまま） */
+export async function writeTeamWindowSnapshotFromStored(
+  db: Firestore,
+  seasonKey: string,
+  serverTimestamp: unknown
+): Promise<{ windowCount: number; skipped?: boolean }> {
+  const map = await loadAllTeamGameLogDetails(db, seasonKey);
+  const details: Record<string, NbaTeamGameLogDetail> = {};
+  for (const [id, d] of map) {
+    if (d) details[id] = d;
+  }
+  if (Object.keys(details).length === 0) return { windowCount: 0, skipped: true };
+  const seasonRows = (await loadLeagueTeamStatsSnapshot(db, seasonKey)).bundle.season;
+  return writeTeamWindowSnapshotFromDetails(
+    db,
+    seasonKey,
+    details,
+    seasonRows,
+    serverTimestamp
+  );
 }
 
 export async function loadTeamWindowRows(
@@ -76,5 +111,5 @@ export async function loadTeamWindowRows(
       ? (data.windows as Record<string, unknown>)
       : {};
   const parsed = parseLeagueTeamWindowRows(windows[nbaStatsWindowId(window)]);
-  return parsed ?? [];
+  return (parsed ?? []).map(withDerivedTwoPointScoring);
 }

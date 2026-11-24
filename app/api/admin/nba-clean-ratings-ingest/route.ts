@@ -38,7 +38,11 @@ export async function POST(req: Request) {
       maxGames: typeof body.maxGames === "number" ? body.maxGames : undefined,
       force: body.force === true,
     });
-    revalidateNbaDocCache(["nbaTeamCleanRatings"]);
+    revalidateNbaDocCache([
+      "nbaTeamCleanRatings",
+      "nbaLeagueTeamWindow",
+      "nbaLeaguePlayerWindow",
+    ]);
     revalidateTag(`nba-lts:${seasonKey}`, { expire: 0 });
     return NextResponse.json(result);
   } catch (e: unknown) {

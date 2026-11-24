@@ -35,6 +35,8 @@ export type NbaLeagueTeamAdvancedMetric =
   | "oppPctPtsPaint"
   | "oppPctPtsFt"
   | "pts3"
+  | "pts2"
+  | "pctPts2"
   | "ptsPaint"
   | "ptsFt"
   | "ptsFb"
@@ -76,6 +78,11 @@ export type NbaLeagueTeamAdvancedMetric =
   | "rebAllowed"
   | "astAllowed"
   | "tovForced"
+  | "reb"
+  | "oreb"
+  | "dreb"
+  | "ast"
+  | "blk"
   | "drives"
   | "drivePts"
   | "driveFgPct"
@@ -454,6 +461,33 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Pontos por jogo em bolas de 3.",
       fr: "Points par match à 3 pts.",
     }),
+    def("pts2", "2PT", "Points from 2 / G", "scoring", true, "one", {
+      ja: "1試合あたりの2P得点。",
+      en: "Points per game from twos.",
+      ko: "경기당 2점 득점.",
+      zh: "场均两分得分。",
+      es: "Puntos por partido de doble.",
+      pt: "Pontos por jogo em bolas de 2.",
+      fr: "Points par match à 2 pts.",
+    }, false),
+    def("pctPts2", "2PT%", "% PTS from 2", "scoring", true, "pct", {
+      ja: "得点のうち 2P の割合。",
+      en: "Share of points from twos.",
+      ko: "득점 중 2점 비중.",
+      zh: "两分得分占比。",
+      es: "Porcentaje de puntos desde el doble.",
+      pt: "Percentual de pontos vindos do 2.",
+      fr: "Part des points venant du 2 pts.",
+    }, false),
+    def("ast", "AST", "Assists / G", "scoring", true, "one", {
+      ja: "1試合あたりのアシスト。",
+      en: "Assists per game.",
+      ko: "경기당 어시스트.",
+      zh: "场均助攻。",
+      es: "Asistencias por partido.",
+      pt: "Assistências por jogo.",
+      fr: "Passes décisives par match.",
+    }, false),
     def("ptsPaint", "PAINT", "Paint points / G", "scoring", true, "one", {
       ja: "1試合あたりのペイント得点。",
       en: "Points per game in the paint.",
@@ -1014,7 +1048,7 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Assistências concedidas por jogo. Menor é melhor.",
       fr: "Passes décisives concédées par match. Plus bas, mieux.",
     }),
-    def("tovForced", "TOV", "TOs forced / G", "defense", true, "one", {
+    def("tovForced", "STL", "Steals / G", "defense", true, "one", {
       ja: "誘発したターンオーバー。高いほど良い。",
       en: "Turnovers forced per game.",
       ko: "경기당 유도한 턴오버. 높을수록 좋음.",
@@ -1023,6 +1057,15 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Turnovers forçados por jogo.",
       fr: "Pertes de balle provoquées par match.",
     }),
+    def("blk", "BLK", "Blocks / G", "defense", true, "one", {
+      ja: "1試合あたりのブロック。",
+      en: "Blocks per game.",
+      ko: "경기당 블록.",
+      zh: "场均盖帽。",
+      es: "Tapones por partido.",
+      pt: "Tocos por jogo.",
+      fr: "Contres par match.",
+    }, false),
     def("drives", "DRIVE", "Drives / G", "tracking", true, "one", {
       ja: "1試合あたりのドライブ数。",
       en: "Drives per game.",
@@ -1247,6 +1290,33 @@ export const NBA_LEAGUE_TEAM_ADVANCED_METRIC_DEFS: readonly NbaLeagueTeamAdvance
       pt: "Triplos contestados por jogo.",
       fr: "Tirs à 3 pts contestés par match.",
     }),
+    def("reb", "REB", "Rebounds / G", "rebounding", true, "one", {
+      ja: "1試合あたりのリバウンド。",
+      en: "Rebounds per game.",
+      ko: "경기당 리바운드.",
+      zh: "场均篮板。",
+      es: "Rebotes por partido.",
+      pt: "Rebotes por jogo.",
+      fr: "Rebonds par match.",
+    }, false),
+    def("oreb", "OREB", "Offensive rebounds / G", "rebounding", true, "one", {
+      ja: "1試合あたりのオフェンスリバウンド。",
+      en: "Offensive rebounds per game.",
+      ko: "경기당 공격 리바운드.",
+      zh: "场均进攻篮板。",
+      es: "Rebotes ofensivos por partido.",
+      pt: "Rebotes ofensivos por jogo.",
+      fr: "Rebonds offensifs par match.",
+    }, false),
+    def("dreb", "DREB", "Defensive rebounds / G", "rebounding", true, "one", {
+      ja: "1試合あたりのディフェンスリバウンド。",
+      en: "Defensive rebounds per game.",
+      ko: "경기당 수비 리바운드.",
+      zh: "场均防守篮板。",
+      es: "Rebotes defensivos por partido.",
+      pt: "Rebotes defensivos por jogo.",
+      fr: "Rebonds défensifs par match.",
+    }, false),
     def("boxOuts", "BOXOUT", "Box outs / G", "rebounding", true, "one", {
       ja: "ボックスアウト。相手をリバウンドから締め出した回数（1 試合平均）。",
       en: "Box outs per game — times sealing an opponent off the glass.",
@@ -1551,6 +1621,8 @@ export function buildLeagueTeamAdvancedFields(
     oppPctPtsPaint,
     oppPctPtsFt,
     pts3,
+    pts2: round1(Math.max(0, core.ppg - pts3 - ptsFt)),
+    pctPts2: pct3(Math.max(0, 1 - pctPts3 - pctPtsFt)),
     ptsPaint,
     ptsFt,
     ptsFb,
@@ -1592,6 +1664,11 @@ export function buildLeagueTeamAdvancedFields(
     rebAllowed,
     astAllowed,
     tovForced,
+    reb: round1(44 + rnd() * 8),
+    oreb: round1(10 + rnd() * 4),
+    dreb: round1(34 + rnd() * 6),
+    ast: round1(24 + rnd() * 8),
+    blk: round1(4.5 + rnd() * 3),
     drives,
     drivePts,
     driveFgPct: pct3(0.42 + rnd() * 0.12),

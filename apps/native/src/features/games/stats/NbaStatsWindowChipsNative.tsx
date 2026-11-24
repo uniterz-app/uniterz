@@ -24,6 +24,12 @@ type Props = {
   onChange: (next: NbaStatsWindow) => void;
   accent: string;
   language?: string;
+  /** 選択中（塗り）。オフは枠だけ */
+  filled?: boolean;
+  /** 1件でもトリガーを出す（期間だけのリスト用） */
+  showWhenSingle?: boolean;
+  /** true ならシートを開かず、呼び出し側で切替だけする */
+  onActivate?: () => boolean;
 };
 
 const SECTION_LABEL = {
@@ -38,9 +44,13 @@ export default function NbaStatsWindowChipsNative({
   onChange,
   accent,
   language,
+  filled = false,
+  showWhenSingle = false,
+  onActivate,
 }: Props) {
   const [open, setOpen] = useState(false);
-  if (windows.length <= 1) return null;
+  if (windows.length === 0) return null;
+  if (!showWhenSingle && windows.length <= 1) return null;
   const ja = language === "ja";
   const lang = ja ? "ja" : "en";
   const activeId = nbaStatsWindowId(value);
@@ -79,14 +89,28 @@ export default function NbaStatsWindowChipsNative({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={ja ? "期間を選ぶ" : "Choose period"}
-        accessibilityState={{ expanded: open }}
-        onPress={() => setOpen(true)}
-        style={[styles.trigger, { borderColor: accent }]}
+        accessibilityState={{ expanded: open, selected: filled }}
+        onPress={() => {
+          if (onActivate?.()) return;
+          setOpen(true);
+        }}
+        style={[
+          styles.trigger,
+          { borderColor: accent },
+          filled ? { backgroundColor: accent } : null,
+        ]}
       >
-        <Text style={[styles.triggerLabel, { color: accent }]}>
+        <Text
+          style={[
+            styles.triggerLabel,
+            { color: filled ? "#050508" : accent },
+          ]}
+        >
           {nbaStatsWindowChipLabel(value, lang)}
         </Text>
-        <Text style={[styles.chev, { color: accent }]}>▾</Text>
+        <Text style={[styles.chev, { color: filled ? "#050508" : accent }]}>
+          ▾
+        </Text>
       </Pressable>
 
       <Modal
