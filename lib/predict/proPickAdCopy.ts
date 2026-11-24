@@ -9,6 +9,8 @@ export function proPickAdCopy(language: string | null | undefined): {
   firstFreeCta: string;
   /** 広告で解除するとき */
   adCta: string;
+  /** 広告後、サーバーの解除確認待ち */
+  confirmingCta: string;
   adModalTitle: string;
   adModalBody: string;
   adModalWait: string;
@@ -32,15 +34,26 @@ export function proPickAdCopy(language: string | null | undefined): {
       pt: "Ver grátis",
     }),
     adCta: L(lang, {
-      ja: "広告を見てこの試合の PRO PICK を見る",
-      en: "Watch an ad to see this game's PRO PICK",
-      zh: "观看广告以查看本场 PRO PICK",
-      ko: "광고를 보고 이 경기의 PRO PICK 보기",
-      es: "Mira un anuncio para ver el PRO PICK de este partido",
-      de: "Werbung ansehen, um das PRO PICK dieses Spiels zu sehen",
-      fr: "Regarder une pub pour voir le PRO PICK de ce match",
-      ar: "شاهد إعلانًا لعرض PRO PICK لهذه المباراة",
-      pt: "Assista a um anúncio para ver o PRO PICK deste jogo",
+      ja: "広告を見て開く",
+      en: "Watch an ad to open",
+      zh: "观看广告后打开",
+      ko: "광고를 보고 열기",
+      es: "Ver un anuncio para abrir",
+      de: "Werbung ansehen und öffnen",
+      fr: "Voir une pub pour ouvrir",
+      ar: "شاهد إعلانًا للفتح",
+      pt: "Assistir a um anúncio para abrir",
+    }),
+    confirmingCta: L(lang, {
+      ja: "確認しています…",
+      en: "Checking…",
+      zh: "正在确认…",
+      ko: "확인 중…",
+      es: "Comprobando…",
+      de: "Wird geprüft…",
+      fr: "Vérification…",
+      ar: "جارٍ التحقق…",
+      pt: "Verificando…",
     }),
     adModalTitle: L(lang, {
       ja: "広告",

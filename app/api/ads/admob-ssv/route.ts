@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { verifyAdMobSsv } from "@/lib/ads/admobSsvVerify";
-import { PRO_PICK_AD_REWARDS_COLLECTION } from "@/lib/pro/proPickGameAccess";
+import { grantProPickUnlockFromAd } from "@/lib/pro/proPickGameAccess";
 import { grantTradeBuzzUnlockFromAd } from "@/lib/ads/tradeBuzzAdUnlock";
 
 /**
  * GET /api/ads/admob-ssv?...（AdMob のサーバー側検証コールバック）
  *
  * 署名が正しい報酬だけ、用途ごとに 1 回記録する。
- * - PRO PICK（custom_data の gameId）: `proPickAdRewards/{transaction_id}`。解除は `POST /api/nba/pro-pick-unlock` が消費
+ * - PRO PICK（custom_data の gameId）: `proPickAdRewards/{transaction_id}` と
+ *   その試合の解除 `proPickGameUnlocks/{uid}_{gameId}` を同時に書く。クライアントは POST で確認する
  * - トレード Buzz（custom_data の feature = trade_buzz）: 今日（日本時間）の解除 `tradeBuzzUnlocks/{uid}_{日付}`
  * 同じ transaction_id は 2 回目以降無視する（再送に強くする）。
  */
@@ -48,11 +48,12 @@ export async function GET(req: Request) {
   const unit = result.adUnit ?? "";
   if (result.purpose.kind === "trade_buzz") {
     const allowed = buzzUnits.length > 0 ? buzzUnits : proPickUnits;
-    if (allowed.length > 0 && !allowed.includes(unit)) {
+    // ad_unit が空のコールバックは弾かない（パラメータ名が違うときがある）
+    if (unit && allowed.length > 0 && !allowed.includes(unit)) {
       console.warn(`[admob-ssv] ignored reason=ad_unit purpose=trade_buzz`);
       return new NextResponse("ignored: ad_unit", { status: 200 });
     }
-  } else {
+  } else if (unit) {
     // PRO PICK の報酬で Buzz 専用ユニットは受け付けない（用途を混ぜない）
     if (buzzUnits.includes(unit) || (proPickUnits.length > 0 && !proPickUnits.includes(unit))) {
       console.warn(`[admob-ssv] ignored reason=ad_unit purpose=pro_pick`);
@@ -68,20 +69,10 @@ export async function GET(req: Request) {
     });
     return new NextResponse("ok", { status: 200 });
   }
-  try {
-    await db
-      .collection(PRO_PICK_AD_REWARDS_COLLECTION)
-      .doc(result.transactionId)
-      .create({
-        uid: result.userId,
-        gameId: result.purpose.gameId,
-        claimed: false,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-  } catch (e) {
-    // 既に記録済み（ALREADY_EXISTS = 6）なら成功扱い
-    const code = (e as { code?: unknown })?.code;
-    if (code !== 6 && code !== "already-exists") throw e;
-  }
+  await grantProPickUnlockFromAd(db, {
+    transactionId: result.transactionId,
+    uid: result.userId,
+    gameId: result.purpose.gameId,
+  });
   return new NextResponse("ok", { status: 200 });
 }

@@ -58,6 +58,7 @@ import MatchListLineFrameNative from "./MatchListLineFrameNative";
 import { resultOutcomeLineFramePaint } from "@/lib/games/matchListLineFrame";
 import { toDateOrNull } from "@/lib/games/transform";
 import NbaPredictToolsTabsNative from "./predict/NbaPredictToolsTabsNative";
+import type { ProPickRewardedResult } from "../ads/proPickRewardedAdNative";
 import { isProInsightPreseasonPhase } from "../../../../../lib/predict/proInsightGateCopy";
 import LiveGameStatsPanelNative from "./live/LiveGameStatsPanelNative";
 import LiveGameStatsPlaceholderNative from "./live/LiveGameStatsPlaceholderNative";
@@ -825,6 +826,12 @@ type PredictModalProps = {
   ) => void;
   /** Free の PRO INSIGHT ゲートから Get Pro へ（親で Modal を閉じてから遷移） */
   onOpenProSubscribe?: () => void;
+  /** リワード広告は予想シートを閉じてから出す（iOS でシートの × と重ならないように） */
+  presentRewardedAd?: (opts: {
+    gameId: string;
+    userId: string;
+  }) => Promise<ProPickRewardedResult>;
+  resumeAfterRewardedAd?: boolean;
   /** この試合で初回無料が使える（送信後の案内用） */
   onFirstFreeOffer?: (available: boolean) => void;
 };
@@ -935,6 +942,8 @@ export default function PredictModal({
   onOpenTeamDetail,
   onOpenPlayerDetail,
   onOpenProSubscribe,
+  presentRewardedAd,
+  resumeAfterRewardedAd = false,
   onFirstFreeOffer,
 }: PredictModalProps) {
   const insets = useSafeAreaInsets();
@@ -2069,6 +2078,8 @@ export default function PredictModal({
                       onOpenTeamDetail={onOpenTeamDetail}
                       onOpenPlayerDetail={onOpenPlayerDetail}
                       onOpenProSubscribe={onOpenProSubscribe}
+                      presentRewardedAd={presentRewardedAd}
+                      resumeAfterRewardedAd={resumeAfterRewardedAd}
                       onRevealPanel={(panel) => {
                         const scroll = predictScrollRef.current;
                         const host = scroll?.getNativeScrollRef();

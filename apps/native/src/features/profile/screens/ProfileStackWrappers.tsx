@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { openProSubscribeNative } from "../../../navigation/navigationRef";
 import type { RouteProp } from "@react-navigation/native";
@@ -13,6 +14,9 @@ import ProSubscribePreviewNative from "../mobileScreens/ProSubscribePreviewNativ
 import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPreviewScreenNative";
 import TradeBallotPreviewScreenNative from "../../games/predict/tradeBallot/TradeBallotPreviewScreenNative";
 import TradeBuzzPreviewScreenNative from "../../games/predict/buzz/TradeBuzzPreviewScreenNative";
+import { showTradeBuzzRewardedAdNative } from "../../ads/proPickRewardedAdNative";
+import { waitHostDismissedForRewardedAd } from "../../games/scheduleAfterPredictModalDismissed";
+import { setTradeBuzzAdEarned } from "../../games/predict/buzz/tradeBuzzAdSessionNative";
 import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
 import LeagueStatsRailPreviewScreenNative from "../../games/stats/LeagueStatsRailPreviewScreenNative";
 import TeamStatsPreviewScreenNative from "../../games/teamStats/TeamStatsPreviewScreenNative";
@@ -168,8 +172,25 @@ export function TradeBallotPreviewScreenWrapper() {
 export function TradeBuzzPreviewScreenWrapper() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
+  const presentRewardedAd = useCallback(
+    async (userId: string) => {
+      navigation.goBack();
+      await waitHostDismissedForRewardedAd();
+      try {
+        const result = await showTradeBuzzRewardedAdNative({ userId });
+        if (result === "earned") setTradeBuzzAdEarned(true);
+        return result;
+      } finally {
+        navigation.navigate("TradeBuzzPreview");
+      }
+    },
+    [navigation]
+  );
   return (
-    <TradeBuzzPreviewScreenNative onClose={() => navigation.goBack()} />
+    <TradeBuzzPreviewScreenNative
+      onClose={() => navigation.goBack()}
+      presentRewardedAd={presentRewardedAd}
+    />
   );
 }
 

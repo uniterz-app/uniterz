@@ -90,19 +90,31 @@ export async function verifyAdMobSsv(rawQuery: string): Promise<AdMobSsvResult> 
   const userId = params.get("user_id")?.trim() ?? "";
   if (!transactionId || !userId) return { ok: false, reason: "missing_fields" };
 
-  let custom: { gameId?: unknown; feature?: unknown } = {};
+  const rawCustom = params.get("custom_data") ?? "";
+  const parseCustom = (s: string): { gameId?: unknown; feature?: unknown } | null => {
+    try {
+      return JSON.parse(s) as { gameId?: unknown; feature?: unknown };
+    } catch {
+      return null;
+    }
+  };
+  let decodedCustom = "";
   try {
-    custom = JSON.parse(params.get("custom_data") ?? "{}") as typeof custom;
+    decodedCustom = decodeURIComponent(rawCustom);
   } catch {
-    custom = {};
+    decodedCustom = "";
   }
-  const gameId = typeof custom.gameId === "string" ? custom.gameId.trim() : "";
+  const custom = parseCustom(rawCustom) ?? parseCustom(decodedCustom) ?? {};
+  let gameId = typeof custom.gameId === "string" ? custom.gameId.trim() : "";
   const feature = typeof custom.feature === "string" ? custom.feature.trim() : "";
+  // JSON ではなく試合 ID だけが入っているとき
+  if (!gameId && !feature && rawCustom && !rawCustom.trim().startsWith("{")) {
+    gameId = rawCustom.trim();
+  }
 
-  let purpose: AdMobSsvPurpose | null = null;
-  if (feature === "trade_buzz") purpose = { kind: "trade_buzz" };
-  else if (gameId) purpose = { kind: "pro_pick", gameId };
-  if (!purpose) return { ok: false, reason: "missing_purpose" };
+  // custom_data が空でも、署名が通った報酬は uid 付きで残す（解除 API が試合に結びつける）
+  const purpose: AdMobSsvPurpose =
+    feature === "trade_buzz" ? { kind: "trade_buzz" } : { kind: "pro_pick", gameId };
 
   return {
     ok: true,
