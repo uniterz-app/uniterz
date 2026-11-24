@@ -1,4 +1,3 @@
 google.com, pub-8832864372815461, DIRECT, f08c47fec0942fa0
-# Meta Audience Network（AdMob メディエーション）。
-# Meta Business Manager の発行者 ID が取れたら、次の行の YOUR_BUSINESS_ID を差し替えて有効にする。
-# facebook.com, YOUR_BUSINESS_ID, DIRECT, c3e20eee3f7126c
+facebook.com, 1674669474211303, DIRECT, c3e20eee3f780d68
+facebook.com, 1674669474211303, DIRECT, c3e20eee3f7126c
