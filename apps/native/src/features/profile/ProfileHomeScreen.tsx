@@ -400,10 +400,14 @@ export default function ProfileHomeScreen({
     }
     if (fromLeaderboards) {
       const groupId = leaderboardsGroupId?.trim();
-      tabNavigation.navigate("LeaderboardsTab", {
-        screen: groupId ? "CommunityDetail" : "LeaderboardsHome",
-        params: groupId ? { groupId } : undefined,
-      });
+      if (groupId) {
+        tabNavigation.navigate("LeaderboardsTab", {
+          screen: "CommunityDetail",
+          params: { groupId },
+        });
+      } else {
+        tabNavigation.navigate("LeaderboardsTab", { screen: "LeaderboardsHome" });
+      }
       return;
     }
     tabNavigation.navigate("RankingsTab", { screen: "RankingsHome" });

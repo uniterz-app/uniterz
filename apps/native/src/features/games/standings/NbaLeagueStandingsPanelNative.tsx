@@ -155,11 +155,7 @@ export function NbaStandingsTablesNative({
     <View>
       {CONFERENCE_SECTIONS.filter(({ id }) => conferences.includes(id)).map(({ id, label }, sectionIndex) => (
         <View key={id} style={sectionIndex > 0 ? styles.sectionSpaced : undefined}>
-          <View style={styles.sectionHead}>
-            <CyberLine side="left" />
-            <Text style={styles.sectionLabel}>{label}</Text>
-            <CyberLine side="right" />
-          </View>
+          <StandingsSectionHeadNative label={label} />
           <ConferenceTable rows={id === "east" ? board.east : board.west} chrome={chrome} onSelectTeam={onSelectTeam} />
         </View>
       ))}
