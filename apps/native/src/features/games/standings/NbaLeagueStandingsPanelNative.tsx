@@ -1,5 +1,5 @@
-/** Web `NbaLeagueStandingsPanel` 相当 — EAST / WEST カンファレンス順位表 */
-import { useState, type ReactNode } from "react";
+/** EAST / WEST カンファレンス順位表 */
+import { useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   ActivityIndicator,
@@ -32,6 +32,11 @@ import { nbaLeagueStatsChrome } from "../stats/nbaStatsUiCopy";
 import { CYBER_TAB_CYAN } from "../../../ui/cyberSideMenuNative";
 import { METRIC_FONT, RANK_DISPLAY_FONT } from "../../rankings/rankingsUiTheme";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
+import {
+  StandingsMetricColNative,
+  StandingsSectionHeadNative,
+  standingsTeamWash,
+} from "./nbaStandingsTableSharedNative";
 
 type Props = {
   language: string;
@@ -68,41 +73,6 @@ function rankColor(rank: number): string {
   return "rgba(252,165,165,0.75)";
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const raw = hex.replace("#", "").trim();
-  if (raw.length !== 6) return `rgba(0,245,255,${alpha})`;
-  const r = Number.parseInt(raw.slice(0, 2), 16);
-  const g = Number.parseInt(raw.slice(2, 4), 16);
-  const b = Number.parseInt(raw.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function ColDash() {
-  return (
-    <View pointerEvents="none" style={styles.vDash}>
-      {DASH_TICKS.map((i) => (
-        <View key={i} style={styles.vDashTick} />
-      ))}
-    </View>
-  );
-}
-
-function MetricCol({
-  width,
-  children,
-}: {
-  width: number;
-  children: ReactNode;
-}) {
-  return (
-    <View style={[styles.metricCol, { width }]}>
-      <ColDash />
-      {children}
-    </View>
-  );
-}
-
-const DASH_TICKS = [0, 1, 2, 3, 4, 5, 6, 7];
 const STANDINGS_SEASON_KEYS = nbaStandingsSeasonKeys();
 
 export default function NbaLeagueStandingsPanelNative({
@@ -150,11 +120,7 @@ export default function NbaLeagueStandingsPanelNative({
             key={id}
             style={sectionIndex > 0 ? styles.sectionSpaced : undefined}
           >
-            <View style={styles.sectionHead}>
-              <CyberLine side="left" />
-              <Text style={styles.sectionLabel}>{label}</Text>
-              <CyberLine side="right" />
-            </View>
+            <StandingsSectionHeadNative label={label} />
             <ConferenceTable
               rows={id === "east" ? board.east : board.west}
               chrome={chrome}
@@ -206,25 +172,6 @@ const CONFERENCE_SECTIONS: readonly { id: NbaConferenceId; label: string }[] = [
   { id: "west", label: "WEST" },
 ];
 
-function CyberLine({ side }: { side: "left" | "right" }) {
-  const isLeft = side === "left";
-  return (
-    <View
-      pointerEvents="none"
-      style={[styles.cyberLine, isLeft ? null : styles.cyberLineReverse]}
-    >
-      <LinearGradient
-        colors={["rgba(0,245,255,0)", "rgba(0,245,255,0.7)"]}
-        start={{ x: isLeft ? 0 : 1, y: 0 }}
-        end={{ x: isLeft ? 1 : 0, y: 0 }}
-        style={styles.cyberLineRule}
-      />
-      <View style={styles.cyberTickSmall} />
-      <View style={styles.cyberTick} />
-    </View>
-  );
-}
-
 function ConferenceTable({
   rows,
   chrome,
@@ -247,28 +194,28 @@ function ConferenceTable({
         <View style={styles.head}>
           <Text style={[styles.th, styles.colRank]}>#</Text>
           <Text style={[styles.th, styles.colTeam]}>{chrome.teamCol}</Text>
-          <MetricCol width={COL.wl}>
+          <StandingsMetricColNative width={COL.wl}>
             <Text style={[styles.th, styles.thMetric]}>
               {chrome.standingsWl}
             </Text>
-          </MetricCol>
-          <MetricCol width={COL.pct}>
+          </StandingsMetricColNative>
+          <StandingsMetricColNative width={COL.pct}>
             <Text style={[styles.th, styles.thPct]}>W%</Text>
-          </MetricCol>
-          <MetricCol width={COL.strk}>
+          </StandingsMetricColNative>
+          <StandingsMetricColNative width={COL.strk}>
             <Text style={[styles.th, styles.thMetric]}>
               {chrome.standingsStreak}
             </Text>
-          </MetricCol>
-          <MetricCol width={COL.split}>
+          </StandingsMetricColNative>
+          <StandingsMetricColNative width={COL.split}>
             <Text style={[styles.th, styles.thMetric]}>L10</Text>
-          </MetricCol>
-          <MetricCol width={COL.homeAway}>
+          </StandingsMetricColNative>
+          <StandingsMetricColNative width={COL.homeAway}>
             <Text style={[styles.th, styles.thMetric]}>HOME</Text>
-          </MetricCol>
-          <MetricCol width={COL.homeAway}>
+          </StandingsMetricColNative>
+          <StandingsMetricColNative width={COL.homeAway}>
             <Text style={[styles.th, styles.thMetric]}>AWAY</Text>
-          </MetricCol>
+          </StandingsMetricColNative>
         </View>
         {rows.map((row) => {
           const primary = getTeamJerseyPrimaryColor("nba", row.teamId);
@@ -293,8 +240,8 @@ function ConferenceTable({
                   <>
                     <LinearGradient
                       colors={[
-                        hexToRgba(primary, 0.18),
-                        hexToRgba(primary, 0.08),
+                        standingsTeamWash(primary, 0.18),
+                        standingsTeamWash(primary, 0.08),
                         "rgba(0,0,0,0)",
                       ]}
                       locations={[0, 0.36, 1]}
@@ -317,20 +264,20 @@ function ConferenceTable({
                     <Text style={styles.tdTeam} numberOfLines={1}>
                       {nick(row)}
                     </Text>
-                    <MetricCol width={COL.wl}>
+                    <StandingsMetricColNative width={COL.wl}>
                       <Text style={styles.tdWl}>
                         {formatStandingsWl({
                           wins: row.wins,
                           losses: row.losses,
                         })}
                       </Text>
-                    </MetricCol>
-                    <MetricCol width={COL.pct}>
+                    </StandingsMetricColNative>
+                    <StandingsMetricColNative width={COL.pct}>
                       <Text style={styles.tdPct}>
                         {formatStandingsWinPct(row.winPct)}
                       </Text>
-                    </MetricCol>
-                    <MetricCol width={COL.strk}>
+                    </StandingsMetricColNative>
+                    <StandingsMetricColNative width={COL.strk}>
                       <Text
                         style={[
                           styles.tdStrk,
@@ -339,22 +286,22 @@ function ConferenceTable({
                       >
                         {formatStreakLabel(row.streak)}
                       </Text>
-                    </MetricCol>
-                    <MetricCol width={COL.split}>
+                    </StandingsMetricColNative>
+                    <StandingsMetricColNative width={COL.split}>
                       <Text style={styles.tdSplit}>
                         {formatStandingsWl(row.last10)}
                       </Text>
-                    </MetricCol>
-                    <MetricCol width={COL.homeAway}>
+                    </StandingsMetricColNative>
+                    <StandingsMetricColNative width={COL.homeAway}>
                       <Text style={styles.tdSplit}>
                         {formatStandingsWl(row.home)}
                       </Text>
-                    </MetricCol>
-                    <MetricCol width={COL.homeAway}>
+                    </StandingsMetricColNative>
+                    <StandingsMetricColNative width={COL.homeAway}>
                       <Text style={styles.tdSplit}>
                         {formatStandingsWl(row.away)}
                       </Text>
-                    </MetricCol>
+                    </StandingsMetricColNative>
                   </>
                 )}
               </Pressable>
@@ -393,48 +340,6 @@ const styles = StyleSheet.create({
   },
   tableScroll: { flex: 1 },
   sectionSpaced: { marginTop: 20 },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  sectionLabel: {
-    fontFamily: METRIC_FONT,
-    color: CYBER_TAB_CYAN,
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: 5,
-    paddingLeft: 5,
-    textTransform: "uppercase",
-    includeFontPadding: false,
-    textShadowColor: "rgba(0,245,255,0.45)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
-    transform: [{ skewX: "-10deg" }],
-  },
-  cyberLine: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  cyberLineReverse: { flexDirection: "row-reverse" },
-  cyberLineRule: { flex: 1, height: 1 },
-  cyberTickSmall: {
-    width: 2,
-    height: 7,
-    backgroundColor: "rgba(0,245,255,0.6)",
-    transform: [{ skewX: "-14deg" }],
-  },
-  cyberTick: {
-    width: 3,
-    height: 11,
-    backgroundColor: CYBER_TAB_CYAN,
-    transform: [{ skewX: "-14deg" }],
-  },
   hScrollContent: {
     paddingHorizontal: 8,
   },
@@ -465,25 +370,6 @@ const styles = StyleSheet.create({
   },
   colRank: { width: COL.rank },
   colTeam: { width: COL.team },
-  metricCol: {
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  vDash: {
-    position: "absolute",
-    left: 0,
-    top: 5,
-    bottom: 5,
-    width: 1,
-    justifyContent: "space-evenly",
-    alignItems: "center",
-  },
-  vDashTick: {
-    width: 1,
-    height: 3,
-    backgroundColor: "rgba(0,245,255,0.28)",
-  },
   thMetric: {
     width: "100%",
     textAlign: "center",

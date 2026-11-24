@@ -12,7 +12,8 @@ export default function GamesNbaSubpageShellNative(
     props.title === "AWARDS" ||
     props.title === "STANDINGS" ||
     props.title === "TEAM STATS" ||
-    props.title === "PLAYER STATS";
+    props.title === "PLAYER STATS" ||
+    props.title === "LEAGUE";
   return (
     <CyberSubpageShellNative
       {...props}

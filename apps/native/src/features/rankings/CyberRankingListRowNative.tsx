@@ -167,6 +167,10 @@ export function CyberRankingListRowNative({
   nameExtra = null,
   compact = false,
   scoreInline = false,
+  /** 金銀銅以外も薄い枠を出す（グループ詳細など、一覧の外枠が無いとき） */
+  frameFallback = false,
+  /** 指標タグ上書き（グループの最高連勝など） */
+  metricTagOverride = null,
 }: {
   rank: number;
   displayName: string;
@@ -203,6 +207,8 @@ export function CyberRankingListRowNative({
   hideListMeta?: boolean;
   /** My Rank カード内 — リスト行の背景・下線・1位枠なし。配置だけ揃える */
   bare?: boolean;
+  /** 4位以下にもグレー枠（メダル色は従来どおり優先） */
+  frameFallback?: boolean;
   rankDisplayValue?: string;
   rankMuted?: boolean;
   /** My Rank カード — 順位の下に「/ 1,234」（その一覧の参加人数） */
@@ -213,11 +219,20 @@ export function CyberRankingListRowNative({
   compact?: boolean;
   /** スコア数字を大きくし、PTS 等を横並び */
   scoreInline?: boolean;
+  metricTagOverride?: string | null;
 }) {
   const palette = cyberRankPalette(rank);
   const firstFrame = !bare && palette.firstPlaceFrame;
-  const medalFrame = bare ? null : rankMedalFrameColor(rank);
-  const metricTag = cyberMetricTag(metric, language);
+  const medalFrame = bare
+    ? null
+    : rankMedalFrameColor(rank) ??
+      (frameFallback ? "rgba(148,163,184,0.38)" : null);
+  const overrideTag = metricTagOverride?.trim() || "";
+  const metricTag = overrideTag
+    ? /[A-Za-z]/.test(overrideTag)
+      ? overrideTag.toUpperCase()
+      : overrideTag
+    : cyberMetricTag(metric, language);
   const nameJa = hasJaScript(displayName);
   const nameFontSize = rankingFontSizePx(compact ? 13 : 15, displayName);
   const tagFontSize = rankingFontSizePx(

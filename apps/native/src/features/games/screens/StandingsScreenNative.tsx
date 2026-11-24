@@ -1,4 +1,4 @@
-/** Web `/mobile/standings` 相当 — カンファレンス順位表 + LEAGUE（今季を図で見る） */
+/** カンファレンス順位 + NBA Cup */
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -8,7 +8,7 @@ import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
 import { useNativeUserLanguage } from "../../../hooks/useNativeUserLanguage";
 import type { GamesStackParamList } from "../../../navigation/types";
 import NbaLeagueStandingsPanelNative from "../standings/NbaLeagueStandingsPanelNative";
-import LeagueHubPanelNative from "../leagueHub/LeagueHubPanelNative";
+import NbaCupStandingsPanelNative from "../standings/NbaCupStandingsPanelNative";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -19,13 +19,15 @@ import {
   useLeagueStatsCollapseState,
 } from "../stats/LeagueStatsCollapseNative";
 
+type StandingsTab = "standings" | "cup";
+
 export default function StandingsScreenNative() {
   const navigation =
     useNavigation<NativeStackNavigationProp<GamesStackParamList>>();
   const { fUser } = useFirebaseUser();
   const { language } = useNativeUserLanguage(fUser?.uid);
   const lang = language === "ja" ? "ja" : "en";
-  const [tab, setTab] = useState<"standings" | "league">("standings");
+  const [tab, setTab] = useState<StandingsTab>("standings");
   const collapse = useLeagueStatsCollapseState(tab);
   const onSelectTeam = (teamId: string) =>
     navigation.navigate("TeamDetailPreview", { teamId });
@@ -40,7 +42,7 @@ export default function StandingsScreenNative() {
     >
       <LeagueStatsCollapseProvider value={collapse}>
       <LeagueStatsCollapsibleNative>
-      <View style={[styles.tabs, tab === "league" ? styles.tabsLeague : null]}>
+      <View style={styles.tabs}>
         <CyberSlantedTabBarNative fill>
           <CyberSlantedTabNative
             label="STANDINGS"
@@ -49,9 +51,9 @@ export default function StandingsScreenNative() {
             compact
           />
           <CyberSlantedTabNative
-            label="LEAGUE"
-            active={tab === "league"}
-            onPress={() => setTab("league")}
+            label="CUP"
+            active={tab === "cup"}
+            onPress={() => setTab("cup")}
             compact
           />
         </CyberSlantedTabBarNative>
@@ -63,13 +65,9 @@ export default function StandingsScreenNative() {
             <NbaLeagueStandingsPanelNative language={lang} onSelectTeam={onSelectTeam} />
           </View>
         ) : (
-          <LeagueHubPanelNative
-            lang={lang}
-            onSelectTeam={onSelectTeam}
-            onSelectPlayer={(playerId) =>
-              navigation.navigate("PlayerDetailPreview", { playerId })
-            }
-          />
+          <View style={styles.standings}>
+            <NbaCupStandingsPanelNative language={lang} onSelectTeam={onSelectTeam} />
+          </View>
         )}
       </View>
       </LeagueStatsCollapseProvider>
@@ -83,10 +81,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 8,
-  },
-  /** 線が LEAGUE の下端からすぐ下の段へ届くよう、間の余白だけ詰める */
-  tabsLeague: {
-    paddingBottom: 0,
   },
   body: { flex: 1 },
   standings: { flex: 1, paddingHorizontal: 12 },

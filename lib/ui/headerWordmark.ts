@@ -11,6 +11,7 @@ export type HeaderWordmark =
   | "STANDINGS"
   | "TEAM STATS"
   | "PLAYER STATS"
+  | "LEAGUE"
   | "SQUAD BATTLE";
 
 export const DEFAULT_HEADER_WORDMARK: HeaderWordmark = "UNITERZ";
@@ -87,6 +88,7 @@ const HEADER_WORDMARK_SET = new Set<string>([
   "STANDINGS",
   "TEAM STATS",
   "PLAYER STATS",
+  "LEAGUE",
   "SQUAD BATTLE",
 ]);
 

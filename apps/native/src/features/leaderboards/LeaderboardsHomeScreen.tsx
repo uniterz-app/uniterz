@@ -6,7 +6,6 @@ import { spacing } from "../../theme/tokens";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
 import type { LeaderboardsStackParamList } from "../../navigation/types";
-import { navigateToPublicProfileNative } from "../../navigation/navigateToPublicProfileNative";
 import { useNativeMyRankingUser } from "../rankings/useNativeMyRankingUser";
 import RankingsCommunityPanelNative from "./RankingsCommunityPanelNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
@@ -38,17 +37,6 @@ export default function LeaderboardsHomeScreen({ bottomReserveY = 0 }: Props) {
           }}
           onOpenSquadBattle={() => {
             stackNavigation.navigate("SquadBattle");
-          }}
-          onOpenProfile={(handle, groupId, warm) => {
-            if (groupId) {
-              stackNavigation.setParams({ reopenGroupId: groupId });
-            }
-            navigateToPublicProfileNative(stackNavigation, {
-              handle,
-              fromLeaderboards: true,
-              ...(groupId ? { leaderboardsGroupId: groupId } : {}),
-              ...(warm ? { warm } : {}),
-            });
           }}
         />
       </ScrollView>

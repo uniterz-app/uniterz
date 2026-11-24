@@ -399,18 +399,58 @@ export function sortValueFromAgg(
   return 0;
 }
 
-function streakFromCumulative(
+/** 現在連勝（連敗の負値は 0）。最高連勝の下限にも使う */
+function activeWinStreakFromCumulative(
   d: Record<string, unknown>,
   league: CommunityLeague
 ): number {
   if (league === "wc") {
-    return Number(d.streakFootball ?? d.activeWinStreak ?? 0);
+    return Math.max(
+      0,
+      Number(d.activeWinStreakFootball ?? 0),
+      Number(d.streakFootball ?? 0),
+      Number(d.activeWinStreak ?? 0)
+    );
   }
   if (league === "nba") {
     const bySport = d.streakBySport as { basketball?: number } | undefined;
-    return Number(bySport?.basketball ?? d.activeWinStreak ?? 0);
+    const signed = Number(bySport?.basketball ?? 0);
+    return Math.max(
+      0,
+      Number(d.activeWinStreakBasketball ?? 0),
+      signed > 0 ? signed : 0,
+      Number(d.activeWinStreak ?? 0)
+    );
   }
-  return Number(d.activeWinStreak ?? 0);
+  return Math.max(0, Number(d.activeWinStreak ?? 0));
+}
+
+/**
+ * グループ「連勝」タブの正: 最高連勝（cumulative）。
+ * streakBySport は連敗を負で持つので使わない。
+ */
+function maxWinStreakFromCumulative(
+  d: Record<string, unknown>,
+  league: CommunityLeague
+): number {
+  const mb = d.maxWinStreakBySport as
+    | { basketball?: number; football?: number }
+    | undefined;
+  let max = 0;
+  if (league === "wc") {
+    max = Number(d.maxWinStreakFootball ?? mb?.football ?? 0);
+  } else if (league === "nba") {
+    max = Number(mb?.basketball ?? d.maxWinStreak ?? d.maxStreak ?? 0);
+  } else {
+    max = Math.max(
+      Number(d.maxWinStreak ?? d.maxStreak ?? 0),
+      Number(mb?.basketball ?? 0),
+      Number(mb?.football ?? 0),
+      Number(d.maxWinStreakFootball ?? 0)
+    );
+  }
+  max = Math.max(max, activeWinStreakFromCumulative(d, league));
+  return Math.max(0, Math.floor(Number.isFinite(max) ? max : 0));
 }
 
 function rowFromAgg(
@@ -522,7 +562,7 @@ export async function buildMemberLeaderboard(
       winRate: Number(d.winRate ?? 0),
       totalPoints: Number(d.totalPoints ?? 0),
       totalUpset: Number(d.totalUpset ?? 0),
-      activeWinStreak: streakFromCumulative(d, league),
+      activeWinStreak: maxWinStreakFromCumulative(d, league),
     });
   }
 

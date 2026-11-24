@@ -307,6 +307,10 @@ function LeaderboardsStackScreen() {
         </LeaderboardsStack.Screen>
         <LeaderboardsStack.Screen
           name="CommunityDetail"
+          options={{
+            animation: "slide_from_right",
+            contentStyle: { backgroundColor: "#000000", paddingTop: 0 },
+          }}
           getComponent={() =>
             require("../features/leaderboards/CommunityDetailScreenNative").default
           }

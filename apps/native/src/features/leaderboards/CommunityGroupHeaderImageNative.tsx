@@ -1,5 +1,5 @@
 /** グループヘッダー画像 — オーナーは変更・削除・位置調整が可能 */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cyberAlert } from "../../components/cyberAlert";
 import {
   ActivityIndicator, Image, PanResponder, Pressable, StyleSheet, Text, View,
@@ -41,8 +41,18 @@ type Props = {
   layout?: "card" | "hero";
   onEditingChange?: (editing: boolean) => void;
   onUpdated: (patch: CommunityGroupHeaderImagePatch) => void;
+  /**
+   * 写真の上・メニューより下に敷く（ヒーロー上下フェードなど）。
+   * 兄弟として後段に置くとメニューに乗ってしまうので、ここ経由で挟む。
+   */
+  photoOverlay?: ReactNode;
+  /** グループ名など編集 */
+  onEditGroup?: () => void;
+  /** グループ終了（アーカイブ） */
+  onEndGroup?: () => void;
+  /** メニュー開閉 — ヒーローのパネルがタッチを奪わないよう前面化する */
+  onMenuOpenChange?: (open: boolean) => void;
 };
-
 type PendingUpload = {
   uri: string;
   blob: Blob | null;
@@ -62,12 +72,28 @@ export default function CommunityGroupHeaderImageNative({
   layout = "card",
   onEditingChange,
   onUpdated,
+  photoOverlay = null,
+  onEditGroup,
+  onEndGroup,
+  onMenuOpenChange,
 }: Props) {
   const { fUser } = useFirebaseUser();
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  /** root = 画像編集/グループ編集/終了 · image = 画像の下位操作 */
+  const [menuMode, setMenuMode] = useState<"root" | "image">("root");
   const [pending, setPending] = useState<PendingUpload | null>(null);
   const dragStart = useRef<{ y: number; startPos: number } | null>(null);
+  const showGroupActions = Boolean(onEditGroup || onEndGroup);
+
+  const setMenuOpenNotify = useCallback(
+    (open: boolean) => {
+      setMenuOpen(open);
+      if (!open) setMenuMode("root");
+      onMenuOpenChange?.(open);
+    },
+    [onMenuOpenChange]
+  );
 
   const savedPositionY = sanitizeHeaderImagePositionY(headerImagePositionY);
   const isHero = layout === "hero";
@@ -140,12 +166,17 @@ export default function CommunityGroupHeaderImageNative({
             remove: "Remove image",
             reposition: "Drag to reposition",
             repositionMenu: "Adjust position",
+            editImage: "Edit image",
+            editGroup: "Edit group",
+            endGroup: "End group",
+            back: "Back",
             apply: "Apply",
             cancel: "Cancel",
             saved: "Image updated.",
             removed: "Image removed.",
             failed: "Update failed.",
             photoRequired: "Photo access is required.",
+            menuA11y: "Group menu",
           }
         : {
             add: "画像を追加",
@@ -153,15 +184,24 @@ export default function CommunityGroupHeaderImageNative({
             remove: "画像を削除",
             reposition: "ドラッグして位置を調整",
             repositionMenu: "位置を調整",
+            editImage: "画像編集",
+            editGroup: "グループ編集",
+            endGroup: "グループ終了",
+            back: "戻る",
             apply: "適用",
             cancel: "キャンセル",
             saved: "画像を更新しました。",
             removed: "画像を削除しました。",
             failed: "更新に失敗しました。",
             photoRequired: "写真へのアクセスが必要です。",
+            menuA11y: "グループメニュー",
           },
     [language]
   );
+
+  const toggleMenu = useCallback(() => {
+    setMenuOpenNotify(!menuOpen);
+  }, [menuOpen, setMenuOpenNotify]);
 
   const commitPatch = useCallback(
     async (patch: CommunityGroupHeaderImagePatch, message?: string) => {
@@ -213,8 +253,8 @@ export default function CommunityGroupHeaderImageNative({
       positionY: savedPositionY,
       repositionOnly: true,
     });
-    setMenuOpen(false);
-  }, [editable, headerImageUrl, savedPositionY]);
+    setMenuOpenNotify(false);
+  }, [editable, headerImageUrl, savedPositionY, setMenuOpenNotify]);
 
   const pickImage = useCallback(async () => {
     if (!editable || busy) return;
@@ -234,13 +274,13 @@ export default function CommunityGroupHeaderImageNative({
         positionY: DEFAULT_HEADER_IMAGE_POSITION_Y,
         repositionOnly: false,
       });
-      setMenuOpen(false);
+      setMenuOpenNotify(false);
     } catch {
       cyberAlert("", t.failed);
     } finally {
       setBusy(false);
     }
-  }, [editable, busy, t]);
+  }, [editable, busy, t, setMenuOpenNotify]);
 
   const applyPending = useCallback(async () => {
     if (!pending || !fUser || busy) return;
@@ -387,6 +427,134 @@ export default function CommunityGroupHeaderImageNative({
     );
   };
 
+  const renderOwnerMenu = (hasImage: boolean) => {
+    if (!editable) return null;
+    return (
+      <View style={[styles.actions, isHero && styles.actionsHero]}>
+        <Pressable
+          disabled={busy}
+          onPress={toggleMenu}
+          style={({ pressed }) => [
+            styles.menuBtn,
+            isHero && styles.menuBtnHero,
+            pressed && communityPressableTapStyle(true),
+          ]}
+          accessibilityLabel={t.menuA11y}
+        >
+          {busy ? (
+            <ActivityIndicator size="small" color={isHero ? "#FFFFFF" : "#e0f2fe"} />
+          ) : (
+            <MaterialCommunityIcons
+              name="menu"
+              size={16}
+              color={isHero ? "#FFFFFF" : "rgba(224,242,254,0.95)"}
+            />
+          )}
+        </Pressable>
+        {menuOpen ? (
+          <View style={[styles.menuPanel, isHero && styles.menuPanelHero]}>
+            {showGroupActions && menuMode === "root" ? (
+              <>
+                <Pressable
+                  disabled={busy}
+                  onPress={() => {
+                    if (!hasImage) {
+                      void pickImage();
+                      return;
+                    }
+                    setMenuMode("image");
+                  }}
+                  style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
+                >
+                  <MaterialCommunityIcons name="image-edit-outline" size={14} color="rgba(224,242,254,0.95)" />
+                  <Text style={styles.menuItemText}>{t.editImage}</Text>
+                </Pressable>
+                {onEditGroup ? (
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => {
+                      setMenuOpenNotify(false);
+                      onEditGroup();
+                    }}
+                    style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
+                  >
+                    <MaterialCommunityIcons name="pencil-outline" size={14} color="rgba(224,242,254,0.95)" />
+                    <Text style={styles.menuItemText}>{t.editGroup}</Text>
+                  </Pressable>
+                ) : null}
+                {onEndGroup ? (
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => {
+                      setMenuOpenNotify(false);
+                      onEndGroup();
+                    }}
+                    style={({ pressed }) => [
+                      styles.menuItem,
+                      styles.menuItemDanger,
+                      pressed && communityPressableTapStyle(true),
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="close-octagon-outline" size={14} color="rgba(254,202,202,0.9)" />
+                    <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>{t.endGroup}</Text>
+                  </Pressable>
+                ) : null}
+              </>
+            ) : (
+              <>
+                {showGroupActions ? (
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => setMenuMode("root")}
+                    style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
+                  >
+                    <MaterialCommunityIcons name="chevron-left" size={14} color="rgba(224,242,254,0.95)" />
+                    <Text style={styles.menuItemText}>{t.back}</Text>
+                  </Pressable>
+                ) : null}
+                {hasImage ? (
+                  <Pressable
+                    disabled={busy}
+                    onPress={startReposition}
+                    style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
+                  >
+                    <MaterialCommunityIcons name="arrow-up-down" size={14} color="rgba(224,242,254,0.95)" />
+                    <Text style={styles.menuItemText}>{t.repositionMenu}</Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  disabled={busy}
+                  onPress={() => void pickImage()}
+                  style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
+                >
+                  <MaterialCommunityIcons name="camera-outline" size={14} color="rgba(224,242,254,0.95)" />
+                  <Text style={styles.menuItemText}>{hasImage ? t.change : t.add}</Text>
+                </Pressable>
+                {hasImage ? (
+                  <Pressable
+                    disabled={busy}
+                    onPress={() => {
+                      setMenuOpenNotify(false);
+                      confirmRemove();
+                    }}
+                    style={({ pressed }) => [
+                      styles.menuItem,
+                      styles.menuItemDanger,
+                      pressed && communityPressableTapStyle(true),
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="trash-can-outline" size={14} color="rgba(254,202,202,0.9)" />
+                    <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>{t.remove}</Text>
+                  </Pressable>
+                ) : null}
+              </>
+            )}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
   const renderBanner = (url: string, positionY: number, showMenu: boolean) => {
     const { imageStyle } = heroImageLayout(positionY, false);
 
@@ -400,57 +568,9 @@ export default function CommunityGroupHeaderImageNative({
             fadeDuration={0}
           />
           {!isHero ? <View style={styles.bannerFade} pointerEvents="none" /> : null}
-          {showMenu ? (
-            <View style={[styles.actions, isHero && styles.actionsHero]}>
-              <Pressable
-                disabled={busy}
-                onPress={() => setMenuOpen((v) => !v)}
-                style={({ pressed }) => [styles.menuBtn, pressed && communityPressableTapStyle(true)]}
-                accessibilityLabel={language === "en" ? "Image menu" : "画像メニュー"}
-              >
-                {busy ? (
-                  <ActivityIndicator size="small" color="#e0f2fe" />
-                ) : (
-                  <MaterialCommunityIcons name="menu" size={16} color="rgba(224,242,254,0.95)" />
-                )}
-              </Pressable>
-              {menuOpen ? (
-                <View style={[styles.menuPanel, isHero && styles.menuPanelHero]}>
-                  <Pressable
-                    disabled={busy}
-                    onPress={startReposition}
-                    style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
-                  >
-                    <MaterialCommunityIcons name="arrow-up-down" size={14} color="rgba(224,242,254,0.95)" />
-                    <Text style={styles.menuItemText}>{t.repositionMenu}</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={busy}
-                    onPress={() => void pickImage()}
-                    style={({ pressed }) => [styles.menuItem, pressed && communityPressableTapStyle(true)]}
-                  >
-                    <MaterialCommunityIcons name="camera-outline" size={14} color="rgba(224,242,254,0.95)" />
-                    <Text style={styles.menuItemText}>{t.change}</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={busy}
-                    onPress={() => {
-                      setMenuOpen(false);
-                      confirmRemove();
-                    }}
-                    style={({ pressed }) => [
-                      styles.menuItem,
-                      styles.menuItemDanger,
-                      pressed && communityPressableTapStyle(true),
-                    ]}
-                  >
-                    <MaterialCommunityIcons name="trash-can-outline" size={14} color="rgba(254,202,202,0.9)" />
-                    <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>{t.remove}</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-            </View>
-          ) : null}
+          {/* フェードはメニューより下。後から兄弟で重ねるとバーガーが沈む */}
+          {photoOverlay}
+          {showMenu ? renderOwnerMenu(true) : null}
         </View>
       </View>
     );
@@ -462,25 +582,31 @@ export default function CommunityGroupHeaderImageNative({
 
   if (!headerImageUrl) {
     return (
-      <Pressable
-        disabled={!editable || busy}
-        onPress={() => void pickImage()}
-        style={({ pressed }) => [
-          styles.placeholder,
-          isHero && styles.placeholderHero,
-          pressed && editable && communityPressableTapStyle(true),
-        ]}
-        accessibilityLabel={t.add}
-      >
-        {busy ? (
-          <ActivityIndicator color="#22d3ee" />
-        ) : (
-          <>
-            <MaterialCommunityIcons name="image-plus" size={22} color="rgba(165,243,252,0.55)" />
-            <Text style={styles.placeholderText}>{t.add}</Text>
-          </>
-        )}
-      </Pressable>
+      <View style={[styles.wrap, isHero && styles.wrapHero]}>
+        <View style={[styles.bannerWrap, isHero && styles.bannerWrapHero, { height: bannerHeight }]}>
+          <Pressable
+            disabled={!editable || busy || showGroupActions}
+            onPress={() => void pickImage()}
+            style={({ pressed }) => [
+              styles.placeholder,
+              isHero && styles.placeholderHero,
+              pressed && editable && !showGroupActions && communityPressableTapStyle(true),
+            ]}
+            accessibilityLabel={t.add}
+          >
+            {busy ? (
+              <ActivityIndicator color="#22d3ee" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="image-plus" size={22} color="rgba(165,243,252,0.55)" />
+                <Text style={styles.placeholderText}>{t.add}</Text>
+              </>
+            )}
+          </Pressable>
+          {photoOverlay}
+          {editable ? renderOwnerMenu(false) : null}
+        </View>
+      </View>
     );
   }
 
@@ -603,6 +729,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.18)",
     backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  /** ヒーロー写真の上でも潰れないよう、塗り・枠をはっきりさせる（サイズは通常と同じ） */
+  menuBtnHero: {
+    borderColor: "rgba(255,255,255,0.55)",
+    backgroundColor: "rgba(0,0,0,0.78)",
   },
   menuPanel: {
     position: "absolute",

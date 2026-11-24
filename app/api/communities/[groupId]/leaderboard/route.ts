@@ -23,8 +23,13 @@ import {
   writeLeaderboardSnapshot,
 } from "@/lib/communities/leaderboardSnapshot";
 import { buildCommunityGroupSummaryPayload } from "@/lib/communities/buildCommunityGroupSummaryPayload";
+import { ensureGroupInviteCode } from "@/lib/communities/ensureGroupInviteCode";
 import { mergeUserPlansIntoLeaderboardRows } from "@/lib/rankings/mergeUserPlanIntoRankingPayload";
-import { readCommunityGamesScope } from "@/lib/communities/communityGamesScope";
+import {
+  parseCommunityGamesScope,
+  readCommunityGamesScope,
+  type CommunityGamesScope,
+} from "@/lib/communities/communityGamesScope";
 import {
   parseRankingEndDateKey,
   parseRankingPeriodMonthKey,
@@ -34,6 +39,8 @@ import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+/** ピックアップ切替の再集計（メンバー × 日次）がタイムアウトしないように */
+export const maxDuration = 60;
 
 type Ctx = { params: Promise<{ groupId: string }> };
 
@@ -105,18 +112,35 @@ function snapshotMatchesGroup(
   );
 }
 
+function readGamesScopeOverride(
+  req: Request,
+  defaultScope: CommunityGamesScope
+): CommunityGamesScope {
+  const raw = new URL(req.url).searchParams.get("gamesScope");
+  if (raw == null || raw.trim() === "") return defaultScope;
+  return parseCommunityGamesScope(raw);
+}
+
 export async function GET(req: Request, ctx: Ctx) {
   try {
     const uid = await requireUidFromRequest(req);
     const { groupId } = await ctx.params;
     const groupSnap = await assertMember(adminDb, groupId, uid);
-    const d = groupSnap.data()!;
+    const ensuredInvite = await ensureGroupInviteCode(groupSnap);
+    const d = {
+      ...groupSnap.data()!,
+      ...(ensuredInvite ? { inviteCode: ensuredInvite } : {}),
+    };
     const group = buildCommunityGroupSummaryPayload(groupId, d, uid);
     const rankingMetric = parseCommunityMetric(d.rankingMetric);
     const periodType = parseCommunityPeriod(d.periodType);
     const rankingLeague = parseCommunityLeague(d.rankingLeague);
     const rankingTeamIds = readRankingTeamIds(d);
-    const rankingGamesScope = readCommunityGamesScope(d as Record<string, unknown>);
+    const defaultGamesScope = readCommunityGamesScope(
+      d as Record<string, unknown>
+    );
+    const rankingGamesScope = readGamesScopeOverride(req, defaultGamesScope);
+    const isDefaultGamesScope = rankingGamesScope === defaultGamesScope;
     const rankingStartDateKey = resolveRankingStartDateKey(d);
     const rankingStartAtMs = resolveRankingStartAtMs(d);
     const rankingEndDateKey = parseRankingEndDateKey(d.rankingEndDateKey) ?? "";
@@ -140,53 +164,73 @@ export async function GET(req: Request, ctx: Ctx) {
       memberCount: Number(d.memberCount ?? 0),
     };
 
+    const defaultRule = {
+      rankingMetric,
+      periodType,
+      rankingLeague,
+      rankingGamesScope: defaultGamesScope,
+      rankingTeamIds,
+    };
+    const appliedRule = {
+      rankingMetric,
+      periodType,
+      rankingLeague,
+      rankingGamesScope,
+      rankingTeamIds,
+    };
+
     /**
-     * 日次スロット（JST 16:00）の snapshot があれば members 全読・daily 再集計しない。
-     * ランキングと同じ「1日1回」モデル。
+     * 日次スロット（JST 16:00）の snapshot は作成時（デフォルト）ルールのみ。
+     * gamesScope 閲覧オーバーライド時は再集計 + メモリキャッシュ。
      */
-    const snapshot = await readLeaderboardSnapshot(
-      adminDb,
-      groupId,
-      snapshotSlotKey
-    );
-        if (snapshot && snapshotMatchesGroup(snapshot, rankingOpts)) {
-      const rows = await withLiveUserFields(
-        snapshot.rows as RankedLeaderboardRow[]
+    if (isDefaultGamesScope) {
+      const snapshot = await readLeaderboardSnapshot(
+        adminDb,
+        groupId,
+        snapshotSlotKey
       );
-      const myRowFromSnapshot = rows.find((x) => x.uid === uid) ?? null;
-      const payload = {
-        ok: true as const,
-        group,
-        rankingMetric,
-        periodType,
-        rankingLeague,
-        rows,
-        myRow: myRowFromSnapshot,
-      };
-      setCachedLeaderboardResponse(
-        {
-          groupId,
+      if (snapshot && snapshotMatchesGroup(snapshot, rankingOpts)) {
+        const rows = await withLiveUserFields(
+          snapshot.rows as RankedLeaderboardRow[]
+        );
+        const myRowFromSnapshot = rows.find((x) => x.uid === uid) ?? null;
+        const payload = {
+          ok: true as const,
+          group,
           rankingMetric,
-          rankingLeague,
-          rankingTeamIds,
           periodType,
-          rankingStartDateKey,
-          rankingStartAtMs,
+          rankingLeague,
           rankingGamesScope,
-          rankingEndDateKey,
-          rankingPeriodMonthKey,
-          rankingSeasonKey,
-          memberCount: snapshot.memberCount,
-          topMemberUidSample: "",
-        },
-        payload
-      );
-      return NextResponse.json(payload, {
-        headers: {
-          // 認証付きのため CDN 公開はしない。同一ブラウザの短再取得だけ抑える
-          "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
-        },
-      });
+          defaultRule,
+          appliedRule,
+          rows,
+          myRow: myRowFromSnapshot,
+        };
+        setCachedLeaderboardResponse(
+          {
+            groupId,
+            rankingMetric,
+            rankingLeague,
+            rankingTeamIds,
+            periodType,
+            rankingStartDateKey,
+            rankingStartAtMs,
+            rankingGamesScope,
+            rankingEndDateKey,
+            rankingPeriodMonthKey,
+            rankingSeasonKey,
+            memberCount: snapshot.memberCount,
+            topMemberUidSample: "",
+          },
+          payload
+        );
+        return NextResponse.json(payload, {
+          headers: {
+            // 認証付きのため CDN 公開はしない。同一ブラウザの短再取得だけ抑える
+            "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+          },
+        });
+      }
     }
 
     const members = await adminDb
@@ -217,7 +261,15 @@ export async function GET(req: Request, ctx: Ctx) {
         cached.rows as RankedLeaderboardRow[]
       );
       const myRow = rows.find((x) => x.uid === uid) ?? null;
-      return NextResponse.json({ ...cached, group, rows, myRow });
+      return NextResponse.json({
+        ...cached,
+        group,
+        rankingGamesScope,
+        defaultRule,
+        appliedRule,
+        rows,
+        myRow,
+      });
     }
 
     const rows = await buildMemberLeaderboard(adminDb, memberUids, rankingMetric, {
@@ -258,25 +310,32 @@ export async function GET(req: Request, ctx: Ctx) {
       rankingMetric,
       periodType,
       rankingLeague,
+      rankingGamesScope,
+      defaultRule,
+      appliedRule,
       rows: ranked,
       myRow,
     } as const;
-    await writeLeaderboardSnapshot(adminDb, groupId, {
-      slotKey: snapshotSlotKey,
-      rankingMetric,
-      rankingLeague,
-      rankingTeamIds,
-      periodType,
-      rankingStartDateKey,
-      rankingStartAtMs,
-      rankingGamesScope,
-      rankingEndDateKey,
-      rankingPeriodMonthKey,
-      rankingSeasonKey,
-      memberCount: memberUids.length,
-      rows: ranked,
-      builtAtMs: Date.now(),
-    });
+
+    // Firestore 日次 snapshot はデフォルト scope のときだけ書く（全組み合わせを増やさない）
+    if (isDefaultGamesScope) {
+      await writeLeaderboardSnapshot(adminDb, groupId, {
+        slotKey: snapshotSlotKey,
+        rankingMetric,
+        rankingLeague,
+        rankingTeamIds,
+        periodType,
+        rankingStartDateKey,
+        rankingStartAtMs,
+        rankingGamesScope,
+        rankingEndDateKey,
+        rankingPeriodMonthKey,
+        rankingSeasonKey,
+        memberCount: memberUids.length,
+        rows: ranked,
+        builtAtMs: Date.now(),
+      });
+    }
     setCachedLeaderboardResponse(cacheParams, payload);
     return NextResponse.json(payload, {
       headers: {

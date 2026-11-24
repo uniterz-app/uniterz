@@ -1,4 +1,4 @@
-/** グループ詳細ヒーロー — 画像を下端で背景色へフェード、TITLE を画像上に重ねる */
+/** グループ詳細ヒーロー — カバー画像の上に名前、下で背景へ溶ける */
 import { useCallback, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -8,6 +8,8 @@ import {
   COMMUNITY_GROUP_HERO_IMAGE_HEIGHT,
   COMMUNITY_GROUP_HERO_NATIVE_SCRIM,
   COMMUNITY_GROUP_HERO_NATIVE_SCRIM_HORIZONTAL,
+  COMMUNITY_GROUP_HERO_NATIVE_SCRIM_BOTTOM,
+  COMMUNITY_GROUP_HERO_NATIVE_SCRIM_TOP,
   COMMUNITY_GROUP_HERO_PANEL_OVERLAP,
 } from "../../../../../lib/communities/communityGroupHeroLayout";
 import type { CommunityGroupSummary } from "./communityApiNative";
@@ -27,6 +29,8 @@ type Props = {
   capTop?: boolean;
   /** 画像編集中 — 親 ScrollView のスクロール無効化用 */
   onImageEditingChange?: (editing: boolean) => void;
+  onEditGroup?: () => void;
+  onEndGroup?: () => void;
 };
 
 export default function CommunityGroupHeaderHeroNative({
@@ -37,8 +41,11 @@ export default function CommunityGroupHeaderHeroNative({
   onImageUpdated,
   capTop = false,
   onImageEditingChange,
+  onEditGroup,
+  onEndGroup,
 }: Props) {
   const [imageEditing, setImageEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const hasImage = Boolean(summary.headerImageUrl);
   const editable = summary.isOwner && !summary.archived;
   const showMedia = hasImage || editable;
@@ -59,9 +66,61 @@ export default function CommunityGroupHeaderHeroNative({
     );
   }
 
+  const photoOverlay =
+    hasImage && !imageEditing ? (
+      <>
+        <LinearGradient
+          pointerEvents="none"
+          colors={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_TOP.colors]}
+          locations={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_TOP.locations]}
+          style={[
+            styles.scrimTop,
+            {
+              height:
+                COMMUNITY_GROUP_HERO_IMAGE_HEIGHT *
+                COMMUNITY_GROUP_HERO_NATIVE_SCRIM_TOP.heightRatio,
+            },
+          ]}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM.colors]}
+          locations={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM.locations]}
+          style={styles.scrim}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_BOTTOM.colors]}
+          locations={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_BOTTOM.locations]}
+          style={[
+            styles.scrimBottom,
+            {
+              height:
+                COMMUNITY_GROUP_HERO_IMAGE_HEIGHT *
+                COMMUNITY_GROUP_HERO_NATIVE_SCRIM_BOTTOM.heightRatio,
+            },
+          ]}
+        />
+        <LinearGradient
+          pointerEvents="none"
+          colors={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_HORIZONTAL.colors]}
+          locations={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_HORIZONTAL.locations]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.scrim}
+        />
+      </>
+    ) : null;
+
   return (
-    <View style={[styles.hero, capTop && styles.heroCapTop]}>
-      <View style={[styles.imageLayer, capTop && styles.imageLayerCapTop]}>
+    <View style={[styles.hero, capTop && styles.heroCapTop, menuOpen && styles.heroMenuOpen]}>
+      <View
+        style={[
+          styles.imageLayer,
+          capTop && styles.imageLayerCapTop,
+          menuOpen && styles.imageLayerMenuOpen,
+        ]}
+      >
         <CommunityGroupHeaderImageNative
           groupId={groupId}
           language={language}
@@ -72,33 +131,25 @@ export default function CommunityGroupHeaderHeroNative({
           editable={editable}
           getIdToken={getIdToken}
           layout="hero"
+          photoOverlay={photoOverlay}
           onEditingChange={handleImageEditingChange}
           onUpdated={onImageUpdated}
+          onEditGroup={onEditGroup}
+          onEndGroup={onEndGroup}
+          onMenuOpenChange={setMenuOpen}
         />
-
-        {hasImage && !imageEditing ? (
-          <>
-            <LinearGradient
-              pointerEvents="none"
-              colors={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM.colors]}
-              locations={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM.locations]}
-              style={styles.scrim}
-            />
-            <LinearGradient
-              pointerEvents="none"
-              colors={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_HORIZONTAL.colors]}
-              locations={[...COMMUNITY_GROUP_HERO_NATIVE_SCRIM_HORIZONTAL.locations]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={styles.scrim}
-            />
-          </>
-        ) : null}
       </View>
 
       {!imageEditing ? (
-        <View style={styles.panelOverlay}>
-          <CommunityGroupHeaderPanelNative summary={summary} language={language} overlay />
+        <View
+          style={[styles.panelOverlay, menuOpen && styles.panelOverlayMenuOpen]}
+          pointerEvents={menuOpen ? "none" : "auto"}
+        >
+          <CommunityGroupHeaderPanelNative
+            summary={summary}
+            language={language}
+            overlay
+          />
         </View>
       ) : null}
     </View>
@@ -108,30 +159,56 @@ export default function CommunityGroupHeaderHeroNative({
 const styles = StyleSheet.create({
   hero: {
     position: "relative",
-    marginBottom: 16,
+    marginBottom: 0,
     width: "100%",
     overflow: "hidden",
     backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   heroCapTop: {},
   panelOnly: {
-    marginBottom: 16,
+    marginBottom: 0,
   },
   imageLayer: {
     width: "100%",
     height: COMMUNITY_GROUP_HERO_IMAGE_HEIGHT,
     position: "relative",
     overflow: "hidden",
+    backgroundColor: COMMUNITY_GROUP_HERO_BG,
   },
   imageLayerCapTop: {},
+  /** メニュー中はタイトル帯より前面にして「グループ終了」などを押せるようにする */
+  imageLayerMenuOpen: {
+    zIndex: 30,
+  },
+  heroMenuOpen: {
+    overflow: "visible",
+    zIndex: 30,
+  },
   scrim: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 4,
+  },
+  scrimTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 5,
+  },
+  scrimBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 5,
   },
   panelOverlay: {
     position: "relative",
     zIndex: 10,
     marginTop: -COMMUNITY_GROUP_HERO_PANEL_OVERLAP,
     paddingHorizontal: 0,
+  },
+  panelOverlayMenuOpen: {
+    zIndex: 1,
   },
 });

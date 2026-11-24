@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
   },
   groupLabel: {
     fontFamily: METRIC_FONT,
-    color: "rgba(0,245,255,0.42)",
+    color: "rgba(236,254,255,0.78)",
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.0,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   groupLabelActive: {
-    color: CYBER_TAB_CYAN,
+    color: "rgba(255,255,255,0.95)",
   },
   railChip: {
     alignSelf: "stretch",

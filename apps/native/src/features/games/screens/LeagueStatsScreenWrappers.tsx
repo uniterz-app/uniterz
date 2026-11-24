@@ -18,7 +18,13 @@ export function LeagueStatsScreenWrapper() {
   return (
     <LeagueStatsHubScreenNative
       language={language === "ja" ? "ja" : "en"}
-      initialTab={route.params?.tab === "player" ? "player" : "team"}
+      initialTab={
+        route.params?.tab === "player"
+          ? "player"
+          : route.params?.tab === "league"
+            ? "league"
+            : "team"
+      }
       onClose={() => navigation.goBack()}
       onSelectTeam={(teamId) =>
         navigation.navigate("TeamDetailPreview", { teamId })

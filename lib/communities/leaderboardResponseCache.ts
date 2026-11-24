@@ -27,6 +27,22 @@ export type LeaderboardResponsePayload = {
   rankingMetric: CommunityMetric;
   periodType: CommunityPeriodType;
   rankingLeague: CommunityLeague;
+  /** 閲覧オーバーライド後の試合対象（無いときは group のデフォルト） */
+  rankingGamesScope?: string;
+  defaultRule?: {
+    rankingMetric: CommunityMetric;
+    periodType: CommunityPeriodType;
+    rankingLeague: CommunityLeague;
+    rankingGamesScope: string;
+    rankingTeamIds: string[];
+  };
+  appliedRule?: {
+    rankingMetric: CommunityMetric;
+    periodType: CommunityPeriodType;
+    rankingLeague: CommunityLeague;
+    rankingGamesScope: string;
+    rankingTeamIds: string[];
+  };
   rows: RankedRow[];
   myRow: RankedRow | null;
 };

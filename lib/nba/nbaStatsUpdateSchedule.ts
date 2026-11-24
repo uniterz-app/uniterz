@@ -13,7 +13,8 @@ export function nbaDailyStatsUpdateFootnote(
   const preseason = options?.preseason ?? /preseason/i.test(base);
   // プレシーズン注記（PRESEASON · 年 · 開幕後に本番データ）は出さない
   if (preseason) return "";
-  const schedule = L(lang, {
+  // 画面には更新時刻だけ（BDL / シーズン / 集計元は付けない）
+  return L(lang, {
     ja: `更新: 毎日 ${NBA_DAILY_STATS_INGEST_JST} JST`,
     en: `Updated daily · ${NBA_DAILY_STATS_INGEST_JST} JST`,
     ko: `매일 업데이트 · ${NBA_DAILY_STATS_INGEST_JST} JST`,
@@ -22,5 +23,4 @@ export function nbaDailyStatsUpdateFootnote(
     pt: `Atualizado diariamente · ${NBA_DAILY_STATS_INGEST_JST} JST`,
     fr: `Mis à jour chaque jour · ${NBA_DAILY_STATS_INGEST_JST} JST`,
   });
-  return base ? `${schedule} · ${base}` : schedule;
 }

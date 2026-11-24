@@ -12,6 +12,7 @@ import { ingestNbaGamesFromBdl } from "@/lib/nba/ingest/nbaGamesIngest";
 import { ingestNbaLeagueStatsFromProvider } from "@/lib/nba/ingest/nbaLeagueStatsIngest";
 import { ingestNbaTeamGameLogsFromGames } from "@/lib/nba/ingest/nbaTeamGameLogsIngest";
 import { ingestNbaStandingsFromBdl } from "@/lib/nba/ingest/nbaStandingsIngest";
+import { ingestNbaCupStandings } from "@/lib/nba/ingest/nbaCupStandingsIngest";
 import { ingestNbaPlayerShotZonesFromBdl } from "@/lib/nba/ingest/nbaPlayerShotZonesIngest";
 import { ingestNbaTeamRostersFromBdl } from "@/lib/nba/ingest/nbaTeamRostersIngest";
 import { ingestNbaPlayerGameLogsFromBdl } from "@/lib/nba/ingest/nbaPlayerGameLogsIngest";
@@ -99,6 +100,11 @@ export async function runNbaStatsSnapshotSteps(
   steps.push(
     await runStep("standings", () =>
       ingestNbaStandingsFromBdl(db, { seasonKey, seasonGames })
+    )
+  );
+  steps.push(
+    await runStep("cup-standings", () =>
+      ingestNbaCupStandings(db, { seasonKey, seasonGames })
     )
   );
   steps.push(

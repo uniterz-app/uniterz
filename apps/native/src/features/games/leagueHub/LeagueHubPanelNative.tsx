@@ -1,6 +1,13 @@
-/** 順位ページ LEAGUE タブ — 今季の NBA を図で見る（TEAM / PLAYER） */
+/** STATS の LEAGUE タブ — 今季の NBA を図で見る（TEAM / PLAYER） */
 import { useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import {
   CyberSlantedTabBarNative,
   CyberSlantedTabNative,
@@ -85,7 +92,10 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
   const [tab, setTab] = useState<"team" | "player">("team");
   const [playerSection, setPlayerSection] = useState<LeagueHubPlayerSection>("style");
   const [teamSection, setTeamSection] = useState<LeagueHubTeamSection>("style");
-  const [barW, setBarW] = useState(0);
+  const { width: windowWidth } = useWindowDimensions();
+  /** タブ左右 padding 12×2。onLayout 待ちだと LEAGUE 切替直後に下段が消えて見える */
+  const tabsPadX = 24;
+  const [barW, setBarW] = useState(() => Math.max(0, windowWidth - tabsPadX));
   const { hub, loading } = useNbaLeagueHubNative();
   const { bottomContentReserveY } = useBottomTabBarInsets();
   const { onTableScroll } = useLeagueStatsCollapse();
@@ -111,18 +121,22 @@ export default function LeagueHubPanelNative({ lang, onSelectTeam, onSelectPlaye
     <View style={styles.root}>
       <LeagueStatsCollapsibleNative>
       <View style={styles.tabs}>
-        <View style={styles.row} onLayout={(e) => setBarW(e.nativeEvent.layout.width)}>
+        <View
+          style={styles.row}
+          onLayout={(e) => {
+            const w = e.nativeEvent.layout.width;
+            if (w > 0 && Math.abs(w - barW) > 0.5) setBarW(w);
+          }}
+        >
           {barW > 0 ? <ElbowLine width={barW} parent={PARENT_SIDE} /> : null}
           <View style={styles.lowerHost}>
             <View
               style={[
                 styles.lowerScale,
-                barW > 0
-                  ? (() => {
-                      const g = subRowGeometry(barW, PARENT_SIDE);
-                      return { left: g.rawLeft, width: g.rawW };
-                    })()
-                  : styles.lowerHidden,
+                (() => {
+                  const g = subRowGeometry(barW > 0 ? barW : Math.max(0, windowWidth - tabsPadX), PARENT_SIDE);
+                  return { left: g.rawLeft, width: g.rawW };
+                })(),
               ]}
             >
               <CyberSlantedTabBarNative fill>
@@ -238,11 +252,6 @@ const styles = StyleSheet.create({
     height: TAB_BAR_H,
     overflow: "visible",
     transform: [{ scale: LOWER_SCALE }],
-  },
-  lowerHidden: {
-    left: 0,
-    width: 0,
-    opacity: 0,
   },
   subTabs: {
     paddingHorizontal: 12,

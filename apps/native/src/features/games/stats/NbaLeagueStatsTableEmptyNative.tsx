@@ -9,9 +9,8 @@ type Props = {
 
 export default function NbaLeagueStatsTableEmptyNative({ copy }: Props) {
   return (
-    <View style={styles.root}>
+    <View style={styles.root} accessibilityLabel={copy.title}>
       <Text style={styles.title}>{copy.title}</Text>
-      <Text style={styles.body}>{copy.body}</Text>
     </View>
   );
 }
@@ -36,13 +35,5 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: `${CYBER_TAB_CYAN}BF`,
     textTransform: "uppercase",
-  },
-  body: {
-    marginTop: 12,
-    maxWidth: 280,
-    fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.55)",
-    textAlign: "center",
   },
 });

@@ -21,6 +21,8 @@ function RankingRowCard({
   animateCrown = false,
   pageKey = "",
   reduceMotion = false,
+  frameFallback = false,
+  metricTagOverride = null,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -30,6 +32,8 @@ function RankingRowCard({
   animateCrown?: boolean;
   pageKey?: string;
   reduceMotion?: boolean;
+  frameFallback?: boolean;
+  metricTagOverride?: string | null;
 }) {
   const countryCode = getCountryCode(row);
   const { n } = metricNum(row, metric);
@@ -64,6 +68,8 @@ function RankingRowCard({
       reduceMotion={reduceMotion}
       proSkinVariant={proSkinVariant}
       proSkinIntensity="subtle"
+      frameFallback={frameFallback}
+      metricTagOverride={metricTagOverride}
     />
     <RankingRowCommentNative comment={row.rankingComment} align="list" />
     </>
@@ -128,6 +134,8 @@ export function RankingListCardNative({
   animateCrown = false,
   pageKey = "",
   reduceMotion = false,
+  frameFallback = false,
+  metricTagOverride = null,
 }: {
   row: RankingRowWithCountry;
   rank: number;
@@ -137,6 +145,10 @@ export function RankingListCardNative({
   animateCrown?: boolean;
   pageKey?: string;
   reduceMotion?: boolean;
+  /** グループ詳細など — 4位以下にも薄い枠 */
+  frameFallback?: boolean;
+  /** グループ最高連勝など — 指標タグ上書き */
+  metricTagOverride?: string | null;
 }) {
   return (
     <RankingRowCard
@@ -148,6 +160,8 @@ export function RankingListCardNative({
       animateCrown={animateCrown}
       pageKey={pageKey}
       reduceMotion={reduceMotion}
+      frameFallback={frameFallback}
+      metricTagOverride={metricTagOverride}
     />
   );
 }

@@ -55,7 +55,10 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-/** JST 16:00 基準のスナップショット日付キー */
+/**
+ * JST 16:00 基準のスナップショット日付キー。
+ * `__maxstreak` = 連勝欄を最高連勝に切り替えたあとの再生成用（旧スロットは読まない）。
+ */
 export function getLeaderboardSnapshotSlotKeyJst(now = new Date()): string {
   const ymd = getZonedYMD(now, TIMEZONE_JST);
   const hourJst = Number(
@@ -69,7 +72,7 @@ export function getLeaderboardSnapshotSlotKeyJst(now = new Date()): string {
   if (Number.isFinite(hourJst) && hourJst < 16) {
     base.setUTCDate(base.getUTCDate() - 1);
   }
-  return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(base.getUTCDate())}`;
+  return `${base.getUTCFullYear()}-${pad2(base.getUTCMonth() + 1)}-${pad2(base.getUTCDate())}__maxstreak`;
 }
 
 function snapshotRef(db: Firestore, groupId: string, slotKey: string) {
