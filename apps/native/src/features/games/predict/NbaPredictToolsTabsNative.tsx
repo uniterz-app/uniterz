@@ -21,6 +21,7 @@ import {
   showProPickRewardedAdNative,
   type ProPickRewardedResult,
 } from "../../ads/proPickRewardedAdNative";
+import { startProPickUnlockPollNative } from "../../ads/rewardedAdUnlockPollNative";
 import {
   peekProPickAdEarnedGameId,
   setProPickAdEarnedGameId,
@@ -245,20 +246,18 @@ export default function NbaPredictToolsTabsNative({
     enabled: insightAvailable,
   });
   const pollProPickUnlock = async (id: string) => {
-    for (let i = 0; i < 15; i++) {
-      if (i > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
-      const again = await requestProPickUnlock({
-        apiBase: apiBaseUrl,
-        gameId: id,
-        adWatched: false,
-      });
-      if (again?.unlocked) {
-        pendingAdGameIdRef.current = null;
-        setProPickUnlockedGameId(id);
-        return true;
-      }
+    const ok = await startProPickUnlockPollNative(id);
+    if (ok) {
+      pendingAdGameIdRef.current = null;
+      setProPickUnlockedGameId(id);
     }
-    return false;
+    return ok;
+  };
+
+  const markProPickAdSession = (id: string) => {
+    setProPickAdEarnedGameId(id);
+    pendingAdGameIdRef.current = id;
+    void startProPickUnlockPollNative(id);
   };
 
   /** AdMob のリワード広告を見て、SSV の確定を待つ（届くまで数回確認する） */
@@ -268,20 +267,32 @@ export default function NbaPredictToolsTabsNative({
     if (!gameId || !uid) return;
     const result = presentRewardedAd
       ? await presentRewardedAd({ gameId, userId: uid })
-      : await showProPickRewardedAdNative({ userId: uid, gameId });
+      : await showProPickRewardedAdNative({
+          userId: uid,
+          gameId,
+          onPresented: () => markProPickAdSession(gameId),
+        });
     if (result === "error") {
+      if (peekProPickAdEarnedGameId() === gameId) {
+        markProPickAdSession(gameId);
+        setProPickConfirming(true);
+        try {
+          const ok = await pollProPickUnlock(gameId);
+          if (!ok) cyberAlert(copy.adModalTitle, copy.adPending);
+        } finally {
+          setProPickConfirming(false);
+        }
+        return;
+      }
       cyberAlert(copy.adModalTitle, copy.adUnavailable);
       return;
     }
-    if (result === "earned") {
-      setProPickAdEarnedGameId(gameId);
-      pendingAdGameIdRef.current = gameId;
-    }
+    // closed でも見た扱い。シートを閉じても確認は続ける
+    markProPickAdSession(gameId);
     if (presentRewardedAd) {
       // 予想シートを閉じて出している。解除確認は開き直した先で行う
       return;
     }
-    if (result !== "earned") return;
     setProPickConfirming(true);
     try {
       const ok = await pollProPickUnlock(gameId);
@@ -307,8 +318,7 @@ export default function NbaPredictToolsTabsNative({
       try {
         const ok = await pollProPickUnlock(gameId);
         if (cancelled) return;
-        if (ok) setProPickAdEarnedGameId(null);
-        else cyberAlert(copy.adModalTitle, copy.adPending);
+        if (!ok) cyberAlert(copy.adModalTitle, copy.adPending);
       } finally {
         if (!cancelled) setProPickConfirming(false);
       }
@@ -323,7 +333,10 @@ export default function NbaPredictToolsTabsNative({
     if (!gameId) return;
     setProPickUnlockBusy(true);
     try {
-      if (!adWatched && pendingAdGameIdRef.current === gameId) {
+      if (
+        !adWatched &&
+        (pendingAdGameIdRef.current === gameId || peekProPickAdEarnedGameId() === gameId)
+      ) {
         setProPickConfirming(true);
         try {
           const ok = await pollProPickUnlock(gameId);

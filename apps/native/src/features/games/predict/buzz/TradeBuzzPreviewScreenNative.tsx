@@ -18,6 +18,7 @@ import {
   showTradeBuzzRewardedAdNative,
   type ProPickRewardedResult,
 } from "../../../ads/proPickRewardedAdNative";
+import { startTradeBuzzUnlockPollNative } from "../../../ads/rewardedAdUnlockPollNative";
 import { fetchTradeBuzzUnlockNative } from "./tradeBuzzUnlockApiNative";
 import {
   peekTradeBuzzAdEarned,
@@ -53,8 +54,6 @@ type Props = {
    */
   presentRewardedAd?: (userId: string) => Promise<ProPickRewardedResult>;
 };
-
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 export default function TradeBuzzPreviewScreenNative({
   onClose,
@@ -131,16 +130,14 @@ export default function TradeBuzzPreviewScreenNative({
   };
 
   const pollBuzzUnlock = async () => {
-    for (let i = 0; i < 15; i++) {
-      if (i > 0) await sleep(1500);
-      const state = await fetchTradeBuzzUnlockNative();
-      if (state?.unlocked) {
-        setTradeBuzzAdEarned(false);
-        setBuzzUnlocked(true);
-        return true;
-      }
-    }
-    return false;
+    const ok = await startTradeBuzzUnlockPollNative();
+    if (ok) setBuzzUnlocked(true);
+    return ok;
+  };
+
+  const markBuzzAdSession = () => {
+    setTradeBuzzAdEarned(true);
+    void startTradeBuzzUnlockPollNative();
   };
 
   const resumedAdRef = useRef(false);
@@ -180,17 +177,29 @@ export default function TradeBuzzPreviewScreenNative({
       // Buzz 専用の広告ユニット（PRO PICK とは別）。画面を閉じてフルスクリーンで出す
       const result = presentRewardedAd
         ? await presentRewardedAd(fUser.uid)
-        : await showTradeBuzzRewardedAdNative({ userId: fUser.uid });
+        : await showTradeBuzzRewardedAdNative({
+            userId: fUser.uid,
+            onPresented: markBuzzAdSession,
+          });
       if (result === "error") {
+        if (peekTradeBuzzAdEarned()) {
+          const ok = await pollBuzzUnlock();
+          if (!ok) {
+            cyberAlert(
+              "確認中",
+              "広告の確認に少し時間がかかっています。しばらくしてから開き直してください。"
+            );
+          }
+          return;
+        }
         cyberAlert("広告", "広告を読み込めませんでした。少し待ってからもう一度お試しください。");
         return;
       }
-      if (result === "earned") setTradeBuzzAdEarned(true);
+      markBuzzAdSession();
       if (presentRewardedAd) {
         // 画面を開き直した先で解除確認する
         return;
       }
-      if (result !== "earned") return;
       const ok = await pollBuzzUnlock();
       if (!ok) {
         cyberAlert(

@@ -12,13 +12,21 @@
  *
  * 広告のネイティブ部分が無いビルドでは "error" を返す（起動は止めない）。
  */
-import { Platform } from "react-native";
+import { AppState, Platform, type NativeEventSubscription } from "react-native";
 import { ensureAdsReadyNative, loadAdsModuleNative } from "./adsConsentNative";
 
 export type ProPickRewardedResult = "earned" | "closed" | "error";
 
 /** 広告の用途（広告ユニットを分ける単位） */
 export type RewardedAdPlacement = "pro_pick" | "trade_buzz";
+
+type RewardedShowOpts = {
+  userId: string;
+  customData: Record<string, string>;
+  placement?: RewardedAdPlacement;
+  /** 広告が前面に出た瞬間（App Store に飛ぶ前でも）。シートの × より先に見た判定を残す */
+  onPresented?: () => void;
+};
 
 function rewardedUnitId(testId: string, placement: RewardedAdPlacement): string {
   const ios = Platform.OS === "ios";
@@ -33,16 +41,34 @@ function rewardedUnitId(testId: string, placement: RewardedAdPlacement): string 
   return envId?.trim() || testId;
 }
 
+function whenAppActive(fn: () => void): () => void {
+  if (AppState.currentState === "active") {
+    fn();
+    return () => {};
+  }
+  let sub: NativeEventSubscription | null = AppState.addEventListener(
+    "change",
+    (state) => {
+      if (state !== "active") return;
+      sub?.remove();
+      sub = null;
+      fn();
+    }
+  );
+  return () => {
+    sub?.remove();
+    sub = null;
+  };
+}
+
 /**
  * リワード広告を表示する（用途は `customData` で SSV に渡す）。
  * - `userId` は SSV の user_id に入る（サーバーはこれで誰の報酬かを確かめる）
  * - `customData` は SSV の custom_data に入る（用途の判定に使う。例: `{ feature: "trade_buzz" }`）
  */
-export async function showRewardedAdNative(opts: {
-  userId: string;
-  customData: Record<string, string>;
-  placement?: RewardedAdPlacement;
-}): Promise<ProPickRewardedResult> {
+export async function showRewardedAdNative(
+  opts: RewardedShowOpts
+): Promise<ProPickRewardedResult> {
   const ads = loadAdsModuleNative();
   if (!ads) return "error";
   try {
@@ -65,45 +91,93 @@ export async function showRewardedAdNative(opts: {
     return await new Promise<ProPickRewardedResult>((resolve) => {
       let earned = false;
       let closed = false;
+      let shown = false;
+      let presenting = false;
       let settled = false;
       let closeTimer: ReturnType<typeof setTimeout> | null = null;
+      let cancelWaitActive: (() => void) | null = null;
       const unsubs: Array<() => void> = [];
       const finish = (result: ProPickRewardedResult) => {
         if (settled) return;
         settled = true;
         if (closeTimer) clearTimeout(closeTimer);
+        cancelWaitActive?.();
         unsubs.forEach((u) => u());
         resolve(result);
       };
+      const finishAfterForeground = (result: ProPickRewardedResult) => {
+        cancelWaitActive?.();
+        cancelWaitActive = whenAppActive(() => finish(result));
+      };
+      const settleAfterClose = () => {
+        // App Store に飛んだ CLOSED は裏にいるあいだ確定しない（UNITERZ のモーダルを重ねない）
+        const result: ProPickRewardedResult = earned || shown ? "earned" : "closed";
+        if (AppState.currentState !== "active") {
+          finishAfterForeground(result);
+          return;
+        }
+        if (earned || shown) {
+          finish("earned");
+          return;
+        }
+        closeTimer = setTimeout(
+          () => finish(earned || shown ? "earned" : "closed"),
+          1_500
+        );
+      };
+      // 読み込み待ちだけ。出してからは切らない
+      const loadTimer = setTimeout(() => {
+        if (!presenting && !shown) finish("error");
+      }, 30_000);
+      unsubs.push(() => clearTimeout(loadTimer));
       unsubs.push(
         ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-          ad.show().catch(() => finish("error"));
+          presenting = true;
+          clearTimeout(loadTimer);
+          ad.show().catch(() => {
+            if (!shown && !earned) finish("error");
+          });
+        })
+      );
+      unsubs.push(
+        ad.addAdEventListener(AdEventType.OPENED, () => {
+          shown = true;
+          opts.onPresented?.();
+        })
+      );
+      unsubs.push(
+        ad.addAdEventListener(AdEventType.CLICKED, () => {
+          earned = true;
+          shown = true;
+          opts.onPresented?.();
         })
       );
       unsubs.push(
         ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
           earned = true;
-          // iOS は CLOSED が先に来ることがある。閉じたあとに報酬が届いたら earned にする
-          if (closed) finish("earned");
+          shown = true;
+          opts.onPresented?.();
+          if (closed) finishAfterForeground("earned");
         })
       );
       unsubs.push(
         ad.addAdEventListener(AdEventType.CLOSED, () => {
           closed = true;
-          if (earned) {
-            finish("earned");
-            return;
-          }
-          closeTimer = setTimeout(() => finish(earned ? "earned" : "closed"), 800);
+          if (presenting) shown = true;
+          if (!earned) opts.onPresented?.();
+          settleAfterClose();
         })
       );
       unsubs.push(
         ad.addAdEventListener(AdEventType.ERROR, () => {
+          if (earned || shown) {
+            finishAfterForeground("earned");
+            return;
+          }
+          if (presenting || closed) return;
           finish("error");
         })
       );
-      const loadTimer = setTimeout(() => finish("error"), 30_000);
-      unsubs.push(() => clearTimeout(loadTimer));
       ad.load();
     });
   } catch {
@@ -114,11 +188,13 @@ export async function showRewardedAdNative(opts: {
 /** トレード Buzz の「今日の解除」用（専用の広告ユニット・custom_data は `{ feature: "trade_buzz" }`） */
 export function showTradeBuzzRewardedAdNative(opts: {
   userId: string;
+  onPresented?: () => void;
 }): Promise<ProPickRewardedResult> {
   return showRewardedAdNative({
     userId: opts.userId,
     customData: { feature: "trade_buzz" },
     placement: "trade_buzz",
+    onPresented: opts.onPresented,
   });
 }
 
@@ -126,9 +202,11 @@ export function showTradeBuzzRewardedAdNative(opts: {
 export function showProPickRewardedAdNative(opts: {
   userId: string;
   gameId: string;
+  onPresented?: () => void;
 }): Promise<ProPickRewardedResult> {
   return showRewardedAdNative({
     userId: opts.userId,
     customData: { gameId: opts.gameId },
+    onPresented: opts.onPresented,
   });
 }

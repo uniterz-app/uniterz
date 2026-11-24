@@ -48,6 +48,19 @@ export type AdMobSsvResult =
     }
   | { ok: false; reason: string };
 
+/** `ca-app-pub-…/123` と `123` を同じユニットとして扱う */
+export function adMobUnitIdKey(unit: string): string {
+  const t = unit.trim();
+  const slash = t.lastIndexOf("/");
+  return slash >= 0 ? t.slice(slash + 1) : t;
+}
+
+export function adMobUnitInList(unit: string, list: string[]): boolean {
+  if (!unit || list.length === 0) return false;
+  const key = adMobUnitIdKey(unit);
+  return list.some((item) => item === unit || adMobUnitIdKey(item) === key);
+}
+
 /**
  * `rawQuery` は `?` より後ろの、加工していない文字列。
  * 必要なのは transaction_id / user_id / custom_data（用途の判定）/ ad_unit。

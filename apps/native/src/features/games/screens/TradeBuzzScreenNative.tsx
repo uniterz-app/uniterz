@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { GamesStackParamList } from "../../../navigation/types";
 import TradeBuzzPreviewScreenNative from "../predict/buzz/TradeBuzzPreviewScreenNative";
 import { showTradeBuzzRewardedAdNative } from "../../ads/proPickRewardedAdNative";
+import { startTradeBuzzUnlockPollNative } from "../../ads/rewardedAdUnlockPollNative";
 import { waitHostDismissedForRewardedAd } from "../scheduleAfterPredictModalDismissed";
 import { setTradeBuzzAdEarned } from "../predict/buzz/tradeBuzzAdSessionNative";
 
@@ -16,8 +17,17 @@ export default function TradeBuzzScreenNative() {
       navigation.goBack();
       await waitHostDismissedForRewardedAd();
       try {
-        const result = await showTradeBuzzRewardedAdNative({ userId });
-        if (result === "earned") setTradeBuzzAdEarned(true);
+        const result = await showTradeBuzzRewardedAdNative({
+          userId,
+          onPresented: () => {
+            setTradeBuzzAdEarned(true);
+            void startTradeBuzzUnlockPollNative();
+          },
+        });
+        if (result !== "error") {
+          setTradeBuzzAdEarned(true);
+          void startTradeBuzzUnlockPollNative();
+        }
         return result;
       } finally {
         navigation.navigate("TradeBuzz");

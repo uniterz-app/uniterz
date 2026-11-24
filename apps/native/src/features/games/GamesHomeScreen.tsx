@@ -152,6 +152,7 @@ import {
   waitPredictModalDismissed,
 } from "./scheduleAfterPredictModalDismissed";
 import { showProPickRewardedAdNative } from "../ads/proPickRewardedAdNative";
+import { startProPickUnlockPollNative } from "../ads/rewardedAdUnlockPollNative";
 import { setProPickAdEarnedGameId } from "./predict/proPickAdSessionNative";
 import { useTrackViewNative } from "../../analytics/useTrackViewNative";
 import { predictAnalyticsPath } from "../../analytics/appAnalyticsNative";
@@ -715,8 +716,17 @@ export default function GamesHomeScreen({
       setIsPredictModalOpen(false);
       await waitPredictModalDismissed();
       try {
-        const result = await showProPickRewardedAdNative(opts);
-        if (result === "earned") setProPickAdEarnedGameId(opts.gameId);
+        const result = await showProPickRewardedAdNative({
+          ...opts,
+          onPresented: () => {
+            setProPickAdEarnedGameId(opts.gameId);
+            void startProPickUnlockPollNative(opts.gameId);
+          },
+        });
+        if (result !== "error") {
+          setProPickAdEarnedGameId(opts.gameId);
+          void startProPickUnlockPollNative(opts.gameId);
+        }
         return result;
       } finally {
         setPredictModalHideAnimated(false);

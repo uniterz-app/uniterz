@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { verifyAdMobSsv } from "@/lib/ads/admobSsvVerify";
+import { adMobUnitInList, verifyAdMobSsv } from "@/lib/ads/admobSsvVerify";
 import { grantProPickUnlockFromAd } from "@/lib/pro/proPickGameAccess";
 import { grantTradeBuzzUnlockFromAd } from "@/lib/ads/tradeBuzzAdUnlock";
 
@@ -49,14 +49,14 @@ export async function GET(req: Request) {
   if (result.purpose.kind === "trade_buzz") {
     const allowed = buzzUnits.length > 0 ? buzzUnits : proPickUnits;
     // ad_unit が空のコールバックは弾かない（パラメータ名が違うときがある）
-    if (unit && allowed.length > 0 && !allowed.includes(unit)) {
-      console.warn(`[admob-ssv] ignored reason=ad_unit purpose=trade_buzz`);
+    if (unit && allowed.length > 0 && !adMobUnitInList(unit, allowed)) {
+      console.warn(`[admob-ssv] ignored reason=ad_unit purpose=trade_buzz unit=${unit}`);
       return new NextResponse("ignored: ad_unit", { status: 200 });
     }
   } else if (unit) {
     // PRO PICK の報酬で Buzz 専用ユニットは受け付けない（用途を混ぜない）
-    if (buzzUnits.includes(unit) || (proPickUnits.length > 0 && !proPickUnits.includes(unit))) {
-      console.warn(`[admob-ssv] ignored reason=ad_unit purpose=pro_pick`);
+    if (adMobUnitInList(unit, buzzUnits) || (proPickUnits.length > 0 && !adMobUnitInList(unit, proPickUnits))) {
+      console.warn(`[admob-ssv] ignored reason=ad_unit purpose=pro_pick unit=${unit}`);
       return new NextResponse("ignored: ad_unit", { status: 200 });
     }
   }

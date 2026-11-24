@@ -15,6 +15,7 @@ import SeasonPredictPreviewScreenNative from "../mobileScreens/SeasonPredictPrev
 import TradeBallotPreviewScreenNative from "../../games/predict/tradeBallot/TradeBallotPreviewScreenNative";
 import TradeBuzzPreviewScreenNative from "../../games/predict/buzz/TradeBuzzPreviewScreenNative";
 import { showTradeBuzzRewardedAdNative } from "../../ads/proPickRewardedAdNative";
+import { startTradeBuzzUnlockPollNative } from "../../ads/rewardedAdUnlockPollNative";
 import { waitHostDismissedForRewardedAd } from "../../games/scheduleAfterPredictModalDismissed";
 import { setTradeBuzzAdEarned } from "../../games/predict/buzz/tradeBuzzAdSessionNative";
 import MonthlyReportPreviewScreenNative from "../mobileScreens/MonthlyReportPreviewScreenNative";
@@ -177,8 +178,17 @@ export function TradeBuzzPreviewScreenWrapper() {
       navigation.goBack();
       await waitHostDismissedForRewardedAd();
       try {
-        const result = await showTradeBuzzRewardedAdNative({ userId });
-        if (result === "earned") setTradeBuzzAdEarned(true);
+        const result = await showTradeBuzzRewardedAdNative({
+          userId,
+          onPresented: () => {
+            setTradeBuzzAdEarned(true);
+            void startTradeBuzzUnlockPollNative();
+          },
+        });
+        if (result !== "error") {
+          setTradeBuzzAdEarned(true);
+          void startTradeBuzzUnlockPollNative();
+        }
         return result;
       } finally {
         navigation.navigate("TradeBuzzPreview");
