@@ -147,13 +147,7 @@ import {
   readPredictNextGameModalSkip,
   writePredictNextGameModalSkip,
 } from "./predictNextGameModalPrefs";
-import {
-  scheduleAfterPredictModalDismissed,
-  waitPredictModalDismissed,
-} from "./scheduleAfterPredictModalDismissed";
-import { showProPickRewardedAdNative } from "../ads/proPickRewardedAdNative";
-import { startProPickUnlockPollNative } from "../ads/rewardedAdUnlockPollNative";
-import { setProPickAdEarnedGameId } from "./predict/proPickAdSessionNative";
+import { scheduleAfterPredictModalDismissed } from "./scheduleAfterPredictModalDismissed";
 import { useTrackViewNative } from "../../analytics/useTrackViewNative";
 import { predictAnalyticsPath } from "../../analytics/appAnalyticsNative";
 import { requestPushPermissionPrimerAfterPredict } from "../../notifications/requestPushPermissionPrimerNative";
@@ -707,34 +701,6 @@ export default function GamesHomeScreen({
   /** 送信成功で閉じるときだけ退場アニメ完了まで Modal を残す */
   const [predictModalHideAnimated, setPredictModalHideAnimated] =
     useState(false);
-  /** リワード広告のためシートを閉じて、見終わったあと開き直す */
-  const [resumeAfterRewardedAd, setResumeAfterRewardedAd] = useState(false);
-  const presentProPickRewardedAd = useCallback(
-    async (opts: { gameId: string; userId: string }) => {
-      setResumeAfterRewardedAd(true);
-      setPredictModalHideAnimated(true);
-      setIsPredictModalOpen(false);
-      await waitPredictModalDismissed();
-      try {
-        const result = await showProPickRewardedAdNative({
-          ...opts,
-          onPresented: () => {
-            setProPickAdEarnedGameId(opts.gameId);
-            void startProPickUnlockPollNative(opts.gameId);
-          },
-        });
-        if (result !== "error") {
-          setProPickAdEarnedGameId(opts.gameId);
-          void startProPickUnlockPollNative(opts.gameId);
-        }
-        return result;
-      } finally {
-        setPredictModalHideAnimated(false);
-        setIsPredictModalOpen(true);
-      }
-    },
-    []
-  );
   /** 終了＋予想済みは現行リザルト詳細（新カード面）を開く */
   const [resultDetailPostId, setResultDetailPostId] = useState<string | null>(
     null
@@ -3602,7 +3568,6 @@ export default function GamesHomeScreen({
           setIsPredictModalOpen(false);
           setExpandScoreFormWhenEditing(false);
           setPredictSpectatorStartedNoPost(false);
-          setResumeAfterRewardedAd(false);
           setSelectedGame(null);
         }}
         onOpenTeamDetail={(teamId) => {
@@ -3637,14 +3602,11 @@ export default function GamesHomeScreen({
           setIsPredictModalOpen(false);
           setExpandScoreFormWhenEditing(false);
           setPredictSpectatorStartedNoPost(false);
-          setResumeAfterRewardedAd(false);
           setSelectedGame(null);
           scheduleAfterPredictModalDismissed(() => {
             openProSubscribeNative();
           });
         }}
-        presentRewardedAd={presentProPickRewardedAd}
-        resumeAfterRewardedAd={resumeAfterRewardedAd}
         spectatorStartedNoPost={
           predictSpectatorStartedNoPost ||
           (selectedGame != null &&

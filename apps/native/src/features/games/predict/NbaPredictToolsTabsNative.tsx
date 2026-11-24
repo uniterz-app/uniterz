@@ -73,6 +73,18 @@ import {
 
 export type NbaPredictToolsTab = "insight" | "info" | "trend";
 
+/** シミュレータ確認用。CDP で `globalThis.__UNITERZ_DEV_FORCE_FREE__ = true` */
+function readDevForceFree(): boolean {
+  if (!__DEV__) return false;
+  try {
+    return Boolean(
+      (globalThis as { __UNITERZ_DEV_FORCE_FREE__?: boolean }).__UNITERZ_DEV_FORCE_FREE__
+    );
+  } catch {
+    return false;
+  }
+}
+
 type Props = {
   language: GamesLanguage;
   /** Insight タブの中身は Pro 限定（タブ自体は常時表示） */
@@ -209,6 +221,9 @@ export default function NbaPredictToolsTabsNative({
     setVisited((cur) => (cur.has(tab) ? cur : new Set(cur).add(tab)));
   }, [tab]);
 
+  const { fUser } = useFirebaseUser();
+  const forceFree = readDevForceFree();
+  const effectivePro = isPro && !forceFree;
   const {
     teaser,
     hasKit: teaserHasKit,
@@ -219,19 +234,22 @@ export default function NbaPredictToolsTabsNative({
   } = useNbaMatchupInsightTeaser({
     gameId,
     apiBaseUrl,
-    enabled: !isPro && !preseason,
+    enabled: !effectivePro && !preseason,
   });
-  const { fUser } = useFirebaseUser();
   /** Free でも、この試合を解除済み（広告 / 初回の無料）なら Pro と同じ中身を出す */
-  const [proPickUnlockedGameId, setProPickUnlockedGameId] = useState<string | null>(null);
+  const [proPickUnlockedGameId, setProPickUnlockedGameId] = useState<string | null>(
+    () => peekProPickAdEarnedGameId()
+  );
   const [proPickAdOpen, setProPickAdOpen] = useState(false);
   const [proPickUnlockBusy, setProPickUnlockBusy] = useState(false);
-  const [proPickConfirming, setProPickConfirming] = useState(false);
-  /** 広告は見終わったが、SSV の解除がまだの試合。同じ試合なら広告を重ねない */
+  /** 広告は見終わった試合。同じ試合なら広告を重ねない */
   const pendingAdGameIdRef = useRef<string | null>(null);
   const proPickUnlockedHere =
-    !!gameId && (teaserUnlocked || proPickUnlockedGameId === gameId);
-  const proPickAccess = isPro || proPickUnlockedHere;
+    !!gameId &&
+    (forceFree
+      ? proPickUnlockedGameId === gameId
+      : teaserUnlocked || proPickUnlockedGameId === gameId);
+  const proPickAccess = effectivePro || proPickUnlockedHere;
 
   const insightAvailable = proPickAccess && !preseason;
   const {
@@ -245,22 +263,14 @@ export default function NbaPredictToolsTabsNative({
     apiBaseUrl,
     enabled: insightAvailable,
   });
-  const pollProPickUnlock = async (id: string) => {
-    const ok = await startProPickUnlockPollNative(id);
-    if (ok) {
-      pendingAdGameIdRef.current = null;
-      setProPickUnlockedGameId(id);
-    }
-    return ok;
-  };
-
   const markProPickAdSession = (id: string) => {
     setProPickAdEarnedGameId(id);
     pendingAdGameIdRef.current = id;
+    setProPickUnlockedGameId(id);
     void startProPickUnlockPollNative(id);
   };
 
-  /** AdMob のリワード広告を見て、SSV の確定を待つ（届くまで数回確認する） */
+  /** 広告が出たらすぐ中身を出す。サーバー確認は裏で続ける */
   const showSdkProPickAd = async () => {
     const copy = proPickAdCopy(language);
     const uid = fUser?.uid;
@@ -272,34 +282,11 @@ export default function NbaPredictToolsTabsNative({
           gameId,
           onPresented: () => markProPickAdSession(gameId),
         });
-    if (result === "error") {
-      if (peekProPickAdEarnedGameId() === gameId) {
-        markProPickAdSession(gameId);
-        setProPickConfirming(true);
-        try {
-          const ok = await pollProPickUnlock(gameId);
-          if (!ok) cyberAlert(copy.adModalTitle, copy.adPending);
-        } finally {
-          setProPickConfirming(false);
-        }
-        return;
-      }
+    if (result === "error" && peekProPickAdEarnedGameId() !== gameId) {
       cyberAlert(copy.adModalTitle, copy.adUnavailable);
       return;
     }
-    // closed でも見た扱い。シートを閉じても確認は続ける
     markProPickAdSession(gameId);
-    if (presentRewardedAd) {
-      // 予想シートを閉じて出している。解除確認は開き直した先で行う
-      return;
-    }
-    setProPickConfirming(true);
-    try {
-      const ok = await pollProPickUnlock(gameId);
-      if (!ok) cyberAlert(copy.adModalTitle, copy.adPending);
-    } finally {
-      setProPickConfirming(false);
-    }
   };
 
   const resumedAdRef = useRef(false);
@@ -311,23 +298,9 @@ export default function NbaPredictToolsTabsNative({
     setTab("insight");
     setVisited((cur) => (cur.has("insight") ? cur : new Set(cur).add("insight")));
     if (earnedId !== gameId) return;
-    const copy = proPickAdCopy(language);
-    setProPickConfirming(true);
-    let cancelled = false;
-    void (async () => {
-      try {
-        const ok = await pollProPickUnlock(gameId);
-        if (cancelled) return;
-        if (!ok) cyberAlert(copy.adModalTitle, copy.adPending);
-      } finally {
-        if (!cancelled) setProPickConfirming(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    markProPickAdSession(gameId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- シートを開き直した 1 回だけ
-  }, [gameId, resumeAfterRewardedAd, language]);
+  }, [gameId, resumeAfterRewardedAd]);
 
   const runProPickUnlock = async (adWatched: boolean) => {
     if (!gameId) return;
@@ -337,14 +310,7 @@ export default function NbaPredictToolsTabsNative({
         !adWatched &&
         (pendingAdGameIdRef.current === gameId || peekProPickAdEarnedGameId() === gameId)
       ) {
-        setProPickConfirming(true);
-        try {
-          const ok = await pollProPickUnlock(gameId);
-          if (ok) return;
-        } finally {
-          setProPickConfirming(false);
-        }
-        cyberAlert(proPickAdCopy(language).adModalTitle, proPickAdCopy(language).adPending);
+        markProPickAdSession(gameId);
         return;
       }
       const r = await requestProPickUnlock({ apiBase: apiBaseUrl, gameId, adWatched });
@@ -369,7 +335,7 @@ export default function NbaPredictToolsTabsNative({
   useEffect(() => {
     const available =
       !tutorialMode &&
-      !isPro &&
+      !effectivePro &&
       !preseason &&
       firstFreeAvailable &&
       !teaserUnlocked &&
@@ -378,7 +344,7 @@ export default function NbaPredictToolsTabsNative({
     return () => onFirstFreeOffer?.(false);
   }, [
     tutorialMode,
-    isPro,
+    effectivePro,
     preseason,
     firstFreeAvailable,
     teaserUnlocked,
@@ -471,7 +437,7 @@ export default function NbaPredictToolsTabsNative({
                   awayTeamName={awayTeamName}
                   onPressUpgrade={openProSubscribeFromTeaser}
                 />
-              ) : !proPickAccess && !teaserHasKit ? (
+              ) : !proPickAccess && !teaserHasKit && !forceFree ? (
                 <PendingPanel text={insightPendingText} />
               ) : !proPickAccess ? (
                 <PredictProBriefPanelNative
@@ -490,7 +456,7 @@ export default function NbaPredictToolsTabsNative({
                   }
                   firstFreeAvailable={firstFreeAvailable}
                   unlockBusy={proPickUnlockBusy}
-                  unlockConfirming={proPickConfirming}
+                  unlockConfirming={false}
                   kitRecord={kitRecord}
                   crowd={crowd}
                 />
@@ -648,6 +614,7 @@ export default function NbaPredictToolsTabsNative({
         onCancel={() => setProPickAdOpen(false)}
         onWatched={() => {
           setProPickAdOpen(false);
+          if (gameId) markProPickAdSession(gameId);
           void runProPickUnlock(true);
         }}
       />

@@ -2,7 +2,7 @@
  * トレード Buzz / 確定トレード。
  * Buzz を見るとき Free はリワード広告（サーバーで解除を確認・日本時間 0 時まで有効）、Pro はスキップ。確定タブは広告なし。
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MobilePageShell from "../../../profile/mobileScreens/MobilePageShell";
 import { useFirebaseUser } from "../../../../auth/FirebaseUserProvider";
@@ -66,11 +66,12 @@ export default function TradeBuzzPreviewScreenNative({
   const [introOpen, setIntroOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("buzz");
   const [teamAbbr, setTeamAbbr] = useState<string | null>(null);
-  /** DEV だけ Free / Pro を切り替えてゲートを確認する */
-  const [devPro, setDevPro] = useState(false);
-  const isPro = planPro || (__DEV__ && devPro);
-  /** 今日（日本時間）の解除があるか（サーバーの判定） */
-  const [buzzUnlocked, setBuzzUnlocked] = useState(false);
+  /** DEV だけ Free / Pro を切り替えてゲートを確認する（実プランが Pro でも Free に落とせる） */
+  const [devPlan, setDevPlan] = useState<boolean | null>(null);
+  const isPro = devPlan ?? planPro;
+  /** 今日（日本時間）の解除があるか（サーバー、またはこの起動で広告を見た） */
+  const [buzzUnlocked, setBuzzUnlocked] = useState(() => peekTradeBuzzAdEarned());
+  /** 広告 SDK の読み込み〜表示中 */
   const [adPlaying, setAdPlaying] = useState(false);
 
   const nowMs = useMemo(() => Date.now(), []);
@@ -115,6 +116,7 @@ export default function TradeBuzzPreviewScreenNative({
   // 開いたとき、サーバーに今日の解除があるか確認する（前に見ていれば広告は出さない）
   useEffect(() => {
     if (!fUser) return;
+    if (__DEV__ && devPlan === false) return;
     let cancelled = false;
     void (async () => {
       const state = await fetchTradeBuzzUnlockNative();
@@ -123,48 +125,17 @@ export default function TradeBuzzPreviewScreenNative({
     return () => {
       cancelled = true;
     };
-  }, [fUser?.uid]);
+  }, [fUser?.uid, devPlan]);
 
   const openBuzzTab = () => {
     setMode("buzz");
   };
 
-  const pollBuzzUnlock = async () => {
-    const ok = await startTradeBuzzUnlockPollNative();
-    if (ok) setBuzzUnlocked(true);
-    return ok;
-  };
-
   const markBuzzAdSession = () => {
     setTradeBuzzAdEarned(true);
+    setBuzzUnlocked(true);
     void startTradeBuzzUnlockPollNative();
   };
-
-  const resumedAdRef = useRef(false);
-  useEffect(() => {
-    if (!fUser || resumedAdRef.current || !peekTradeBuzzAdEarned()) return;
-    resumedAdRef.current = true;
-    setAdPlaying(true);
-    let cancelled = false;
-    void (async () => {
-      try {
-        const ok = await pollBuzzUnlock();
-        if (cancelled) return;
-        if (!ok) {
-          cyberAlert(
-            "確認中",
-            "広告の確認に少し時間がかかっています。しばらくしてから開き直してください。"
-          );
-        }
-      } finally {
-        if (!cancelled) setAdPlaying(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 広告後に開き直した 1 回だけ
-  }, [fUser?.uid]);
 
   const watchAd = async () => {
     if (!fUser || adPlaying) return;
@@ -174,39 +145,17 @@ export default function TradeBuzzPreviewScreenNative({
         setIntroOpen(false);
         await waitHostDismissedForRewardedAd(280);
       }
-      // Buzz 専用の広告ユニット（PRO PICK とは別）。画面を閉じてフルスクリーンで出す
       const result = presentRewardedAd
         ? await presentRewardedAd(fUser.uid)
         : await showTradeBuzzRewardedAdNative({
             userId: fUser.uid,
             onPresented: markBuzzAdSession,
           });
-      if (result === "error") {
-        if (peekTradeBuzzAdEarned()) {
-          const ok = await pollBuzzUnlock();
-          if (!ok) {
-            cyberAlert(
-              "確認中",
-              "広告の確認に少し時間がかかっています。しばらくしてから開き直してください。"
-            );
-          }
-          return;
-        }
+      if (result === "error" && !peekTradeBuzzAdEarned()) {
         cyberAlert("広告", "広告を読み込めませんでした。少し待ってからもう一度お試しください。");
         return;
       }
       markBuzzAdSession();
-      if (presentRewardedAd) {
-        // 画面を開き直した先で解除確認する
-        return;
-      }
-      const ok = await pollBuzzUnlock();
-      if (!ok) {
-        cyberAlert(
-          "確認中",
-          "広告の確認に少し時間がかかっています。しばらくしてから開き直してください。"
-        );
-      }
     } finally {
       setAdPlaying(false);
     }
@@ -224,7 +173,11 @@ export default function TradeBuzzPreviewScreenNative({
         {__DEV__ ? (
           <View style={styles.devRow}>
             <Pressable
-              onPress={() => setDevPro((v) => !v)}
+              onPress={() => {
+                const next = !(devPlan ?? planPro);
+                setDevPlan(next);
+                if (!next) setBuzzUnlocked(false);
+              }}
               style={styles.banner}
               accessibilityRole="button"
             >
@@ -295,12 +248,12 @@ export default function TradeBuzzPreviewScreenNative({
                 accessibilityRole="button"
               >
                 <Text style={styles.gateBtnText}>
-                  {adPlaying ? "再生中…" : "広告を見て開く"}
+                  {adPlaying ? "読み込んでいます…" : "広告を見て開く"}
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => {
-                  if (__DEV__) setDevPro(true);
+                  if (__DEV__) setDevPlan(true);
                   else openProSubscribeNative("trade_buzz");
                 }}
                 style={styles.gateProLink}

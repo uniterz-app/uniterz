@@ -11,14 +11,24 @@
  * 広告・ATT のネイティブ部分がバイナリに無いビルド（古いビルド・Expo Go）でも起動は止めない。
  * そのため、SDK は import せず、使うときだけ読み込む。
  */
-import { Platform } from "react-native";
+import { Platform, TurboModuleRegistry } from "react-native";
 import type { AdsConsentInfo } from "react-native-google-mobile-ads";
 
 type AdsModuleNative = typeof import("react-native-google-mobile-ads");
 type TrackingModuleNative = typeof import("expo-tracking-transparency");
 
+/** ネイティブに AdMob が入っているか。無いのに require すると赤いエラーになる */
+function hasGoogleMobileAdsNative(): boolean {
+  try {
+    return TurboModuleRegistry.get("RNGoogleMobileAdsModule") != null;
+  } catch {
+    return false;
+  }
+}
+
 /** 広告 SDK を読み込む。ネイティブ部分が無いビルドでは null（例外で起動を止めない） */
 export function loadAdsModuleNative(): AdsModuleNative | null {
+  if (!hasGoogleMobileAdsNative()) return null;
   try {
     return require("react-native-google-mobile-ads") as AdsModuleNative;
   } catch {
@@ -61,10 +71,25 @@ export function ensureAdsReadyNative(): Promise<boolean> {
   return readyPromise;
 }
 
+function isIosSimulatorNative(): boolean {
+  if (Platform.OS !== "ios") return false;
+  try {
+    const Device = require("expo-device") as { isDevice?: boolean };
+    return Device.isDevice === false;
+  } catch {
+    return false;
+  }
+}
+
 async function runConsentThenInitNative(): Promise<boolean> {
   const ads = loadAdsModuleNative();
   if (!ads) return false;
   try {
+    // シミュレータの UMP / ATT はネイティブダイアログで画面を塞ぐ。実機の同意フローはそのまま。
+    if (isIosSimulatorNative()) {
+      await ads.default().initialize();
+      return true;
+    }
     await ads.AdsConsent.requestInfoUpdate();
     const info: AdsConsentInfo = await ads.AdsConsent.loadAndShowConsentFormIfRequired();
     if (!info.canRequestAds) return false;
