@@ -170,6 +170,7 @@ import TutorialLiveCoachNative from "../tutorial/TutorialLiveCoachNative";
 import TutorialWelcomeWorldCameraNative from "../tutorial/TutorialWelcomeWorldCameraNative";
 import TutorialLiveHostNative from "../tutorial/TutorialLiveHostNative";
 import { scheduleAndroidOwnProfileTabWarm } from "../profile/scheduleAndroidOwnProfileTabWarm";
+import { markGamesFirstPaintReady } from "../../bootstrap/gamesFirstPaintGateNative";
 import { registerTutorialScrollHost } from "../tutorial/tutorialMeasureNative";
 import {
   clearTutorialLivePickNative,
@@ -1136,6 +1137,7 @@ export default function GamesHomeScreen({
    */
   useEffect(() => {
     if (showInitialSkeleton) return;
+    markGamesFirstPaintReady();
     return scheduleAndroidOwnProfileTabWarm({
       uid: fUser?.uid,
       tabNavigation,

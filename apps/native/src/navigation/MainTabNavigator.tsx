@@ -60,17 +60,21 @@ import {
 } from "./StackNavigators";
 import { resetGamesStackInBackgroundNative } from "./resetGamesTabHomeNative";
 import { flushPendingShareDeepLink } from "./shareDeepLinkNative";
-import ProfileStatsPrefetchHost from "../features/profile/ProfileStatsPrefetchHost";
-import SquadBattleLaunchPromptHostNative from "../features/squads/SquadBattleLaunchPromptHostNative";
-import ProSkinUnlockLaunchHostNative from "../features/profile/reports/ProSkinUnlockLaunchHostNative";
-import MonthlyBadgeUnlockLaunchHostNative from "../features/profile/MonthlyBadgeUnlockLaunchHostNative";
-import StoreReviewLaunchHostNative from "../features/games/StoreReviewLaunchHostNative";
-import UnitEarnLaunchHostNative from "../features/units/UnitEarnLaunchHostNative";
-import SeasonPredictCrowdLaunchHostNative from "../features/games/predict/season/SeasonPredictCrowdLaunchHostNative";
+import {
+  armGamesFirstPaintGate,
+  subscribeGamesFirstPaintReady,
+} from "../bootstrap/gamesFirstPaintGateNative";
+import { warmDeferredTabHomesNative } from "./warmDeferredTabHomesNative";
 import AppAnalyticsUserHostNative from "../analytics/AppAnalyticsUserHostNative";
 import AskFabNative from "../features/games/ask/AskFabNative";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+function DeferredLaunchHostsGate() {
+  const DeferredLaunchHosts =
+    require("./DeferredLaunchHostsNative").default as typeof import("./DeferredLaunchHostsNative").default;
+  return <DeferredLaunchHosts />;
+}
 
 function resolveTabWordmark(
   state: NavigationState | PartialState<NavigationState> | undefined
@@ -103,6 +107,7 @@ export default function MainTabNavigator() {
     if (!SplashGate) return false;
     return consumeSplashVideoColdStart();
   });
+  const [launchIdle, setLaunchIdle] = useState(false);
   const [wordmark, setWordmark] = useState(DEFAULT_HEADER_WORDMARK);
   const brandShelfHidden = useSyncExternalStore(
     subscribeAppBrandShelfHidden,
@@ -229,17 +234,19 @@ export default function MainTabNavigator() {
     return () => cancelAnimationFrame(id);
   }, []);
 
+  useEffect(() => {
+    armGamesFirstPaintGate();
+    return subscribeGamesFirstPaintReady(() => {
+      setLaunchIdle(true);
+      warmDeferredTabHomesNative();
+    });
+  }, []);
+
   return (
     <>
-      <ProfileStatsPrefetchHost />
       <AppAnalyticsUserHostNative />
       <NativePushNotificationsHost />
-      <SquadBattleLaunchPromptHostNative />
-      <UnitEarnLaunchHostNative />
-      <SeasonPredictCrowdLaunchHostNative />
-      <ProSkinUnlockLaunchHostNative />
-      <MonthlyBadgeUnlockLaunchHostNative />
-      <StoreReviewLaunchHostNative />
+      {launchIdle ? <DeferredLaunchHostsGate /> : null}
       <View style={styles.root}>
         <View style={styles.tabHost}>
           <Tab.Navigator

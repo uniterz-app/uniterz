@@ -3,11 +3,7 @@ import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import GamesHomeScreen from "../features/games/GamesHomeScreen";
-import ResultHomeScreen from "../features/results/ResultHomeScreen";
-import RankingsHomeScreen from "../features/rankings/RankingsHomeScreen";
 import RankingsScreenBoundaryNative from "../features/rankings/RankingsScreenBoundaryNative";
-import LeaderboardsHomeScreen from "../features/leaderboards/LeaderboardsHomeScreen";
-import ProfileHomeScreen from "../features/profile/ProfileHomeScreen";
 import type {
   GamesStackParamList,
   ResultStackParamList,
@@ -61,7 +57,7 @@ const publicProfileScreenOptions = {
 
 /**
  * 深層画面は getComponent + require で初回遷移までモジュール評価を遅延する。
- * タブホームだけ静的 import（起動時に必要な画面）。
+ * 起動時に静的 import するのは Games ホームだけ。他タブホームは初回表示（または裏温め）まで遅延。
  */
 
 function GuidelinesScreenWrapper() {
@@ -202,15 +198,19 @@ function GamesStackScreen() {
   );
 }
 
-function ResultStackScreen() {
+function ResultHomeRoute() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const ResultHomeScreen =
+    require("../features/results/ResultHomeScreen").default;
+  return <ResultHomeScreen bottomReserveY={bottomContentReserveY} />;
+}
+
+function ResultStackScreen() {
   const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
       <ResultStack.Navigator screenOptions={stackOptions}>
-        <ResultStack.Screen name="ResultHome">
-          {() => <ResultHomeScreen bottomReserveY={bottomContentReserveY} />}
-        </ResultStack.Screen>
+        <ResultStack.Screen name="ResultHome" component={ResultHomeRoute} />
         <ResultStack.Screen
           name="ResultDetail"
           getComponent={() =>
@@ -243,19 +243,23 @@ function ResultStackScreen() {
   );
 }
 
-function RankingsStackScreen() {
+function RankingsHomeRoute() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const RankingsHomeScreen =
+    require("../features/rankings/RankingsHomeScreen").default;
+  return (
+    <RankingsScreenBoundaryNative>
+      <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />
+    </RankingsScreenBoundaryNative>
+  );
+}
+
+function RankingsStackScreen() {
   const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
       <RankingsStack.Navigator screenOptions={stackOptions}>
-        <RankingsStack.Screen name="RankingsHome">
-          {() => (
-            <RankingsScreenBoundaryNative>
-              <RankingsHomeScreen bottomReserveY={bottomContentReserveY} />
-            </RankingsScreenBoundaryNative>
-          )}
-        </RankingsStack.Screen>
+        <RankingsStack.Screen name="RankingsHome" component={RankingsHomeRoute} />
         <RankingsStack.Screen
           name="SquadBattle"
           getComponent={() =>
@@ -296,15 +300,22 @@ function RankingsStackScreen() {
   );
 }
 
-function LeaderboardsStackScreen() {
+function LeaderboardsHomeRoute() {
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const LeaderboardsHomeScreen =
+    require("../features/leaderboards/LeaderboardsHomeScreen").default;
+  return <LeaderboardsHomeScreen bottomReserveY={bottomContentReserveY} />;
+}
+
+function LeaderboardsStackScreen() {
   const stackOptions = useStackScreenOptions();
   return (
     <NativeStackBackdrop>
       <LeaderboardsStack.Navigator screenOptions={stackOptions}>
-        <LeaderboardsStack.Screen name="LeaderboardsHome">
-          {() => <LeaderboardsHomeScreen bottomReserveY={bottomContentReserveY} />}
-        </LeaderboardsStack.Screen>
+        <LeaderboardsStack.Screen
+          name="LeaderboardsHome"
+          component={LeaderboardsHomeRoute}
+        />
         <LeaderboardsStack.Screen
           name="CommunityDetail"
           options={{
@@ -358,6 +369,8 @@ function LeaderboardsStackScreen() {
 function ProfileHomeRoute() {
   const route = useRoute<RouteProp<ProfileStackParamList, "ProfileHome">>();
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const ProfileHomeScreen =
+    require("../features/profile/ProfileHomeScreen").default;
   return (
     <ProfileHomeScreen
       bottomReserveY={bottomContentReserveY}
