@@ -17,3 +17,19 @@ export function scheduleAfterPredictModalDismissed(onReady: () => void) {
   });
   return () => task.cancel();
 }
+
+/** 予想シートを閉じてから、フルスクリーン広告などを出すまでの待ち */
+export function waitPredictModalDismissed(): Promise<void> {
+  return new Promise((resolve) => {
+    scheduleAfterPredictModalDismissed(resolve);
+  });
+}
+
+/** スタック画面や RN Modal を閉じてから、フルスクリーン広告を出すまでの待ち */
+export function waitHostDismissedForRewardedAd(extraMs = 400): Promise<void> {
+  return new Promise((resolve) => {
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(resolve, extraMs);
+    });
+  });
+}

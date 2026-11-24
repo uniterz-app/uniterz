@@ -64,8 +64,14 @@ export async function showRewardedAdNative(opts: {
 
     return await new Promise<ProPickRewardedResult>((resolve) => {
       let earned = false;
+      let closed = false;
+      let settled = false;
+      let closeTimer: ReturnType<typeof setTimeout> | null = null;
       const unsubs: Array<() => void> = [];
       const finish = (result: ProPickRewardedResult) => {
+        if (settled) return;
+        settled = true;
+        if (closeTimer) clearTimeout(closeTimer);
         unsubs.forEach((u) => u());
         resolve(result);
       };
@@ -77,11 +83,18 @@ export async function showRewardedAdNative(opts: {
       unsubs.push(
         ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
           earned = true;
+          // iOS は CLOSED が先に来ることがある。閉じたあとに報酬が届いたら earned にする
+          if (closed) finish("earned");
         })
       );
       unsubs.push(
         ad.addAdEventListener(AdEventType.CLOSED, () => {
-          finish(earned ? "earned" : "closed");
+          closed = true;
+          if (earned) {
+            finish("earned");
+            return;
+          }
+          closeTimer = setTimeout(() => finish(earned ? "earned" : "closed"), 800);
         })
       );
       unsubs.push(
@@ -89,6 +102,8 @@ export async function showRewardedAdNative(opts: {
           finish("error");
         })
       );
+      const loadTimer = setTimeout(() => finish("error"), 30_000);
+      unsubs.push(() => clearTimeout(loadTimer));
       ad.load();
     });
   } catch {

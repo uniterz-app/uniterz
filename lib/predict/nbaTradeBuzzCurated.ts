@@ -1,5 +1,5 @@
 /**
- * トレード Buzz — 手で集めた 2026-11-12〜23 の動き（日本時間）。
+ * トレード Buzz — 手で集めた 2026-11-12〜24 の動き（日本時間）。
  * 確度順（rank 1 が最も確度が高い）。手更新。
  *
  * 出典の記者名・媒体は取材メモのまま。記事は二次配信（まとめ・X・転載）のものも含む。
@@ -8,7 +8,7 @@
 import type { NbaTradeBuzzItem } from "@/lib/predict/nbaTradeBuzz";
 
 /** 取材の基準時刻（JST の表示用） */
-export const NBA_TRADE_BUZZ_AS_OF_JST = "2026-11-23 10:00";
+export const NBA_TRADE_BUZZ_AS_OF_JST = "2026-11-24 09:00";
 
 export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   {
@@ -207,8 +207,17 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     fromTeamAbbr: "BKN",
     confidence: "multi",
     headlineJa:
-      "Nets は全員の話を聞く構え。焦点はこの2人で、2月11日の期限までにベテランを売る見方がある。",
+      "出だしが悪く市場で動く見込み、という見方。焦点はこの2人で、期限までにベテランを売るという声は前からある。",
     events: [
+      {
+        day: "2026-11-23",
+        time: "13:58",
+        kind: "market",
+        textJa:
+          "スタインのコラム。出だしが悪かった Nets も市場で動く見込みで、Michael Porter Jr. と Julius Randle に関心が集まりそうだとしている。大きな成立やシャムス級の速報ではない。",
+        sourceLabel: "Marc Stein（X）・Hoops Rumors まとめ",
+        sourceUrl: "https://x.com/TheSteinLine/status/2124729186795630622",
+      },
       {
         day: "2026-11-14",
         time: null,
@@ -330,12 +339,21 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     id: "clippers",
     rank: 8,
     playerId: null,
-    playerName: "Max Strus / Derrick Jones Jr. / Brook Lopez",
+    playerName: "Rui Hachimura / Max Strus / Derrick Jones Jr. / Brook Lopez",
     fromTeamAbbr: "LAC",
     confidence: "single",
     headlineJa:
-      "3人は動きやすいと報道。指名権を取り戻すため、Kris Dunn や場合によっては Brandon Ingram も売りに出るかもしれない。",
+      "スタインによると、ベテラン先発で関心を集めている「確実な売り手」。八村、Jones Jr.、Lopez、Strus が対象。Strus / Jones / Lopez / Dunn は今季切れ、八村は来季1400万ドルのチームオプション。",
     events: [
+      {
+        day: "2026-11-23",
+        time: "13:58",
+        kind: "market",
+        textJa:
+          "スタインのコラム。Clippers は関心を高めるためにベテランだけで先発を組んでいて、リーグ内では「確実な売り手」と見られている。対象は八村塁、Derrick Jones Jr.、Brook Lopez、Max Strus。Strus、Jones、Lopez、Kris Dunn は今季で契約が切れ、八村の契約には来季1400万ドルのチームオプションが付いている。",
+        sourceLabel: "Marc Stein（X）・Hoops Rumors まとめ",
+        sourceUrl: "https://x.com/TheSteinLine/status/2124729186795630622",
+      },
       {
         day: "2026-11-14",
         time: null,
@@ -518,20 +536,20 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     id: "lakers",
     rank: 14,
     playerId: null,
-    playerName: "Lakers (deadline)",
+    playerName: "Lakers (backup C)",
     fromTeamAbbr: "LAL",
-    confidence: "single",
+    confidence: "opinion",
     headlineJa:
-      "Pelinka GM が、2月のトレード期限に向けて積極的に動く方針を本人が話している。具体的な標的の名前は出ていない。",
+      "Pelinka が期限に向けて積極的に動くと発言。スタインは Walker Kessler の控えセンター探しと見る。出せるのは2巡目3本で材料は少ない。",
     events: [
       {
         day: "2026-11-23",
-        time: null,
-        kind: "statement",
+        time: "13:58",
+        kind: "opinion",
         textJa:
-          "Lakers の Rob Pelinka GM は、2月のトレード期限に向けて積極的に動く方針を本人が話している。狙っている選手の名前は出ていない。",
-        sourceLabel: "11/23 朝の取材まとめ",
-        sourceUrl: null,
+          "Rob Pelinka 編成本部長が「期限に向けて積極的に動く」と話したことを、スタインは Walker Kessler の控えになる信頼できるセンターを探すサインと見ている。ただし出せるのは2巡目指名権が3本だけで、材料は少ない。",
+        sourceLabel: "Marc Stein（X）・Hoops Rumors まとめ",
+        sourceUrl: "https://x.com/TheSteinLine/status/2124729186795630622",
       },
     ],
   },
@@ -668,6 +686,28 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
         sourceLabel: "Sporting News",
         sourceUrl:
           "https://www.sportingnews.com/us/nba/news/nba-trade-candidates-anthony-davis-paolo-banchero-among-11-most-likely-get-moved-2026-27-season/021fddb6d6094bb12bc8d15b",
+      },
+    ],
+  },
+  {
+    id: "cisse",
+    rank: 20,
+    playerId: null,
+    playerName: "Musa Cisse / Walter Clayton",
+    fromTeamAbbr: "DAL",
+    confidence: "opinion",
+    headlineJa:
+      "最後の枠を Dwight Powell ではなく Musa Cisse にした理由の一つが、後半にトレードで使えること。Clayton を2ウェイから本契約に上げる枠のため、Cisse 放出の可能性。",
+    events: [
+      {
+        day: "2026-11-23",
+        time: "13:58",
+        kind: "opinion",
+        textJa:
+          "スタインのコラム。Mavs が最後のロスター枠を Dwight Powell ではなく Musa Cisse に渡した理由の一つが、シーズン後半に Cisse をトレードに使えるという判断。Walter Clayton を2ウェイから本契約に上げる枠を作るため、Cisse が放出される可能性があるとしている。",
+        sourceLabel: "Marc Stein（X）・Hoops Rumors まとめ",
+        sourceUrl:
+          "https://www.hoopsrumors.com/2026/11/steins-latest-grimes-clippers-nets-clayton.html",
       },
     ],
   },

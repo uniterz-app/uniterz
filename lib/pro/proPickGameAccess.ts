@@ -3,8 +3,8 @@
  *
  * - 初回: 新ビルド以降、Free の最初の PRO PICK は広告なしで解除（アカウントで 1 回だけ。`proPickLaunchFreeUsedAt` で判定）
  * - 2 試合目以降: 試合ごとに広告 1 本で、その試合だけ解除
- * - 広告の検証はまだ無い（SDK 導入前）。`PRO_PICK_AD_MOCK=1` のときだけモックで解除できる。
- *   本番で広告を入れるときは、SDK のサーバー検証（SSV）の結果だけで解除する形に差し替える。
+ * - 本番の広告は AdMob SSV（`/api/ads/admob-ssv`）が署名つきで届いたときだけ解除する。
+ *   `PRO_PICK_AD_MOCK=1` のときだけ、クライアントの `adWatched` でも付与できる。
  *
  * 解除の有無は API の応答で出し分けるだけで、クライアントの判定は信用しない。
  */
@@ -86,8 +86,47 @@ export async function tryGrantProPickFirstFree(
 }
 
 /**
+ * SSV で検証済みのリワードを、その試合の解除としてすぐ書く（トレード Buzz と同じ）。
+ * 同じ transaction_id は 2 回目以降無視する。
+ */
+export async function grantProPickUnlockFromAd(
+  db: AdminDb,
+  input: { transactionId: string; uid: string; gameId: string }
+): Promise<void> {
+  const gameId = input.gameId.trim();
+  try {
+    await db.collection(PRO_PICK_AD_REWARDS_COLLECTION).doc(input.transactionId).create({
+      uid: input.uid,
+      gameId,
+      claimed: gameId.length > 0,
+      createdAt: FieldValue.serverTimestamp(),
+      ...(gameId ? { claimedAt: FieldValue.serverTimestamp() } : {}),
+    });
+  } catch (e) {
+    const code = (e as { code?: unknown })?.code;
+    if (code !== 6 && code !== "already-exists") throw e;
+    // 報酬は記録済み。解除 doc が欠けていたときのために下の set は続ける
+  }
+  if (!gameId) return;
+  await db
+    .collection(PRO_PICK_UNLOCK_COLLECTION)
+    .doc(proPickUnlockDocId(input.uid, gameId))
+    .set(
+      {
+        uid: input.uid,
+        gameId,
+        via: "ad_sdk" satisfies ProPickUnlockVia,
+        transactionId: input.transactionId,
+        createdAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+}
+
+/**
  * SSV で検証済みのリワードが 1 件あれば消費して、この試合を解除する。
  * 二重に使わないよう、トランザクションで `claimed` を立てる。
+ * gameId が空の報酬（custom_data が届かなかったとき）も、この uid の未使用分として使う。
  */
 export async function claimProPickAdReward(
   db: AdminDb,
@@ -97,19 +136,26 @@ export async function claimProPickAdReward(
   const q = await db
     .collection(PRO_PICK_AD_REWARDS_COLLECTION)
     .where("uid", "==", uid)
-    .where("gameId", "==", gameId)
     .where("claimed", "==", false)
-    .limit(1)
+    .limit(8)
     .get();
-  if (q.empty) return false;
-  const rewardRef = q.docs[0]!.ref;
+  const hit = q.docs.find((d) => {
+    const g = String(d.get("gameId") ?? "").trim();
+    return g === "" || g === gameId;
+  });
+  if (!hit) return false;
+  const rewardRef = hit.ref;
   const unlockRef = db
     .collection(PRO_PICK_UNLOCK_COLLECTION)
     .doc(proPickUnlockDocId(uid, gameId));
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(rewardRef);
     if (!snap.exists || snap.get("claimed") === true) return false;
-    tx.update(rewardRef, { claimed: true, claimedAt: FieldValue.serverTimestamp() });
+    tx.update(rewardRef, {
+      claimed: true,
+      claimedAt: FieldValue.serverTimestamp(),
+      gameId,
+    });
     tx.set(
       unlockRef,
       { uid, gameId, via: "ad_sdk" satisfies ProPickUnlockVia, createdAt: FieldValue.serverTimestamp() },
