@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { DocumentData } from "firebase-admin/firestore";
 import { requireUidFromRequest } from "@/lib/communities/serverAuth";
 import { assertMember } from "@/lib/communities/groupAccess";
 import { adminDb } from "@/lib/firebaseAdmin";
@@ -16,8 +17,8 @@ export async function GET(req: Request, ctx: Ctx) {
     const { groupId } = await ctx.params;
     const groupSnap = await assertMember(adminDb, groupId, uid);
     const ensuredInvite = await ensureGroupInviteCode(groupSnap);
-    const d = {
-      ...groupSnap.data()!,
+    const d: DocumentData = {
+      ...(groupSnap.data() ?? {}),
       ...(ensuredInvite ? { inviteCode: ensuredInvite } : {}),
     };
 
