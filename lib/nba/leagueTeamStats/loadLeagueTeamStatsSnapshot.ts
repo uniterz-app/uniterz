@@ -47,7 +47,7 @@ export async function loadLeagueTeamStatsSnapshot(
 }
 
 /** Firestore に載せる core + advanced（clutch / playtype 等） */
-function teamRowForFirestore(row: NbaLeagueTeamStatsBundle["season"][number]) {
+export function teamRowForFirestore(row: NbaLeagueTeamStatsBundle["season"][number]) {
   const core = {
     teamId: row.teamId,
     teamName: row.teamName,

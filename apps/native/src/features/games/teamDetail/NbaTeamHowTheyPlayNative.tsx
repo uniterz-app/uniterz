@@ -1,5 +1,5 @@
 /** Web `HowTheyPlayBoard` 相当 — チーム詳細の HOW THEY PLAY */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
@@ -7,9 +7,13 @@ import {
   TEAM_HOW_THEY_PLAY_TABS,
   TEAM_TRACK_GROUPS,
   getTeamHowTheyPlay,
+  teamHowTheyPlayTabsWithData,
   type TeamHowTheyPlayTab,
 } from "../../../../../../lib/predict/nbaTeamDetailHowTheyPlay";
-import type { NbaLeagueTeamStatsBundle } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
+import type {
+  NbaLeagueTeamStatRow,
+  NbaLeagueTeamStatsBundle,
+} from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import {
   nbaLocalizedText,
   nbaHowTheyPlayChrome,
@@ -102,6 +106,8 @@ type Props = {
   /** @deprecated use language */
   isJa?: boolean;
   bundle?: NbaLeagueTeamStatsBundle;
+  /** 期間窓の 30 チーム行。あれば season の代わりに使う */
+  rows?: readonly NbaLeagueTeamStatRow[];
   initialTab?: TeamHowTheyPlayTab;
   initialTrackGroup?: (typeof TEAM_TRACK_GROUPS)[number]["id"];
 };
@@ -112,18 +118,34 @@ export default function NbaTeamHowTheyPlayNative({
   language,
   isJa,
   bundle,
+  rows,
   initialTab,
   initialTrackGroup,
 }: Props) {
   const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
   const { lang } = chrome;
   const board = useMemo(
-    () => (bundle ? getTeamHowTheyPlay(teamId, bundle) : null),
-    [teamId, bundle]
+    () => (bundle ? getTeamHowTheyPlay(teamId, bundle, rows) : null),
+    [teamId, bundle, rows]
   );
+  const tabs = useMemo(() => {
+    if (!board) return TEAM_HOW_THEY_PLAY_TABS;
+    if (!rows) return TEAM_HOW_THEY_PLAY_TABS;
+    const filled = teamHowTheyPlayTabsWithData(board);
+    if (filled.length === 0) {
+      return TEAM_HOW_THEY_PLAY_TABS.filter((t) => t.id === "fourFactors");
+    }
+    return TEAM_HOW_THEY_PLAY_TABS.filter((t) => filled.includes(t.id));
+  }, [board, rows]);
   const [tab, setTab] = useState<TeamHowTheyPlayTab>(
     initialTab && TEAM_HOW_THEY_PLAY_TABS.some((t) => t.id === initialTab) ? initialTab : "fourFactors"
   );
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === tab)) {
+      const fallback = tabs[0]?.id;
+      if (fallback) setTab(fallback);
+    }
+  }, [tabs, tab]);
   const [factorId, setFactorId] = useState("efg");
   const [hustleId, setHustleId] = useState("deflections");
   const [trackId, setTrackId] = useState("drives");
@@ -133,7 +155,15 @@ export default function NbaTeamHowTheyPlayNative({
   const [rebId, setRebId] = useState("boxOuts");
   if (!board) return null;
 
-  const tabMeta = TEAM_HOW_THEY_PLAY_TABS.find((t) => t.id === tab)!;
+  const tabMeta =
+    tabs.find((t) => t.id === tab) ??
+    tabs[0] ??
+    TEAM_HOW_THEY_PLAY_TABS[0]!;
+  const scoringRows = rows
+    ? board.scoring.filter(
+        (r) => Math.abs(r.cell.value) > 1e-9 || Math.abs(r.pts.value) > 1e-9
+      )
+    : board.scoring;
   const factor =
     board.fourFactors.find((r) => r.id === factorId) ?? board.fourFactors[0]!;
   const hustle =
@@ -166,7 +196,7 @@ export default function NbaTeamHowTheyPlayNative({
       </View>
 
       <View style={styles.chipRow}>
-        {TEAM_HOW_THEY_PLAY_TABS.map((t) => {
+        {tabs.map((t) => {
           const active = tab === t.id;
           return (
             <Pressable
@@ -241,7 +271,7 @@ export default function NbaTeamHowTheyPlayNative({
 
       {tab === "scoring" ? (
         <View style={[styles.padCard, { borderColor: frame }]}>
-          {board.scoring.map((row) => (
+          {scoringRows.map((row) => (
             <View key={row.id} style={styles.barBlock}>
               <View style={styles.barTop}>
                 <Text style={styles.barLabel}>

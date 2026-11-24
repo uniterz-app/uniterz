@@ -504,7 +504,7 @@ const TRACKING_ROWS: readonly {
 ];
 
 function leagueRank(
-  rows: NbaLeagueTeamStatRow[],
+  rows: readonly NbaLeagueTeamStatRow[],
   metric: NbaLeagueTeamStatMetric,
   teamId: string,
   higherIsBetter: boolean
@@ -519,7 +519,7 @@ function leagueRank(
 }
 
 function cell(
-  rows: NbaLeagueTeamStatRow[],
+  rows: readonly NbaLeagueTeamStatRow[],
   team: NbaLeagueTeamStatRow,
   metric: NbaLeagueTeamStatMetric,
   higherIsBetter: boolean
@@ -595,9 +595,9 @@ export function emptyTeamHowTheyPlay(): TeamHowTheyPlay {
 
 export function getTeamHowTheyPlay(
   teamId: string,
-  bundle: NbaLeagueTeamStatsBundle
+  bundle: NbaLeagueTeamStatsBundle,
+  rows: readonly NbaLeagueTeamStatRow[] = bundle.season
 ): TeamHowTheyPlay {
-  const rows = bundle.season;
   const team = rows.find((r) => r.teamId === teamId);
   if (!team) return emptyTeamHowTheyPlay();
 
@@ -674,4 +674,31 @@ export function getTeamHowTheyPlay(
   });
 
   return { fourFactors, scoring, playtype, clutch, hustle, rebounding, tracking };
+}
+
+function hasCell(value: number): boolean {
+  return Number.isFinite(value) && Math.abs(value) > 1e-9;
+}
+
+/** 期間窓など、値が入っているタブだけ出す */
+export function teamHowTheyPlayTabsWithData(
+  board: TeamHowTheyPlay
+): TeamHowTheyPlayTab[] {
+  const filled: TeamHowTheyPlayTab[] = [];
+  if (board.fourFactors.some((r) => hasCell(r.own.value) || hasCell(r.opp.value))) {
+    filled.push("fourFactors");
+  }
+  if (board.scoring.some((r) => hasCell(r.cell.value) || hasCell(r.pts.value))) {
+    filled.push("scoring");
+  }
+  if (board.playtype.some((r) => hasCell(r.freq.value) || hasCell(r.ppp.value))) {
+    filled.push("playtype");
+  }
+  if (board.clutch.some((r) => hasCell(r.cell.value))) filled.push("clutch");
+  if (board.hustle.some((r) => hasCell(r.cell.value))) filled.push("hustle");
+  if (board.rebounding.some((r) => hasCell(r.cell.value))) {
+    filled.push("rebounding");
+  }
+  if (board.tracking.some((r) => hasCell(r.cell.value))) filled.push("tracking");
+  return filled;
 }

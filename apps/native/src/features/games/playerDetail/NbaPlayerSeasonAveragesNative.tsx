@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import {
   averageRecentGameLogs,
   formatMetricDisplay,
@@ -12,9 +12,16 @@ import {
   type NbaPlayerSeasonMetric,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
 import { isPlayerDetailRankShown } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
+import {
+  filterLogsByWindow,
+  nbaStatsWindowId,
+  nbaStatsWindowsForLogs,
+  type NbaStatsWindow,
+} from "../../../../../../lib/nba/nbaStatsWindow";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
 import { profileOverviewChartNoDataStyle } from "../../profile/profileOverviewChartShell";
 import { nbaPlayerDetailChrome } from "./nbaPlayerDetailChromeCopy";
+import NbaStatsWindowChipsNative from "../stats/NbaStatsWindowChipsNative";
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace("#", "");
@@ -28,30 +35,46 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-/** 選手詳細の SEASON AVERAGES（Season / Last 10）。ASK でも同じ部品を出す */
+/** 選手詳細の SEASON AVERAGES（Season / 月 / 直近 N）。ASK でも同じ部品を出す */
 export function NbaPlayerSeasonAveragesNative({
   metrics,
   season,
   logs,
   accent,
   language,
+  statsWindow: statsWindowProp,
+  onStatsWindowChange,
 }: {
   metrics: NbaPlayerSeasonMetric[];
   season: NbaPlayerDetailPreview["season"];
   logs: NbaPlayerGameLog[];
   accent: string;
   language: string;
+  statsWindow?: NbaStatsWindow;
+  onStatsWindowChange?: (next: NbaStatsWindow) => void;
 }) {
   const chrome = nbaPlayerDetailChrome(language);
   const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
     (id) => metrics.find((m) => m.id === id)
   ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
   const cellLine = hexToRgba(accent, 0.22);
-  const last10Avg = averageRecentGameLogs(logs, 10);
+  const windows = useMemo(() => nbaStatsWindowsForLogs(logs), [logs]);
+  const [innerWindow, setInnerWindow] = useState<NbaStatsWindow>({
+    kind: "season",
+  });
+  const window = statsWindowProp ?? innerWindow;
+  const setWindow = onStatsWindowChange ?? setInnerWindow;
+  const windowId = nbaStatsWindowId(window);
+  const filtered = useMemo(() => filterLogsByWindow(logs, window), [logs, window]);
+  const windowAvg = useMemo(
+    () =>
+      window.kind === "season"
+        ? null
+        : averageRecentGameLogs(filtered, filtered.length),
+    [filtered, window.kind]
+  );
   const hasSeasonAverages = season.gamesPlayed > 0;
-  const [avgWindow, setAvgWindow] = useState<"season" | "last10">("season");
   const hot = "#FCD34D";
-  const frame = hexToRgba(accent, 0.35);
 
   const renderCells = (
     cells: Array<{
@@ -120,39 +143,20 @@ export function NbaPlayerSeasonAveragesNative({
 
   return (
     <View style={styles.advWrap}>
-      <View style={styles.careerHeadRow}>
+      <View style={styles.advTitleRow}>
         <Text style={styles.advTitle}>{chrome.seasonAverages}</Text>
-        <View style={[styles.careerTabs, { borderColor: frame }]}>
-          {(
-            [
-              ["season", "Season"],
-              ["last10", "Last 10"],
-            ] as const
-          ).map(([id, label]) => {
-            const active = avgWindow === id;
-            return (
-              <Pressable
-                key={id}
-                onPress={() => setAvgWindow(id)}
-                style={[
-                  styles.careerTab,
-                  active ? { backgroundColor: accent } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.careerTabText,
-                    { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {window.kind !== "season" && filtered.length > 0 ? (
+          <Text style={styles.advWindowN}>{filtered.length} GP</Text>
+        ) : null}
       </View>
-      {avgWindow === "season" && hasSeasonAverages
+      <NbaStatsWindowChipsNative
+        windows={windows}
+        value={window}
+        onChange={setWindow}
+        accent={accent}
+        language={language}
+      />
+      {windowId === "season" && hasSeasonAverages
         ? renderCells(
             shown.map((m) => ({
               id: m.id,
@@ -161,18 +165,18 @@ export function NbaPlayerSeasonAveragesNative({
               leagueRank: m.leagueRank,
             }))
           )
-        : avgWindow === "last10" && last10Avg
+        : windowId !== "season" && windowAvg
           ? renderCells(
               shown.map((m) => {
-                const l10 = playerDetailRecentRawValue(last10Avg, m.id);
+                const v = playerDetailRecentRawValue(windowAvg, m.id);
                 const seasonV = playerDetailSeasonRawValue(season, m.id);
                 return {
                   id: m.id,
                   short: m.short,
-                  display: formatMetricDisplay(m.id, l10),
+                  display: formatMetricDisplay(m.id, v),
                   highlight:
                     hasSeasonAverages &&
-                    isPlayerDetailLast10AboveSeason(l10, seasonV),
+                    isPlayerDetailLast10AboveSeason(v, seasonV),
                 };
               })
             )
@@ -203,6 +207,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     textTransform: "uppercase",
     color: "#FFFFFF",
+  },
+  advWindowN: {
+    fontFamily: METRIC_FONT,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    color: "rgba(255,255,255,0.55)",
+    fontVariant: ["tabular-nums"],
   },
   advGrid: {
     flexDirection: "row",

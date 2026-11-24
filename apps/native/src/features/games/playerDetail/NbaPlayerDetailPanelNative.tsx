@@ -27,8 +27,6 @@ import {
   injuryReasonLabel,
 } from "../../../../../../lib/nba/teamInjuries/injuryReasonDisplay";
 import {
-  averageRecentGameLogs,
-  formatMetricDisplay,
   formatPhysique,
   formatSalaryUsd,
   formatContractSeasonLabel,
@@ -40,23 +38,17 @@ import {
   formatTeamHistory,
   getNbaPlayerDetailDevMock,
   getNbaPlayerDetailPreview,
-  isPlayerDetailLast10AboveSeason,
-  NBA_PLAYER_DETAIL_SEASON_SHOWN,
   nbaCountryNameToIso2,
-  playerDetailRecentRawValue,
-  playerDetailSeasonRawValue,
   type NbaPlayerAvailability,
   type NbaPlayerCareerSeasonBoard,
   type NbaPlayerCareerSeasonRow,
   type NbaPlayerDetailPreview,
   type NbaPlayerGameLog,
-  type NbaPlayerSeasonMetric,
   type NbaPlayerShotZone,
   type NbaPlayerVenueSplit,
   type NbaPlayerVsOpponentSample,
 } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
 import {
-  isPlayerDetailRankShown,
   isPlayerDetailSalaryRankShown,
 } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
 import { nbaTwoWaySalaryForSeason } from "../../../../../../lib/nba/teamPayroll/mapBdlToTeamPayroll";
@@ -103,6 +95,13 @@ import JerseyMarkSvg from "../JerseyMarkSvg";
 import NbaFavoriteStarButtonNative from "../NbaFavoriteStarButtonNative";
 import { NbaPlayerDisciplineSectionNative } from "../NbaDisciplineSectionNative";
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
+import { NbaPlayerSeasonAveragesNative } from "./NbaPlayerSeasonAveragesNative";
+import NbaStatsWindowChipsNative from "../stats/NbaStatsWindowChipsNative";
+import {
+  filterLogsByWindow,
+  nbaStatsWindowsForLogs,
+  type NbaStatsWindow,
+} from "../../../../../../lib/nba/nbaStatsWindow";
 import NbaPlayerHowTheyPlayNative from "./NbaPlayerHowTheyPlayNative";
 import NbaPlayerMatchupsNative from "./NbaPlayerMatchupsNative";
 import NbaPlayerOnOffNative from "./NbaPlayerOnOffNative";
@@ -821,159 +820,6 @@ function PlayerVsOpponentSectionNative({
   );
 }
 
-function SeasonMetricsGrid({
-  metrics,
-  season,
-  logs,
-  accent,
-  language,
-}: {
-  metrics: NbaPlayerSeasonMetric[];
-  season: NbaPlayerDetailPreview["season"];
-  logs: NbaPlayerGameLog[];
-  accent: string;
-  language: string;
-}) {
-  const chrome = nbaPlayerDetailChrome(language);
-  const shown = NBA_PLAYER_DETAIL_SEASON_SHOWN.map(
-    (id) => metrics.find((m) => m.id === id)
-  ).filter((m): m is NbaPlayerSeasonMetric => Boolean(m));
-  const cellLine = hexToRgba(accent, 0.22);
-  const last10Avg = averageRecentGameLogs(logs, 10);
-  const hasSeasonAverages = season.gamesPlayed > 0;
-  const [avgWindow, setAvgWindow] = useState<"season" | "last10">("season");
-  const hot = "#FCD34D";
-  const frame = hexToRgba(accent, 0.35);
-
-  const renderCells = (
-    cells: Array<{
-      id: string;
-      short: string;
-      display: string;
-      leagueRank?: number;
-      highlight?: boolean;
-    }>
-  ) => (
-    <View style={[styles.advGrid, { borderColor: hexToRgba(accent, 0.4) }]}>
-      {cells.map((m, i) => {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const lastRow = Math.floor((cells.length - 1) / 3);
-        return (
-          <View
-            key={m.id}
-            style={[
-              styles.advCell,
-              col < 2
-                ? {
-                    borderRightWidth: StyleSheet.hairlineWidth,
-                    borderRightColor: cellLine,
-                  }
-                : null,
-              row < lastRow
-                ? {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: cellLine,
-                  }
-                : null,
-            ]}
-          >
-            <View style={styles.advCellTop}>
-              <Text style={styles.advLabel}>{m.short}</Text>
-              {m.leagueRank != null && isPlayerDetailRankShown(m.leagueRank) ? (
-                <Text
-                  style={[
-                    styles.advRank,
-                    {
-                      color:
-                        m.leagueRank <= 10
-                          ? accent
-                          : "rgba(255,255,255,0.35)",
-                    },
-                  ]}
-                >
-                  #{m.leagueRank}
-                </Text>
-              ) : null}
-            </View>
-            <Text
-              style={[
-                styles.advValue,
-                m.highlight ? { color: hot } : null,
-              ]}
-            >
-              {m.display}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-
-  return (
-    <View style={styles.advWrap}>
-      <View style={styles.careerHeadRow}>
-        <Text style={styles.advTitle}>{chrome.seasonAverages}</Text>
-        <View style={[styles.careerTabs, { borderColor: frame }]}>
-          {(
-            [
-              ["season", "Season"],
-              ["last10", "Last 10"],
-            ] as const
-          ).map(([id, label]) => {
-            const active = avgWindow === id;
-            return (
-              <Pressable
-                key={id}
-                onPress={() => setAvgWindow(id)}
-                style={[
-                  styles.careerTab,
-                  active ? { backgroundColor: accent } : null,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.careerTabText,
-                    { color: active ? "#050508" : "rgba(255,255,255,0.55)" },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-      {avgWindow === "season" && hasSeasonAverages
-        ? renderCells(
-            shown.map((m) => ({
-              id: m.id,
-              short: m.short,
-              display: m.display,
-              leagueRank: m.leagueRank,
-            }))
-          )
-        : avgWindow === "last10" && last10Avg
-          ? renderCells(
-              shown.map((m) => {
-                const l10 = playerDetailRecentRawValue(last10Avg, m.id);
-                const seasonV = playerDetailSeasonRawValue(season, m.id);
-                return {
-                  id: m.id,
-                  short: m.short,
-                  display: formatMetricDisplay(m.id, l10),
-                  highlight:
-                    hasSeasonAverages &&
-                    isPlayerDetailLast10AboveSeason(l10, seasonV),
-                };
-              })
-            )
-          : (
-              <PlayerDetailSectionNoDataNative accent={accent} />
-            )}
-    </View>
-  );
-}
 
 function fmtPerGameNative(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
@@ -1375,13 +1221,18 @@ export function PlayerGameSplitsSectionNative({
 function GameLogsSection({
   logs,
   accent,
+  language,
 }: {
   logs: NbaPlayerGameLog[];
   accent: string;
+  language: string;
 }) {
   const [open, setOpen] = useState(true);
-  const wins = logs.filter((g) => g.result === "W").length;
-  const losses = logs.length - wins;
+  const windows = useMemo(() => nbaStatsWindowsForLogs(logs), [logs]);
+  const [window, setWindow] = useState<NbaStatsWindow>({ kind: "last", n: 20 });
+  const shown = useMemo(() => filterLogsByWindow(logs, window), [logs, window]);
+  const wins = shown.filter((g) => g.result === "W").length;
+  const losses = shown.length - wins;
 
   if (logs.length === 0) {
     return (
@@ -1400,7 +1251,7 @@ function GameLogsSection({
         hitSlop={8}
       >
         <Text style={styles.sectionTitleInline}>
-          GAME LOGS (LAST {logs.length})
+          GAME LOGS ({shown.length})
         </Text>
         <Text style={styles.formRecord}>
           {wins}-{losses}
@@ -1409,9 +1260,20 @@ function GameLogsSection({
           {open ? "▾" : "▸"}
         </Text>
       </Pressable>
+      <NbaStatsWindowChipsNative
+        windows={windows}
+        value={window}
+        onChange={setWindow}
+        accent={accent}
+        language={language}
+      />
 
       {open ? (
-        <NbaPlayerGameLogTableNative logs={logs} accent={accent} />
+        shown.length ? (
+          <NbaPlayerGameLogTableNative logs={shown} accent={accent} />
+        ) : (
+          <PlayerDetailSectionNoDataNative accent={accent} />
+        )
       ) : null}
     </View>
   );
@@ -1538,6 +1400,10 @@ export default function NbaPlayerDetailPanelNative({
       }),
     [detail, rosterPlayer, teammates]
   );
+  const seasonLogs = detail.seasonGameLogs ?? detail.gameLogs;
+  const [statsWindow, setStatsWindow] = useState<NbaStatsWindow>({
+    kind: "season",
+  });
   const bottomPad = Math.max(12, insets.bottom);
   const contract = detail.contract;
   const currentSalary = contract?.seasons[0] ?? null;
@@ -1667,12 +1533,14 @@ export default function NbaPlayerDetailPanelNative({
 
         {!isRetired ? (
           <>
-        <SeasonMetricsGrid
+        <NbaPlayerSeasonAveragesNative
           metrics={detail.seasonMetrics}
           season={detail.season}
-          logs={detail.gameLogs}
+          logs={seasonLogs}
           accent={accent}
           language={language}
+          statsWindow={statsWindow}
+          onStatsWindowChange={setStatsWindow}
         />
 
         {detail.teamId ? (
@@ -1721,6 +1589,8 @@ export default function NbaPlayerDetailPanelNative({
           leaders={leaders}
           teamStats={teamStats}
           detail={detail}
+          logs={seasonLogs}
+          statsWindow={statsWindow}
         />
 
         <NbaPlayerMatchupsNative playerId={detail.playerId} isJa={isJa} />
@@ -1785,7 +1655,11 @@ export default function NbaPlayerDetailPanelNative({
               language={language}
               trailingDivider={[styles.divider, { backgroundColor: dividerColor }]}
             />
-            <GameLogsSection logs={detail.gameLogs} accent={accent} />
+            <GameLogsSection
+              logs={detail.seasonGameLogs ?? detail.gameLogs}
+              accent={accent}
+              language={language}
+            />
             <View style={[styles.divider, { backgroundColor: dividerColor }]} />
             <PlayerGameSplitsSectionNative
               logs={detail.seasonGameLogs ?? detail.gameLogs}

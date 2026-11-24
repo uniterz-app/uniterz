@@ -1,5 +1,5 @@
 /** Web `NbaLeagueTeamStatsPanel` 相当 — 左レール + リーグ 30 チーム表 */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   ActivityIndicator,
@@ -18,7 +18,9 @@ import {
   metricValue,
   defaultLeagueTeamStatSortDir,
   leagueMetricDef,
+  leagueTeamRailGroupsForFilledRows,
   leagueTeamRailGroupsForMode,
+  NBA_LEAGUE_TEAM_BASIC_METRICS,
   sortLeagueTeamRows,
   teamGamesPlayed,
   formatTeamRecord,
@@ -55,6 +57,14 @@ import {
   nbaLeagueStatsSeasonNavState,
 } from "../../../../../../lib/nba/nbaLeagueStatsSeasonNav";
 import { getUniterzApiBaseUrl } from "../submitPredictionApi";
+import NbaStatsWindowChipsNative from "../stats/NbaStatsWindowChipsNative";
+import {
+  nbaStatsLeagueTableWindows,
+  nbaStatsWindowId,
+  type NbaStatsWindow,
+} from "../../../../../../lib/nba/nbaStatsWindow";
+import { fetchLeagueTeamWindow } from "../../../../../../lib/nba/leagueTeamStats/fetchLeagueTeamWindowClient";
+import { fillWindowRatingsFromSeasonPace } from "../../../../../../lib/nba/leagueTeamStats/buildTeamWindowRowsFromGameLogs";
 import {
   nbaLocalizedText,
   nbaLeagueStatsChrome,
@@ -137,17 +147,42 @@ export default function NbaLeagueTeamStatsPanelNative({
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
+  const [statsWindow, setStatsWindow] = useState<NbaStatsWindow>({ kind: "season" });
+  const [windowRows, setWindowRows] = useState<NbaLeagueTeamStatRow[] | null>(null);
+  const [windowLoading, setWindowLoading] = useState(false);
+  const [windowError, setWindowError] = useState<string | null>(null);
+  const tableWindows = useMemo(() => nbaStatsLeagueTableWindows(), []);
+  const windowId = nbaStatsWindowId(statsWindow);
+  const useWindowRows = phase === "season" && statsWindow.kind !== "season";
   const hasCleanRatings = leagueTeamRowsHaveCleanRatings(
     phase === "playoffs" ? bundle.playoffs : bundle.season
   );
-  const railGroupsFor = (nextMode: NbaLeagueStatsMode) =>
-    leagueTeamRailGroupsForMode(nextMode).filter(
+  const railGroupsFor = (nextMode: NbaLeagueStatsMode) => {
+    if (useWindowRows) {
+      const filled = leagueTeamRailGroupsForFilledRows(windowRows ?? []);
+      if (filled.length > 0) return filled;
+      return [
+        {
+          id: "basic" as const,
+          short: "BASIC",
+          metrics: NBA_LEAGUE_TEAM_BASIC_METRICS.filter(
+            (m) =>
+              m.id === "winPct" ||
+              m.id === "ppg" ||
+              m.id === "papg" ||
+              m.id === "diff"
+          ),
+        },
+      ];
+    }
+    return leagueTeamRailGroupsForMode(nextMode).filter(
       (g) => g.id !== "ratings" || hasCleanRatings
     );
+  };
   const groups = useMemo(
     () => railGroupsFor(mode),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, hasCleanRatings]
+    [mode, hasCleanRatings, useWindowRows, windowRows]
   );
   const [metricState, setMetric] = useState<NbaLeagueTeamStatMetric>("winPct");
   const [sortDir, setSortDir] = useState<NbaLeagueTeamStatSortDir>(() =>
@@ -186,22 +221,79 @@ export default function NbaLeagueTeamStatsPanelNative({
   }
 
   const modeOptions = modesForTeamPhase(phase);
+
+  useEffect(() => {
+    if (!useWindowRows) {
+      setWindowRows(null);
+      setWindowError(null);
+      setWindowLoading(false);
+      return;
+    }
+    if (
+      statsWindow.kind === "last" &&
+      statsWindow.n === 10 &&
+      bundle.last10.length > 0
+    ) {
+      setWindowRows(
+        fillWindowRatingsFromSeasonPace(bundle.last10, bundle.season)
+      );
+      setWindowError(null);
+      setWindowLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const abort = new AbortController();
+    setWindowLoading(true);
+    setWindowError(null);
+    void fetchLeagueTeamWindow({
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      season: seasonKey,
+      window: statsWindow,
+      signal: abort.signal,
+    })
+      .then((payload) => {
+        if (cancelled) return;
+        setWindowRows(
+          fillWindowRatingsFromSeasonPace(payload.rows, bundle.season)
+        );
+      })
+      .catch((e) => {
+        if (cancelled || abort.signal.aborted) return;
+        setWindowRows([]);
+        setWindowError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (!cancelled) setWindowLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      abort.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useWindowRows, windowId, seasonKey, bundle.last10, bundle.season]);
+
   const rows = useMemo(() => {
-    const base = resolveLeagueTeamStatRows({
-      phase,
-      mode,
-      season: bundle.season,
-      playoffs: bundle.playoffs,
-    });
+    const base = useWindowRows
+      ? resolveLeagueTeamStatRows({
+          phase: "season",
+          mode,
+          season: windowRows ?? [],
+        })
+      : resolveLeagueTeamStatRows({
+          phase,
+          mode,
+          season: bundle.season,
+          playoffs: bundle.playoffs,
+        });
     return sortLeagueTeamRows(base, metric, sortDir);
-  }, [bundle, phase, mode, metric, sortDir]);
+  }, [bundle, phase, mode, metric, sortDir, useWindowRows, windowRows]);
 
   const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
   const showEmptyTable = !loading && rows.length === 0;
 
   return (
     <View style={styles.root}>
-      {loading ? (
+      {loading || windowLoading ? (
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator color={CYBER_TAB_CYAN} />
         </View>
@@ -213,6 +305,11 @@ export default function NbaLeagueTeamStatsPanelNative({
         {error ? (
           <Text style={styles.fetchWarn}>
             {chrome.loadFailed(error)}
+          </Text>
+        ) : null}
+        {windowError ? (
+          <Text style={styles.fetchWarn}>
+            {chrome.loadFailed(windowError)}
           </Text>
         ) : null}
         <NbaLeagueStatsSeasonNavNative
@@ -229,6 +326,7 @@ export default function NbaLeagueTeamStatsPanelNative({
                 onPress={() => {
                   setPhase(p);
                   setMode(coerceTeamModeForPhase(p, mode));
+                  if (p === "playoffs") setStatsWindow({ kind: "season" });
                   if (
                     !leagueTeamRowsHaveCleanRatings(
                       p === "playoffs" ? bundle.playoffs : bundle.season
@@ -257,6 +355,17 @@ export default function NbaLeagueTeamStatsPanelNative({
               ))}
             </CyberSlantedTabBarNative>
           </View>
+          {phase === "season" ? (
+            <View style={{ marginTop: 8 }}>
+              <NbaStatsWindowChipsNative
+                windows={tableWindows}
+                value={statsWindow}
+                onChange={setStatsWindow}
+                accent={CYBER_TAB_CYAN}
+                language={language}
+              />
+            </View>
+          ) : null}
         </View>
       </View>
       </LeagueStatsCollapsibleNative>
@@ -265,7 +374,10 @@ export default function NbaLeagueTeamStatsPanelNative({
           nbaLeagueStatsSeasonNavState(seasonKey).label,
           phaseTabLabel(phase),
           modeTabLabel(mode),
-        ].join(" · ")}
+          statsWindow.kind === "season" ? null : nbaStatsWindowId(statsWindow).toUpperCase(),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       />
 
       <View style={styles.split}>

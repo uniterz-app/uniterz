@@ -580,6 +580,22 @@ export function leaguePlayerRailGroupsForMode(
   return [{ id: "basic", short: "BASIC", metrics: basic }];
 }
 
+/** 期間窓など、値が入っている指標だけレールに出す */
+export function leaguePlayerRailGroupsForFilledBoard(
+  board: Partial<
+    Record<NbaPlayerLeaderMetricId, readonly NbaPlayerStatLeaderRow[]>
+  >
+): NbaPlayerRailGroup[] {
+  return leaguePlayerRailGroups()
+    .map((g) => ({
+      ...g,
+      metrics: g.metrics.filter((m) =>
+        (board[m.id] ?? []).some((r) => Math.abs(r.value) > 1e-9)
+      ),
+    }))
+    .filter((g) => g.metrics.length > 0);
+}
+
 export function isPlayerAdvancedLeaderMetric(
   id: NbaPlayerLeaderMetricId
 ): id is NbaPlayerAdvancedLeaderMetric {

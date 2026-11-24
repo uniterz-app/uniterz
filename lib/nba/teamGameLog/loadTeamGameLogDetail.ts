@@ -1,4 +1,5 @@
 import type { Firestore } from "firebase-admin/firestore";
+import { NBA_ALL_TEAM_IDS } from "@/lib/nba/teamGameLog/buildTeamGameLogsBundleFromGames";
 import { normalizeTeamGameLogSeasonKey } from "@/lib/nba/teamGameLog/loadTeamGameLog";
 import { NBA_TEAM_GAME_LOGS_COLLECTION } from "@/lib/nba/teamGameLog/teamGameLogTypes";
 import {
@@ -31,6 +32,21 @@ export async function loadTeamGameLogDetail(
     detail: resolveTeamGameLogDetail(teamId, season, data),
     updatedAt: data.updatedAt?.toDate?.().toISOString() ?? null,
   };
+}
+
+/** 30 チーム分。公開 API は doc 単体 get（共有キャッシュ）で読む */
+export async function loadAllTeamGameLogDetails(
+  db: Firestore,
+  seasonRaw: string | null | undefined
+): Promise<Map<string, NbaTeamGameLogDetail | null>> {
+  const season = normalizeTeamGameLogSeasonKey(seasonRaw);
+  const pairs = await Promise.all(
+    NBA_ALL_TEAM_IDS.map(async (teamId) => {
+      const { detail } = await loadTeamGameLogDetail(db, season, teamId);
+      return [teamId, detail] as const;
+    })
+  );
+  return new Map(pairs);
 }
 
 export async function writeTeamGameLogDetails(

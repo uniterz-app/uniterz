@@ -152,6 +152,53 @@ function compactBoard(
   return out;
 }
 
+/** 空指標は書かない（期間スナップショット用） */
+export function compactPlayerLeaderBoardFilled(
+  board: Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
+): Record<string, CompactEntry[]> {
+  const out: Record<string, CompactEntry[]> = {};
+  for (const [metric, rows] of Object.entries(compactBoard(board))) {
+    if (rows.length === 0) continue;
+    out[metric] = rows;
+  }
+  return out;
+}
+
+export function collectPlayersFromLeaderBoards(
+  boards: readonly Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>[]
+): Record<string, CompactPlayer> {
+  const players: Record<string, CompactPlayer> = {};
+  for (const board of boards) {
+    for (const rows of Object.values(board)) {
+      for (const row of rows) {
+        if (!players[row.playerId]) {
+          players[row.playerId] = {
+            n: row.playerName,
+            t: row.teamId,
+            c: row.conference,
+          };
+        }
+      }
+    }
+  }
+  return players;
+}
+
+export function parseCompactLeaderPlayers(
+  raw: unknown
+): Record<string, CompactPlayer> | null {
+  return parsePlayers(raw);
+}
+
+export function expandPlayerLeaderBoard(
+  raw: unknown,
+  players: Record<string, CompactPlayer>
+): Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]> | null {
+  const parsed = parseBoard(raw, players);
+  if (!parsed) return null;
+  return parsed;
+}
+
 export function compactPlayerStatLeadersBundle(
   bundle: NbaPlayerStatLeadersBundle
 ): {

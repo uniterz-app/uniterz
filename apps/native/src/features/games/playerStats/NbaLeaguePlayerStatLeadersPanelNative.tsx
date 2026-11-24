@@ -1,5 +1,5 @@
 /** Web `NbaLeaguePlayerStatLeadersPanel` 相当 — 左レール + リーダ表 */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   ActivityIndicator,
@@ -14,10 +14,20 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { getTeamPrimaryColor } from "../../../../../../lib/team-colors";
 import {
   formatPlayerLeaderValue,
+  leaguePlayerRailGroupsForFilledBoard,
   leaguePlayerRailGroupsForMode,
   playerLeaderMetricDef,
+  type NbaPlayerLeaderMetricId,
   type NbaPlayerStatLeaderMetric,
+  type NbaPlayerStatLeaderRow,
 } from "@/lib/predict/nbaPlayerStatLeadersMocks";
+import { fetchLeaguePlayerWindow } from "@/lib/nba/playerStatLeaders/fetchLeaguePlayerWindowClient";
+import NbaStatsWindowChipsNative from "../stats/NbaStatsWindowChipsNative";
+import {
+  nbaStatsLeagueTableWindows,
+  nbaStatsWindowId,
+  type NbaStatsWindow,
+} from "@/lib/nba/nbaStatsWindow";
 import { formatNbaPlayerListName } from "@/lib/nba/formatNbaPlayerListName";
 import { usePlayerStatLeadersBundle } from "../../../../../../lib/nba/usePlayerStatLeadersBundle";
 import { nbaDailyStatsUpdateFootnote } from "../../../../../../lib/nba/nbaStatsUpdateSchedule";
@@ -131,11 +141,82 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
   });
   const [phase, setPhase] = useState<NbaLeagueStatsPhase>("season");
   const [mode, setMode] = useState<NbaLeagueStatsMode>("per_game");
-  const groups = useMemo(() => leaguePlayerRailGroupsForMode(mode), [mode]);
-  const [metric, setMetric] = useState<NbaPlayerStatLeaderMetric>("pts");
+  const [statsWindow, setStatsWindow] = useState<NbaStatsWindow>({
+    kind: "season",
+  });
+  const [windowBoard, setWindowBoard] = useState<Record<
+    NbaPlayerLeaderMetricId,
+    NbaPlayerStatLeaderRow[]
+  > | null>(null);
+  const [windowLoading, setWindowLoading] = useState(false);
+  const tableWindows = useMemo(() => nbaStatsLeagueTableWindows(), []);
+  const windowId = nbaStatsWindowId(statsWindow);
+  const useWindowBoard = phase === "season" && statsWindow.kind !== "season";
+
+  useEffect(() => {
+    if (!useWindowBoard) {
+      setWindowBoard(null);
+      setWindowLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const abort = new AbortController();
+    setWindowLoading(true);
+    void fetchLeaguePlayerWindow({
+      apiBaseUrl: getUniterzApiBaseUrl(),
+      season: seasonKey,
+      window: statsWindow,
+      signal: abort.signal,
+    })
+      .then((payload) => {
+        if (!cancelled) setWindowBoard(payload.board);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (
+          statsWindow.kind === "last" &&
+          statsWindow.n === 10 &&
+          (bundle.last10.pts?.length ?? 0) > 0
+        ) {
+          setWindowBoard(bundle.last10);
+          return;
+        }
+        setWindowBoard(
+          {} as Record<NbaPlayerLeaderMetricId, NbaPlayerStatLeaderRow[]>
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setWindowLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      abort.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useWindowBoard, windowId, seasonKey, bundle.last10]);
+
+  const railGroupsFor = (nextMode: NbaLeagueStatsMode) => {
+    if (useWindowBoard) {
+      const filled = leaguePlayerRailGroupsForFilledBoard(windowBoard ?? {});
+      if (filled.length > 0) return filled;
+      return leaguePlayerRailGroupsForMode("last10");
+    }
+    return leaguePlayerRailGroupsForMode(nextMode);
+  };
+  const groups = useMemo(
+    () => railGroupsFor(mode),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, useWindowBoard, windowBoard]
+  );
+  const [metricState, setMetric] = useState<NbaPlayerStatLeaderMetric>("pts");
   const [sortDir, setSortDir] = useState<SortDir>(() =>
     defaultSortDir(playerLeaderMetricDef("pts").higherIsBetter)
   );
+  const metric: NbaPlayerStatLeaderMetric = groups.some((g) =>
+    g.metrics.some((m) => m.id === metricState)
+  )
+    ? metricState
+    : groups[0]?.metrics[0]?.id ?? "pts";
 
   const metricMeta = playerLeaderMetricDef(metric);
   const activeGroupId =
@@ -149,7 +230,7 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
 
   function applyMode(next: NbaLeagueStatsMode) {
     setMode(next);
-    const nextGroups = leaguePlayerRailGroupsForMode(next);
+    const nextGroups = railGroupsFor(next);
     const allowed = new Set(
       nextGroups.flatMap((g) => g.metrics.map((m) => m.id))
     );
@@ -161,25 +242,27 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
 
   const modeOptions = modesForPlayerPhase(phase);
   const leaders = useMemo(() => {
+    const source = useWindowBoard
+      ? windowBoard?.[metric] ?? []
+      : undefined;
     const list = resolvePlayerStatLeaderRows({
-      phase,
+      phase: useWindowBoard ? "season" : phase,
       mode,
       metric,
-      season: bundle.season[metric] ?? [],
+      season: source ?? bundle.season[metric] ?? [],
       playoffs: bundle.playoffs?.[metric] ?? [],
     });
-    // 低いほど良い指標（守備% など）は ingest 時点で昇順なので、反転ではなく値で並べる
     return [...list].sort((a, b) =>
       sortDir === "asc" ? a.value - b.value : b.value - a.value
     );
-  }, [bundle, phase, mode, metric, sortDir]);
+  }, [bundle, phase, mode, metric, sortDir, useWindowBoard, windowBoard]);
 
   const emptyCopy = leagueStatsTableEmptyCopy(lang, mode);
-  const showEmptyTable = !loading && leaders.length === 0;
+  const showEmptyTable = !loading && !windowLoading && leaders.length === 0;
 
   return (
     <View style={styles.root}>
-      {loading ? (
+      {loading || windowLoading ? (
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator color={CYBER_TAB_CYAN} />
         </View>
@@ -227,6 +310,17 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
               ))}
             </CyberSlantedTabBarNative>
           </View>
+          {phase === "season" ? (
+            <View style={{ marginTop: 8 }}>
+              <NbaStatsWindowChipsNative
+                windows={tableWindows}
+                value={statsWindow}
+                onChange={setStatsWindow}
+                accent={CYBER_TAB_CYAN}
+                language={language}
+              />
+            </View>
+          ) : null}
         </View>
       </View>
       </LeagueStatsCollapsibleNative>
@@ -235,7 +329,12 @@ export default function NbaLeaguePlayerStatLeadersPanelNative({
           nbaLeagueStatsSeasonNavState(seasonKey).label,
           phaseTabLabel(phase),
           modeTabLabel(mode),
-        ].join(" · ")}
+          statsWindow.kind === "season"
+            ? null
+            : nbaStatsWindowId(statsWindow).toUpperCase(),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       />
 
       <View style={styles.split}>

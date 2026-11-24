@@ -1,5 +1,5 @@
 /** Web `NbaPlayerHowTheyPlay` 相当 — HOW THEY PLAY（RATINGS 含む） */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CyberSlantedSegBarNative } from "../../rankings/CyberSlantedSegBarNative";
 import { METRIC_FONT } from "../../rankings/rankingsUiTheme";
@@ -8,10 +8,19 @@ import {
   PLAYER_TRACK_GROUPS,
   getPlayerHowTheyPlay,
   isPlayerDetailRankShown,
+  playerHowTheyPlayFromGameLogs,
+  playerHowTheyPlayTabsWithData,
   type PlayerHowRow,
   type PlayerHowTheyPlayTab,
 } from "../../../../../../lib/predict/nbaPlayerDetailHowTheyPlay";
-import type { NbaPlayerDetailPreview } from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
+import type {
+  NbaPlayerDetailPreview,
+  NbaPlayerGameLog,
+} from "../../../../../../lib/predict/nbaPlayerDetailPreviewMocks";
+import {
+  filterLogsByWindow,
+  type NbaStatsWindow,
+} from "../../../../../../lib/nba/nbaStatsWindow";
 import type { NbaPlayerStatLeadersBundle } from "../../../../../../lib/predict/nbaPlayerStatLeadersMocks";
 import type { NbaLeagueTeamStatsBundle } from "../../../../../../lib/predict/nbaLeagueTeamStatsMocks";
 import {
@@ -184,6 +193,8 @@ type Props = {
   leaders?: NbaPlayerStatLeadersBundle;
   teamStats?: NbaLeagueTeamStatsBundle;
   detail?: NbaPlayerDetailPreview;
+  logs?: readonly NbaPlayerGameLog[];
+  statsWindow?: NbaStatsWindow;
   initialTab?: PlayerHowTheyPlayTab;
   initialTrackGroup?: (typeof PLAYER_TRACK_GROUPS)[number]["id"];
 };
@@ -196,18 +207,39 @@ export default function NbaPlayerHowTheyPlayNative({
   leaders,
   teamStats,
   detail,
+  logs,
+  statsWindow,
   initialTab,
   initialTrackGroup,
 }: Props) {
   const chrome = nbaHowTheyPlayChrome(language ?? (isJa ? "ja" : "en"));
   const { lang } = chrome;
-  const board = useMemo(
-    () => getPlayerHowTheyPlay(playerId, { leaders, teamStats, detail }),
-    [playerId, leaders, teamStats, detail]
-  );
+  const useWindow = statsWindow != null && statsWindow.kind !== "season";
+  const board = useMemo(() => {
+    if (useWindow) {
+      return playerHowTheyPlayFromGameLogs(
+        filterLogsByWindow(logs ?? [], statsWindow)
+      );
+    }
+    return getPlayerHowTheyPlay(playerId, { leaders, teamStats, detail });
+  }, [playerId, leaders, teamStats, detail, logs, statsWindow, useWindow]);
+  const tabs = useMemo(() => {
+    if (!useWindow) return PLAYER_HOW_THEY_PLAY_TABS;
+    const filled = playerHowTheyPlayTabsWithData(board);
+    if (filled.length === 0) {
+      return PLAYER_HOW_THEY_PLAY_TABS.filter((t) => t.id === "ratings");
+    }
+    return PLAYER_HOW_THEY_PLAY_TABS.filter((t) => filled.includes(t.id));
+  }, [board, useWindow]);
   const [tab, setTab] = useState<PlayerHowTheyPlayTab>(
     initialTab && PLAYER_HOW_THEY_PLAY_TABS.some((t) => t.id === initialTab) ? initialTab : "ratings"
   );
+  useEffect(() => {
+    if (!tabs.some((t) => t.id === tab)) {
+      const fallback = tabs[0]?.id;
+      if (fallback) setTab(fallback);
+    }
+  }, [tabs, tab]);
   const [ratingId, setRatingId] = useState("per");
   const [factorId, setFactorId] = useState("efg_pct");
   const [defenseId, setDefenseId] = useState("matchup_fg_pct");
@@ -217,7 +249,15 @@ export default function NbaPlayerHowTheyPlayNative({
   const [trackGroup, setTrackGroup] = useState<(typeof PLAYER_TRACK_GROUPS)[number]["id"]>(
     initialTrackGroup && PLAYER_TRACK_GROUPS.some((g) => g.id === initialTrackGroup) ? initialTrackGroup : "drive"
   );
-  const tabMeta = PLAYER_HOW_THEY_PLAY_TABS.find((t) => t.id === tab)!;
+  const tabMeta =
+    tabs.find((t) => t.id === tab) ??
+    tabs[0] ??
+    PLAYER_HOW_THEY_PLAY_TABS[0]!;
+  const scoringRows = useWindow
+    ? board.scoring.filter(
+        (r) => Math.abs(r.cell.value) > 1e-9 || Math.abs(r.pts.value) > 1e-9
+      )
+    : board.scoring;
   const frame = hexToRgba(accent, 0.4);
   const line = hexToRgba(accent, 0.15);
 
@@ -233,7 +273,7 @@ export default function NbaPlayerHowTheyPlayNative({
       </View>
 
       <View style={styles.chipRow}>
-        {PLAYER_HOW_THEY_PLAY_TABS.map((t) => {
+        {tabs.map((t) => {
           const active = tab === t.id;
           return (
             <Pressable
@@ -282,7 +322,7 @@ export default function NbaPlayerHowTheyPlayNative({
 
       {tab === "scoring" ? (
         <View style={[styles.padCard, { borderColor: frame }]}>
-          {board.scoring.map((row) => (
+          {scoringRows.map((row) => (
             <View key={row.id} style={styles.barBlock}>
               <View style={styles.barTop}>
                 <Text style={styles.barLabel}>

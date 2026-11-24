@@ -20,6 +20,7 @@ import {
   writeTeamGameLogsSnapshot,
 } from "@/lib/nba/teamGameLog/loadTeamGameLog";
 import { writeTeamGameLogDetails } from "@/lib/nba/teamGameLog/loadTeamGameLogDetail";
+import { writeTeamWindowSnapshotFromDetails } from "@/lib/nba/leagueTeamStats/loadTeamWindowSnapshot";
 import {
   loadNbaSeasonGameRows,
   NBA_SEASON_GAME_ROWS_LIMIT,
@@ -83,17 +84,21 @@ export async function ingestNbaTeamGameLogsFromGames(
     serverTimestamp: FieldValue.serverTimestamp(),
   });
 
-  await writeTeamGameLogDetails(
+  const details = buildTeamGameLogDetailsFromGames({ seasonKey, games: rows });
+  const ts = FieldValue.serverTimestamp();
+  await writeTeamGameLogDetails(db, seasonKey, details, ts);
+  const seasonRows = (await loadLeagueTeamStatsSnapshot(db, seasonKey)).bundle
+    .season;
+  await writeTeamWindowSnapshotFromDetails(
     db,
     seasonKey,
-    buildTeamGameLogDetailsFromGames({ seasonKey, games: rows }),
-    FieldValue.serverTimestamp()
+    details,
+    seasonRows,
+    ts
   );
 
   const last10 = buildLast10RowsFromGames(rows, {
-    seasonPaceByTeamId: seasonPaceByTeamIdFromRows(
-      (await loadLeagueTeamStatsSnapshot(db, seasonKey)).bundle.season
-    ),
+    seasonPaceByTeamId: seasonPaceByTeamIdFromRows(seasonRows),
   });
   await mergeLast10IntoLeagueTeamStatsSnapshot(
     db,
