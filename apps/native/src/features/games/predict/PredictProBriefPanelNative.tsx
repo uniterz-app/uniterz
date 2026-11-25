@@ -664,8 +664,8 @@ export default function PredictProBriefPanelNative({
                         onPress={onPressProPickUnlock}
                         disabled={unlockBusy}
                         style={({ pressed }) => [
-                          styles.ctaAdText,
-                          pressed || unlockBusy ? styles.ctaAdTextPressed : null,
+                          styles.ctaAd,
+                          pressed || unlockBusy ? styles.ctaAdPressed : null,
                           unlockBusy ? styles.ctaBusy : null,
                         ]}
                         accessibilityRole="button"
@@ -673,7 +673,7 @@ export default function PredictProBriefPanelNative({
                           unlockConfirming ? unlockCopy.confirmingCta : unlockCopy.adCta
                         }
                       >
-                        <Text style={styles.ctaAdTextLabel}>
+                        <Text style={styles.ctaAdLabel}>
                           {unlockConfirming ? unlockCopy.confirmingCta : unlockCopy.adCta}
                         </Text>
                       </Pressable>
@@ -1035,19 +1035,26 @@ const styles = StyleSheet.create({
   ctaFilledLabelPressed: {
     color: "#120e08",
   },
-  ctaAdText: {
+  ctaAd: {
     alignSelf: "stretch",
+    minHeight: 44,
     alignItems: "center",
-    paddingVertical: 6,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.34)",
+    backgroundColor: "transparent",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
-  ctaAdTextPressed: {
-    opacity: 0.55,
+  ctaAdPressed: {
+    transform: [{ scale: 0.94 }],
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  ctaAdTextLabel: {
-    fontFamily: JP_400,
-    fontSize: 13,
-    letterSpacing: 0.2,
-    color: "rgba(255,255,255,0.48)",
+  ctaAdLabel: {
+    fontFamily: JP_600,
+    fontSize: 14,
+    letterSpacing: 0.3,
+    color: "rgba(255,255,255,0.86)",
   },
   exampleBlock: {
     gap: 8,

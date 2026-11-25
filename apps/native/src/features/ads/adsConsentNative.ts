@@ -71,8 +71,8 @@ export function ensureAdsReadyNative(): Promise<boolean> {
   return readyPromise;
 }
 
-function isIosSimulatorNative(): boolean {
-  if (Platform.OS !== "ios") return false;
+/** iOS シミュレータ / Android エミュレータ。実機の同意フローは通す。 */
+function isEmulatorNative(): boolean {
   try {
     const Device = require("expo-device") as { isDevice?: boolean };
     return Device.isDevice === false;
@@ -86,7 +86,7 @@ async function runConsentThenInitNative(): Promise<boolean> {
   if (!ads) return false;
   try {
     // シミュレータの UMP / ATT はネイティブダイアログで画面を塞ぐ。実機の同意フローはそのまま。
-    if (isIosSimulatorNative()) {
+    if (isEmulatorNative()) {
       await ads.default().initialize();
       return true;
     }
