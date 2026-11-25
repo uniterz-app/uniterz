@@ -8,7 +8,9 @@
  * 2026-27 の 248 試合（出場した選手が分かっている前提）で 1 番手 45.6%。
  * 相手の失点（全体 0.4 + 同じポジション 0.8、試合数で shrink）を平均に掛けると 46.8%。
  * 40% 以上と出した試合の当たり 55.3% → 60.3%（scripts/backtest-predict-kit-scorers.ts）。
+ * キット作成時に points O/U があれば平均だけ市場へ寄せる（順位のシミュレーションは同じ）。
  */
+import { blendScorerMu } from "@/lib/nba/insights/predictKit/predictKitMarket";
 
 export const PREDICT_KIT_SCORER_TUNING = {
   priorGames: 6,
@@ -117,7 +119,12 @@ export function predictKitScorerSeasonMu(p: Pick<PredictKitScorerPlayer, "gp" | 
   return (p.gp * p.ppg + k * base) / (p.gp + k);
 }
 
-export function predictKitScorerOdds(players: PredictKitScorerPlayer[], seed: number): PredictKitScorerOdds[] {
+export function predictKitScorerOdds(
+  players: PredictKitScorerPlayer[],
+  seed: number,
+  /** 選手 ID → points O/U。無い選手は今の平均のまま */
+  propLines?: Record<string, number>
+): PredictKitScorerOdds[] {
   const T = PREDICT_KIT_SCORER_TUNING;
   const cand = players
     .filter((p) => p.playProb > 0)
@@ -129,7 +136,8 @@ export function predictKitScorerOdds(players: PredictKitScorerPlayer[], seed: nu
           ? (1 - T.recentWeight) * seasonMu + (T.recentWeight * recent.reduce((a, b) => a + b, 0)) / recent.length
           : seasonMu;
       const sd0 = T.sdSlope * blended + T.sdBase;
-      const mu = blended * (p.oppMuAdj && p.oppMuAdj > 0 ? p.oppMuAdj : 1);
+      const withOpp = blended * (p.oppMuAdj && p.oppMuAdj > 0 ? p.oppMuAdj : 1);
+      const mu = blendScorerMu(withOpp, propLines?.[p.playerId]);
       const pts = p.recentPts;
       let sd = sd0;
       if (pts.length >= 4) {

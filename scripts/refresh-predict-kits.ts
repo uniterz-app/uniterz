@@ -1,10 +1,11 @@
 /**
- * これからの試合の「予想の材料」+ 裏のシミュレーション（`refreshPredictKits`）を手で回す。OpenAI・BDL なし。
+ * これからの試合の「予想の材料」+ 裏のシミュレーション（`refreshPredictKits`）を手で回す。
+ * キット作成時に BDL の今のオッズ / 選手プロップを読む（公開 API からは叩かない）。
  * 既定は書き込まずに表示だけ。`--write` で gameProInsights に保存（書いたら公開 API のキャッシュは
  * 次の pro-brief ingest か `/api/admin/nba-pro-brief-ingest` で捨てる）。
  *
  *   npx tsx --tsconfig tsconfig.json scripts/refresh-predict-kits.ts [--write] [--hourly]
- *   （既定 = 20:00 の回と同じく 24h 以内を全部。--hourly = 毎時の回と同じく、もうある予想を欠場が変わったときだけ）
+ *   （既定 = 19:00 の回と同じく 24h 以内を全部作り直す。--hourly = 毎時の回と同じく、まだ無い予想は作る・もうある予想は欠場が変わったとき、またはラインが動いた試合だけ）
  */
 import "./_loadAdminEnv";
 import { getAdminDb } from "../lib/firebaseAdmin";

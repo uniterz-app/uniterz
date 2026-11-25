@@ -8,5 +8,5 @@ export const MATCHUP_INSIGHT_CACHE_TAG = "matchup-insight";
 export const MATCHUP_INSIGHT_CACHE_REVALIDATE_SEC = 300;
 
 export function revalidateMatchupInsightCache(): void {
-  revalidateTag(MATCHUP_INSIGHT_CACHE_TAG, {});
+  revalidateTag(MATCHUP_INSIGHT_CACHE_TAG, { expire: 0 });
 }

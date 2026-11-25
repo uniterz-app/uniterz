@@ -1,7 +1,7 @@
 /**
- * JST 毎日 20:00 — 翌日窓の Pro Insight ナラティブを OpenAI Batch 投入し、続けて予想の材料（翌日 24h 分）を作る。
- * 予想の材料は 20:00 頃に表示。ナラティブは 21:00 までに初版（batch_poll が 15 分ごと完了反映）。
- * tip 1h 前は injury 変更時のみ narrative_patch。
+ * JST 毎日 19:00 — 18:00 の日次スタッツのあと、開始 24h 以内の予想の材料を作り直す。
+ * 初回作成は毎時 :15（試合が 24h 窓に入ったとき）。19:00 はスタッツ反映の作り直し。20:00 ではない。
+ * ナラティブの新規 Batch は停止済み。
  *
  * body.mode = batch_submit（OPENAI_API_KEY 未設定時は fact フォールバック即書き）
  *
@@ -28,7 +28,7 @@ function resolveProBriefIngestUrl(): string | null {
 
 export const runNbaProBriefFullCron = onSchedule(
   {
-    schedule: "0 20 * * *",
+    schedule: "0 19 * * *",
     timeZone: "Asia/Tokyo",
     region: "asia-northeast1",
     timeoutSeconds: 540,

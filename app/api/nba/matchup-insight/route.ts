@@ -101,7 +101,7 @@ async function loadMatchupInsightPayload(gameId: string) {
  *   - predictKit … 予想の材料（Pro 限定。無料のティーザーには載せない）
  *
  * クライアントは narrative を優先。未生成は status: "empty" | "pending"。
- * Free + `teaser=1`: PREVIEW の第 1 段落と、予想の材料があるか・今季の的中率だけ `{ locked: true, teaser, hasKit, kitRecord }`。
+ * Free + `teaser=1`: PREVIEW の第 1 段落と、予想の材料があるか・今季の的中率・未読点用 updatedAt だけ `{ locked: true, teaser, hasKit, kitRecord, updatedAt }`。
  *   予想の中身（確率・スコア・得点王）は返さない。どちらも無い試合は 403。
  * Pro 判定は毎回。試合共通部分は unstable_cache（書き込み側 ingest で tag を捨てる）。
  */
@@ -130,10 +130,11 @@ export async function GET(req: Request) {
     const db = getAdminDb();
     const unlocked = !isPro && (await hasProPickGameUnlock(db, uid, gameId));
     const hasAccess = isPro || unlocked;
+    const noStore = { headers: { "Cache-Control": "private, no-store" } };
     if (!hasAccess && !wantsTeaser) {
       return NextResponse.json(
         { ok: false, error: "pro_required", locked: true },
-        { status: 403 }
+        { status: 403, ...noStore }
       );
     }
     if (unlocked && wantsTeaser) {
@@ -146,7 +147,7 @@ export async function GET(req: Request) {
 
     const result = await unstable_cache(
       () => loadMatchupInsightPayload(gameId),
-      ["matchup-insight", gameId],
+      ["matchup-insight", "v2", gameId],
       {
         revalidate: MATCHUP_INSIGHT_CACHE_REVALIDATE_SEC,
         tags: [MATCHUP_INSIGHT_CACHE_TAG],
@@ -156,7 +157,7 @@ export async function GET(req: Request) {
     if (result.kind !== "ok") {
       return NextResponse.json(
         { ok: false, error: result.kind },
-        { status: 404 }
+        { status: 404, headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
@@ -166,7 +167,7 @@ export async function GET(req: Request) {
       if (!teaser && !hasKit) {
         return NextResponse.json(
           { ok: false, error: "pro_required", locked: true },
-          { status: 403 }
+          { status: 403, ...noStore }
         );
       }
       // 初回の無料解除が使えるか（ボタンの文言を「無料」にするため）
@@ -182,6 +183,8 @@ export async function GET(req: Request) {
           hasKit,
           kitRecord: result.body.predictKit?.record ?? null,
           firstFreeAvailable,
+          /** 無料のタブ未読点用。中身は出さない */
+          updatedAt: hasKit ? result.body.updatedAt : null,
         },
         { headers: { "Cache-Control": "private, no-store" } }
       );

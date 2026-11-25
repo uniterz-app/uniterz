@@ -36,8 +36,8 @@ type RouteMode =
  *
  * full / patch … 旧テンプレ proBrief
  * batch_submit / narrative_patch … ナラティブ（OpenAI）の生成は停止済み。「予想の材料」+ 裏のシミュレーションだけ
- *   計算し直す（変わった試合だけ書く。batch_submit = 20:00 に翌日 24h 分を作る。narrative_patch = 毎時、
- *   もうある予想を欠場が変わったときだけ直す）
+ *   計算し直す（変わった試合だけ書く。batch_submit = 19:00 に 24h 以内を作り直す。narrative_patch = 毎時 :15、
+ *   開始 24h 以内でまだ無い予想は作る。もうある予想は欠場が変わったとき、またはラインが動いた試合だけ直す）
  * batch_poll … 停止前に投入済みの Batch の完了ポーリング（新しい投入は無いので空振りで終わる）
  */
 export async function POST(req: Request) {
@@ -103,15 +103,17 @@ export async function POST(req: Request) {
         return { error: e instanceof Error ? e.message : String(e) };
       }
     };
-    const kitsChanged = (r: Awaited<ReturnType<typeof refreshKits>>) =>
-      "kitWritten" in r && r.kitWritten > 0;
 
     // ナラティブ（OpenAI）は作らない。cron が送るモード名は変えずに予想の材料だけ回す
     if (mode === "batch_submit" || mode === "narrative_patch") {
       const predictKits = await refreshKits(mode === "batch_submit" ? "daily" : "hourly");
       return respond(
         { ok: true, narrative: "stopped", predictKits },
-        { insight: kitsChanged(predictKits), teamDocs: false }
+        {
+          // 変わっていなくても tag を捨てる（書いた直後に空キャッシュが残らないように）
+          insight: true,
+          teamDocs: false,
+        }
       );
     }
 

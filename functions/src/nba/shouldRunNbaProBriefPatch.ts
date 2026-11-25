@@ -2,7 +2,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
 /**
  * lib `refreshPredictKits` の hourly と同じ範囲（`PREDICT_KIT_CREATE_HORIZON_HOURS`）。
- * 欠場が変わった予想の作り直しも、20:00 に作れなかった試合の拾い直しも開始 24h 以内が対象
+ * 欠場が変わった予想の作り直しも、まだ無い予想の作成も開始 24h 以内が対象
  */
 const PATCH_HORIZON_MS = 24 * 60 * 60 * 1000;
 

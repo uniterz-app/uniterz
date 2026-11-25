@@ -316,3 +316,49 @@ export function buildPredictKit(input: {
     totalVsLeague,
   };
 }
+
+/**
+ * 点差・合計を差し替えて勝率・スコア・ペースを組み直す。
+ * 内訳の符号は有利側から見たまま。点差の大きさが変わったら内訳も同じ比率で縮める。
+ */
+export function withPredictKitOutlook(
+  kit: PredictKit,
+  input: { homeMargin: number; total: number; homeTeamId: string; awayTeamId: string }
+): PredictKit {
+  const { homeMargin, total, homeTeamId: home, awayTeamId: away } = input;
+  const pHome = normCdf(homeMargin / C.sigma);
+  const favoredHome = pHome >= 0.5;
+  const favoredTeamId = favoredHome ? home : away;
+  const p = Math.max(pHome, 1 - pHome);
+  const leagueTotal = kit.score.leagueTotal;
+  const totalVsLeague = total - leagueTotal;
+  const oldFavHome = kit.homeMargin >= 0;
+  const signFlip = oldFavHome === favoredHome ? 1 : -1;
+  const scale =
+    Math.abs(kit.homeMargin) >= 0.5 ? Math.abs(homeMargin) / Math.abs(kit.homeMargin) : 1;
+  const factors = kit.factors
+    .map((f) => ({ ...f, pts: f.pts * scale * signFlip }))
+    .filter((f) => Math.abs(f.pts) >= PREDICT_KIT_FACTOR_MIN_PTS)
+    .sort((a, b) => Math.abs(b.pts) - Math.abs(a.pts));
+  return {
+    ...kit,
+    favoredTeamId,
+    lean: leanTierFromP(p),
+    favoredWinP: p,
+    homeMargin,
+    factors,
+    pace:
+      totalVsLeague >= PREDICT_KIT_TOTAL_TIER_PTS
+        ? "high"
+        : totalVsLeague <= -PREDICT_KIT_TOTAL_TIER_PTS
+          ? "low"
+          : "mid",
+    totalVsLeague,
+    score: {
+      home: (total + homeMargin) / 2,
+      away: (total - homeMargin) / 2,
+      total,
+      leagueTotal,
+    },
+  };
+}

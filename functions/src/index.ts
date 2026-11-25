@@ -58,7 +58,7 @@ export {
 } from "./nba/runNbaInjuryIngestCron";
 // NBA スタッツ週次（ペイロール + 契約）
 export { runNbaStatsWeeklyIngestCron } from "./nba/runNbaStatsWeeklyIngestCron";
-// Pro Insight 前日 20:00 予想の材料（翌日 24h 分）
+// Pro Insight 19:00 予想の材料（24h 以内の作り直し・18:00 日次のあと。初回は毎時 24h 窓）
 export { runNbaProBriefFullCron } from "./nba/runNbaProBriefFullCron";
 // Pro Insight の OpenAI Batch（ナラティブ）は停止済み。完了ポーリング cron は export しない
 // Pro Insight tip 1h 前パッチ（injury は専用 cron が更新済みスナップショットを読む）

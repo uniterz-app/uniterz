@@ -11,7 +11,8 @@ import {
 import { loadGamePredictorUids } from "./gamePredictors";
 
 const PUSH_LEAGUES = ["nba", "bj", "j1", "pl", "wc"] as const;
-const LOOKAHEAD_MS = 12 * 60 * 60 * 1000;
+/** 予想の材料の作成窓（24h）と同じ。12h だと初回キットのあとに知らせられない */
+const LOOKAHEAD_MS = 24 * 60 * 60 * 1000;
 const LOOKAHEAD_LIMIT = 80;
 
 type PregameKind = "injury_status" | "pro_insight_update";

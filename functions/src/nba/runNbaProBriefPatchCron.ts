@@ -1,6 +1,6 @@
 /**
- * JST 毎時 — tip 1h 前の試合。injury ステータスが変わっていたらナラティブを再生成。
- * （変更なしは skip。injury スナップショットは専用 cron が更新済み）
+ * JST 毎時 :15 — 開始 24h 以内の NBA 試合。まだ無い予想の材料を作る。
+ * もうある予想は欠場が変わったとき、またはラインが動いた試合だけ直す。
  *
  * env（どちらか）:
  *   NEXT_NBA_PRO_BRIEF_INGEST_URL  … 例 https://www.uniterz.app/api/admin/nba-pro-brief-ingest

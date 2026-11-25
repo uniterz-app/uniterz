@@ -30,7 +30,7 @@ export async function loadGameProInsight(
   gameId: string,
   legacyGameData?: Record<string, unknown> | null
 ): Promise<GameProInsightDoc> {
-  // 返すのは GAME_PRO_INSIGHT_FIELDS だけ。simShadow / predictKitRaw / predictAudit など
+  // 返すのは GAME_PRO_INSIGHT_FIELDS だけ。simShadow / predictKitRaw / predictKitMarket / predictAudit など
   // 大きい非公開項目や games の重い項目（pointsSummary など）を受け取らないよう項目を絞る
   const fieldMask = [...GAME_PRO_INSIGHT_FIELDS];
   const [[snap], legacy] = await Promise.all([

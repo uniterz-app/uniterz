@@ -75,6 +75,6 @@ functions:runNbaProBriefPatchCron
 
 | Cron | スケジュール | mode |
 |---|---|---|
-| `runNbaProBriefFullCron` | 毎日 20:00 JST | `batch_submit` |
+| `runNbaProBriefFullCron` | 毎日 19:00 JST | `batch_submit` |
 | `runNbaProInsightBatchPollCron` | 15 分ごと | `batch_poll` |
-| `runNbaProBriefPatchCron` | 毎時 :15 | `narrative_patch`（injury 変更時のみ） |
+| `runNbaProBriefPatchCron` | 毎時 :15 | `narrative_patch`（未作成の初回、または欠場 / ライン変更） |

@@ -4,7 +4,8 @@
  * `simShadow` に書く。実力差の今季分は本番がガベージタイム抜き + 相手補正、平均得失点差のままの版を `predictKitRaw` に残す
  * （simShadow / predictKitRaw は公開 API に出さない。試合後に `runPredictAudits` で 3 つを採点して比べる）。
  * 本番には得点王の候補（`predictKitScorers`）と、採点済みの試合から作った今季の成績（20 試合以上）も載せる。
- * Firestore だけ（BDL・OpenAI なし）。開始後の試合は書き換えない＝試合前最後の値が残る。
+ * キットを書くときだけ BDL `/nba/v2/odds` と player_props を取り、勝率・合計・得点王の平均を市場へ寄せる。
+ * スナップショットは `predictKitMarket`（公開 API に出さない。ブック名も出さない）。開始後の試合は書き換えない。
  */
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { CURRENT_NBA_SEASON_KEY } from "@/lib/rankings/nbaSeason";
@@ -31,6 +32,12 @@ import {
   predictKitInjuryKey,
   type PredictKitInjuryContext,
 } from "@/lib/nba/insights/predictKit/predictKitSeason";
+import { PREDICT_KIT_CREATE_HORIZON_HOURS } from "@/lib/nba/insights/predictKit/predictKitHorizon";
+import {
+  blendPredictKitWithMarket,
+  predictKitMarketShifted,
+} from "@/lib/nba/insights/predictKit/predictKitMarket";
+import { loadPredictKitMarkets } from "@/lib/nba/insights/predictKit/loadPredictKitMarkets";
 import { loadTeamInjuriesSnapshot } from "@/lib/nba/teamInjuries/loadTeamInjuriesSnapshot";
 import { buildNbaSimTeamInput, loadNbaSimContext, type NbaSimContext } from "@/lib/nba/sim/buildNbaSimInputs";
 import { fitSimMarginShock, simulateNbaPossessionGame, type SimOutPlayer } from "@/lib/nba/sim/nbaPossessionSim";
@@ -42,10 +49,7 @@ export const SIM_SHADOW_RUNS = 5000;
 const SIM_SHOCK_FIT_MIN_GAMES = 30;
 
 const KIT_PHASES = new Set(["regular", "playoffs", "play_in"]);
-/** 20:00 JST の回で作る範囲（翌日の試合。36h だと連戦の 1 試合目より前に 2 試合目の予想ができてしまう） */
-export const PREDICT_KIT_CREATE_HORIZON_HOURS = 24;
-/** 毎時の回で、予想の無い試合を新しく作ってよい開始までの時間 */
-const PREDICT_KIT_LATE_CREATE_HOURS = 12;
+export { PREDICT_KIT_CREATE_HORIZON_HOURS } from "@/lib/nba/insights/predictKit/predictKitHorizon";
 /** 今季の終了試合のうちガベージタイム抜きの点差がこの割合以上あれば、本番の実力差に使う */
 const CLEAN_SOS_MIN_COVERAGE = 0.8;
 /** 得点王の候補を何人まで載せるか */
@@ -166,9 +170,9 @@ export async function refreshPredictKits(
   opts: {
     seasonKey?: string;
     /**
-     * daily … 前日 20:00 JST の回。翌日（24h 以内）の試合を全部作り直す
-     * hourly … 毎時。もうある予想だけを、対象チームの欠場が前回から変わったときに直す
-     *   （20:00 に作れなかった試合は開始 12h 前から拾う。前の試合は必ず終わっている）
+     * daily … 19:00 JST。24h 以内の試合を全部作り直す（18:00 日次スタッツのあと）
+     * hourly … 毎時。24h 以内でまだ無い予想は作る。もうある予想は欠場が変わったとき、
+     *   またはマネーライン / 合計 / 得点プロップが閾値以上動いた試合だけ直す
      */
     mode?: "daily" | "hourly";
     nowMs?: number;
@@ -198,31 +202,39 @@ export async function refreshPredictKits(
     loadTeamInjuriesSnapshot(db, seasonKey),
     db.getAll(metaRef, { fieldMask: ["simShockSd", "predictKitInjuryKey"] }),
     db.getAll(...candidates.map((d) => gameProInsightRef(db, d.id)), {
-      fieldMask: ["predictKit", "predictKitRaw", "simShadow"],
+      fieldMask: ["predictKit", "predictKitRaw", "simShadow", "predictKitMarket"],
     }),
   ]);
-  const lateCreateBeforeMs = nowMs + PREDICT_KIT_LATE_CREATE_HOURS * 3_600_000;
-  const picked = candidates.flatMap((doc, i) => {
-    const prev = candidateExisting[i]!;
-    if (!hourly || prev.data()?.predictKit != null) return [{ doc, prev }];
-    return (doc.data().startAtJst as Timestamp).toMillis() <= lateCreateBeforeMs ? [{ doc, prev }] : [];
-  });
-  if (!picked.length) return empty;
-  const upcoming = picked.map((p) => p.doc);
-  const existing = picked.map((p) => p.prev);
-
+  const allPicked = candidates.map((doc, i) => ({ doc, prev: candidateExisting[i]! }));
+  const missingKit = allPicked.filter((p) => p.prev.data()?.predictKit == null);
   const meta = (metaSnap[0]?.data() as PredictShadowMeta | undefined) ?? {};
   const injuryKey = predictKitInjuryKey(
     injurySnap.bundle.teams,
-    upcoming.flatMap((d) => [String(d.data().homeTeamId), String(d.data().awayTeamId)])
+    candidates.flatMap((d) => [String(d.data().homeTeamId), String(d.data().awayTeamId)])
   );
-  if (
-    hourly &&
-    meta.predictKitInjuryKey === injuryKey &&
-    existing.every((s) => s.data()?.predictKit != null)
-  ) {
-    return { games: upcoming.length, kitWritten: 0, simWritten: 0, skipped: upcoming.length, noChange: true };
+  const injuryChanged = meta.predictKitInjuryKey !== injuryKey;
+  const markets = await loadPredictKitMarkets(
+    candidates.map((d) => d.id),
+    nowMs
+  );
+  const marketMoved = allPicked.filter((p) =>
+    predictKitMarketShifted(p.prev.data()?.predictKitMarket, markets.get(p.doc.id))
+  );
+  if (hourly && !injuryChanged && missingKit.length === 0 && marketMoved.length === 0) {
+    return {
+      games: candidates.length,
+      kitWritten: 0,
+      simWritten: 0,
+      skipped: candidates.length,
+      noChange: true,
+    };
   }
+  const picked = !hourly || injuryChanged
+    ? allPicked
+    : [...new Map([...missingKit, ...marketMoved].map((p) => [p.doc.id, p])).values()];
+  if (!picked.length) return empty;
+  const upcoming = picked.map((p) => p.doc);
+  const existing = picked.map((p) => p.prev);
 
   const [seasons, injuries, sim, recordSnap] = await Promise.all([
     loadPredictKitSeasonStates(db, seasonKey, nowMs),
@@ -263,12 +275,14 @@ export async function refreshPredictKits(
     const absences = [predictKitAbsenceOf(injuries, homeTeamId), predictKitAbsenceOf(injuries, awayTeamId)];
     const rawKit = buildPredictKit({ season, ...kitInput });
     const predictKitRaw = toProInsightPredictKit({ kit: rawKit, homeTeamId, awayTeamId, absences });
+    const market = markets.get(doc.id);
     const scorers = predictKitScorerOdds(
       [...(scorerPlayers[homeTeamId] ?? []), ...(scorerPlayers[awayTeamId] ?? [])].map((p) => {
         const oppId = p.teamId === homeTeamId ? awayTeamId : homeTeamId;
         return { ...p, oppMuAdj: predictKitScorerOppMuAdj(p.pos, sim.posDefense[oppId] ?? null) };
       }),
-      seedOf(doc.id)
+      seedOf(doc.id),
+      market?.pointsLines
     )
       .slice(0, PREDICT_KIT_SCORERS_SHOWN)
       .map((s) => ({
@@ -279,11 +293,15 @@ export async function refreshPredictKits(
         ppg: Math.round(s.ppg * 10) / 10,
         ...(s.doubtful ? { doubtful: true } : {}),
       }));
+    const baseKit = useCleanSos
+      ? { ...buildPredictKit({ season: seasons.cleanSos, ...kitInput }), teams: rawKit.teams }
+      : rawKit;
+    const blendedKit = market
+      ? blendPredictKitWithMarket(baseKit, market, { homeTeamId, awayTeamId })
+      : baseKit;
     const kit = toProInsightPredictKit({
       // 成績の行（勝敗・平均得失点差）は実際の数字のまま
-      kit: useCleanSos
-        ? { ...buildPredictKit({ season: seasons.cleanSos, ...kitInput }), teams: rawKit.teams }
-        : rawKit,
+      kit: blendedKit,
       homeTeamId,
       awayTeamId,
       absences,
@@ -305,7 +323,7 @@ export async function refreshPredictKits(
     kits[doc.id] = { kit, raw: predictKitRaw, sim: simShadow };
 
     const prev = existing[i]!.data() as
-      | { predictKit?: unknown; predictKitRaw?: unknown; simShadow?: unknown }
+      | { predictKit?: unknown; predictKitRaw?: unknown; simShadow?: unknown; predictKitMarket?: unknown }
       | undefined;
     const patch: Record<string, unknown> = {};
     if (stableJson(prev?.predictKit) !== stableJson(kit)) {
@@ -314,6 +332,9 @@ export async function refreshPredictKits(
     }
     if (stableJson(prev?.predictKitRaw) !== stableJson(predictKitRaw)) {
       patch.predictKitRaw = predictKitRaw;
+    }
+    if (market && stableJson(prev?.predictKitMarket) !== stableJson(market)) {
+      patch.predictKitMarket = market;
     }
     if (simShadow && stableJson(prev?.simShadow) !== stableJson(simShadow)) {
       patch.simShadow = simShadow;
