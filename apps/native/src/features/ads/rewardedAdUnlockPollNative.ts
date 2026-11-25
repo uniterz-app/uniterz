@@ -1,11 +1,11 @@
 /**
  * リワード広告のあとの解除確認。画面やシートを閉じても止めない。
- * 確定はサーバー（SSV）だけ。ここは届くまで取りに行く。
+ * SSV が先に書いていればそれを使い、無ければ見終わった確認（adWatched）で解除する。
  */
 import { requestProPickUnlock } from "../../../../../lib/nba/predict/proPickUnlockApi";
 import { getUniterzApiBaseUrl } from "../games/submitPredictionApi";
 import { fetchTradeBuzzUnlockNative } from "../games/predict/buzz/tradeBuzzUnlockApiNative";
-import { setProPickAdEarnedGameId } from "../games/predict/proPickAdSessionNative";
+import { markProPickUnlockConfirmed } from "../games/predict/proPickAdSessionNative";
 import { setTradeBuzzAdEarned } from "../games/predict/buzz/tradeBuzzAdSessionNative";
 
 const TRIES = 30;
@@ -25,10 +25,10 @@ export function startProPickUnlockPollNative(gameId: string): Promise<boolean> {
       const again = await requestProPickUnlock({
         apiBase,
         gameId,
-        adWatched: false,
+        adWatched: true,
       });
       if (again?.unlocked) {
-        setProPickAdEarnedGameId(null);
+        markProPickUnlockConfirmed(gameId);
         return true;
       }
     }
@@ -48,7 +48,7 @@ export function startTradeBuzzUnlockPollNative(): Promise<boolean> {
       if (i > 0) await sleep(GAP_MS);
       const state = await fetchTradeBuzzUnlockNative();
       if (state?.unlocked) {
-        setTradeBuzzAdEarned(false);
+        setTradeBuzzAdEarned(true);
         return true;
       }
     }

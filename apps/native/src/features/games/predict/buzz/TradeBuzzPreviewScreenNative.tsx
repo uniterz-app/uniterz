@@ -21,6 +21,7 @@ import {
 import { startTradeBuzzUnlockPollNative } from "../../../ads/rewardedAdUnlockPollNative";
 import { fetchTradeBuzzUnlockNative } from "./tradeBuzzUnlockApiNative";
 import {
+  hydrateTradeBuzzAdEarned,
   peekTradeBuzzAdEarned,
   setTradeBuzzAdEarned,
 } from "./tradeBuzzAdSessionNative";
@@ -69,8 +70,10 @@ export default function TradeBuzzPreviewScreenNative({
   /** DEV だけ Free / Pro を切り替えてゲートを確認する（実プランが Pro でも Free に落とせる） */
   const [devPlan, setDevPlan] = useState<boolean | null>(null);
   const isPro = devPlan ?? planPro;
-  /** 今日（日本時間）の解除があるか（サーバー、またはこの起動で広告を見た） */
+  /** 今日（日本時間）の解除があるか（サーバー、または端末に残した今日の広告） */
   const [buzzUnlocked, setBuzzUnlocked] = useState(() => peekTradeBuzzAdEarned());
+  /** 端末・サーバーの今日の解除を確認するまでゲートを出さない */
+  const [unlockReady, setUnlockReady] = useState(() => peekTradeBuzzAdEarned());
   /** 広告 SDK の読み込み〜表示中 */
   const [adPlaying, setAdPlaying] = useState(false);
 
@@ -113,14 +116,28 @@ export default function TradeBuzzPreviewScreenNative({
     if (canSeeBuzz) markSeen();
   }, [canSeeBuzz, markSeen]);
 
-  // 開いたとき、サーバーに今日の解除があるか確認する（前に見ていれば広告は出さない）
+  // 開いたとき、端末に今日の解除があるか → サーバーに今日の解除があるか（前に見ていれば広告は出さない）
   useEffect(() => {
-    if (!fUser) return;
-    if (__DEV__ && devPlan === false) return;
+    if (__DEV__ && devPlan === false) {
+      setUnlockReady(true);
+      return;
+    }
     let cancelled = false;
     void (async () => {
+      const local = await hydrateTradeBuzzAdEarned();
+      if (cancelled) return;
+      if (local) setBuzzUnlocked(true);
+      if (!fUser) {
+        setUnlockReady(true);
+        return;
+      }
       const state = await fetchTradeBuzzUnlockNative();
-      if (!cancelled && state?.unlocked) setBuzzUnlocked(true);
+      if (cancelled) return;
+      if (state?.unlocked) {
+        setTradeBuzzAdEarned(true);
+        setBuzzUnlocked(true);
+      }
+      setUnlockReady(true);
     })();
     return () => {
       cancelled = true;
@@ -243,12 +260,17 @@ export default function TradeBuzzPreviewScreenNative({
               </Text>
               <Pressable
                 onPress={() => void watchAd()}
-                disabled={adPlaying}
-                style={[styles.gateBtn, adPlaying ? styles.gateBtnBusy : null]}
+                disabled={adPlaying || !unlockReady}
+                style={[
+                  styles.gateBtn,
+                  adPlaying || !unlockReady ? styles.gateBtnBusy : null,
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.gateBtnText}>
-                  {adPlaying ? "読み込んでいます…" : "広告を見て開く"}
+                  {adPlaying || !unlockReady
+                    ? "読み込んでいます…"
+                    : "広告を見て開く"}
                 </Text>
               </Pressable>
               <Pressable

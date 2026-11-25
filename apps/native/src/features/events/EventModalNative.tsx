@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -16,7 +17,10 @@ import { useReducedMotion } from "react-native-reanimated";
 import type { ImageSourcePropType } from "react-native";
 import type { EventNoticeContent } from "../../../../../lib/events/eventNoticeTypes";
 import { eventModalLayoutFor } from "../../../../../lib/events/eventModalLayout";
-import type { EventModalPrizeKind } from "../../../../../lib/events/eventModalLayout";
+import type {
+  EventModalPrizeKind,
+  EventModalPrizePlace,
+} from "../../../../../lib/events/eventModalLayout";
 import type { Language } from "../../../../../lib/i18n/language";
 import { t } from "../../../../../lib/i18n/t";
 import {
@@ -54,14 +58,19 @@ const PRIZE: Partial<Record<EventModalPrizeKind, ImageSourcePropType>> = {
   tee: require("../../../assets/events/prize-tee-gold.jpg"),
 };
 
-const PLACE_COLOR = {
+const PLACE_COLOR: Record<EventModalPrizePlace, string> = {
   1: "#fcd34d",
   2: "#e2e8f0",
   3: "#d6a36a",
-} as const;
+  100: "#67e8f9",
+  500: "#67e8f9",
+};
 
-function placeLabel(place: 1 | 2 | 3): string {
-  return place === 1 ? "1st" : place === 2 ? "2nd" : "3rd";
+function placeLabel(place: EventModalPrizePlace): string {
+  if (place === 1) return "1st";
+  if (place === 2) return "2nd";
+  if (place === 3) return "3rd";
+  return String(place);
 }
 
 export default function EventModalNative({
@@ -146,50 +155,64 @@ export default function EventModalNative({
               <View style={styles.headerBrandLine} />
             </View>
 
-            <Text style={styles.kicker}>{en ? layout.kickerEn : layout.kickerJa}</Text>
-            <Text style={styles.title}>{en ? layout.titleEn : layout.titleJa}</Text>
-            <Text style={styles.rule}>{en ? layout.ruleEn : layout.ruleJa}</Text>
+            <ScrollView
+              style={styles.bodyScroll}
+              contentContainerStyle={styles.bodyScrollContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.kicker}>{en ? layout.kickerEn : layout.kickerJa}</Text>
+              <Text style={styles.title}>{en ? layout.titleEn : layout.titleJa}</Text>
+              <Text style={styles.rule}>{en ? layout.ruleEn : layout.ruleJa}</Text>
 
-            {hero ? (
-              <Image
-                source={hero}
-                style={[styles.hero, { height: heroH }]}
-                resizeMode="cover"
-                accessibilityIgnoresInvertColors
-              />
-            ) : null}
+              {hero ? (
+                <Image
+                  source={hero}
+                  style={[styles.hero, { height: heroH }]}
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
+                />
+              ) : null}
 
-            <View style={styles.podium}>
-              {layout.prizes.map((row) => {
-                const photo = PRIZE[row.kind];
-                const tone = PLACE_COLOR[row.place];
-                return (
-                  <View key={`${row.place}-${row.kind}`} style={styles.prizeRow}>
-                    <Text style={[styles.place, { color: tone }]}>
-                      {placeLabel(row.place)}
-                    </Text>
-                    <View style={[styles.prizeThumb, { borderColor: `${tone}66` }]}>
-                      {photo ? (
-                        <Image source={photo} style={styles.prizeImg} resizeMode="cover" />
-                      ) : (
-                        <MaterialCommunityIcons name="tshirt-crew" size={22} color={tone} />
-                      )}
-                    </View>
-                    <View style={styles.prizeText}>
-                      <Text style={styles.prizeName} numberOfLines={1}>
-                        {en ? row.labelEn : row.labelJa}
+              <View style={styles.podium}>
+                {layout.prizes.map((row) => {
+                  const photo = PRIZE[row.kind];
+                  const tone = PLACE_COLOR[row.place];
+                  const consolation = row.place === 100 || row.place === 500;
+                  return (
+                    <View key={`${row.place}-${row.kind}`} style={styles.prizeRow}>
+                      <Text
+                        style={[
+                          styles.place,
+                          consolation && styles.placeConsolation,
+                          { color: tone },
+                        ]}
+                      >
+                        {placeLabel(row.place)}
                       </Text>
-                      <Text style={styles.prizeHint} numberOfLines={2}>
-                        {en ? row.hintEn : row.hintJa}
-                      </Text>
+                      <View style={[styles.prizeThumb, { borderColor: `${tone}66` }]}>
+                        {photo ? (
+                          <Image source={photo} style={styles.prizeImg} resizeMode="cover" />
+                        ) : (
+                          <MaterialCommunityIcons name="tshirt-crew" size={22} color={tone} />
+                        )}
+                      </View>
+                      <View style={styles.prizeText}>
+                        <Text style={styles.prizeName} numberOfLines={1}>
+                          {en ? row.labelEn : row.labelJa}
+                        </Text>
+                        <Text style={styles.prizeHint} numberOfLines={2}>
+                          {en ? row.hintEn : row.hintJa}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
 
-            <Text style={styles.target}>{en ? layout.targetEn : layout.targetJa}</Text>
-            <Text style={styles.footer}>{en ? layout.footerEn : layout.footerJa}</Text>
+              <Text style={styles.target}>{en ? layout.targetEn : layout.targetJa}</Text>
+              <Text style={styles.footer}>{en ? layout.footerEn : layout.footerJa}</Text>
+            </ScrollView>
 
             <View style={styles.actions}>
               <ModalActionRowNative>
@@ -290,6 +313,13 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#05070c",
   },
+  bodyScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  bodyScrollContent: {
+    paddingBottom: 2,
+  },
   podium: {
     marginTop: 10,
     borderWidth: 1,
@@ -307,8 +337,11 @@ const styles = StyleSheet.create({
   place: {
     fontFamily: ORBITRON_800,
     fontSize: 14,
-    width: 40,
+    width: 48,
     letterSpacing: 0.2,
+  },
+  placeConsolation: {
+    fontSize: 12,
   },
   prizeThumb: {
     width: 40,

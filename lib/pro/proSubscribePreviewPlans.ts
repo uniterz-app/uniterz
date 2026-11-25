@@ -9,6 +9,7 @@ export type ProSubscribePreviewPlanId = "weekly" | "monthly" | "season";
 
 export type ProSubscribeFeatureIcon =
   | "insight"
+  | "noAds"
   | "alert"
   | "rank"
   | "badge"
@@ -42,6 +43,27 @@ export type ProSubscribePreviewPlan = {
 
 /** Weekly 含む共通（Gap・Shadow なし） */
 const CORE_FEATURES: readonly ProSubscribePreviewFeature[] = [
+  {
+    icon: "noAds",
+    title: {
+      ja: "広告なし",
+      en: "No ads",
+      ko: "광고 없음",
+      zh: "无广告",
+      es: "Sin anuncios",
+      pt: "Sem anúncios",
+      fr: "Sans pub",
+    },
+    detail: {
+      ja: "リザルトのバナー、PRO PICK・Buzz の動画広告が出ない",
+      en: "No result banners, and no video ads on PRO PICK or Buzz.",
+      ko: "결과 배너·PRO PICK·Buzz 영상 광고가 나오지 않습니다.",
+      zh: "结果页横幅、PRO PICK / Buzz 视频广告均不出现。",
+      es: "Sin banners en resultados ni vídeos en PRO PICK o Buzz.",
+      pt: "Sem banners nos resultados nem vídeos no PRO PICK ou Buzz.",
+      fr: "Pas de bannières résultats, ni de pubs vidéo sur PRO PICK ou Buzz.",
+    },
+  },
   {
     icon: "insight",
     title: {

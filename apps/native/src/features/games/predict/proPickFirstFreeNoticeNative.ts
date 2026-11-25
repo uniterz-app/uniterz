@@ -1,6 +1,6 @@
 /**
- * 初回 PRO PICK 無料の案内モーダルを、アカウントごとに 1 回だけ出す。
- * ギフト自体（サーバーの first_free）とは別。閉じてもゲートの無料ボタンは残る。
+ * 初回 PRO PICK 無料の案内を、アカウントごとに 1 回だけ出す（予想ページを開いたとき）。
+ * ギフト自体（サーバーの first_free）とは別。あとで閉じてもゲートの無料ボタンは残る。
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 

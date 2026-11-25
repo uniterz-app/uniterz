@@ -2,12 +2,16 @@ import {
   DECEMBER_2026_CHRISTMAS_NOTICE_ID,
   DECEMBER_2026_CUP_NOTICE_ID,
   DECEMBER_2026_MONTHLY_NOTICE_ID,
+  DECEMBER_2026_SCORE_TIEBREAK_EN,
+  DECEMBER_2026_SCORE_TIEBREAK_JA,
 } from "../campaigns/december2026Campaign";
 
 export type EventModalPrizeKind = "mega-box" | "ballers" | "packs" | "tee";
 
+export type EventModalPrizePlace = 1 | 2 | 3 | 100 | 500;
+
 export type EventModalPrizeRow = {
-  place: 1 | 2 | 3;
+  place: EventModalPrizePlace;
   kind: EventModalPrizeKind;
   labelJa: string;
   labelEn: string;
@@ -34,12 +38,12 @@ const MONTHLY: EventModalLayout = {
   kickerEn: "EVENT",
   titleJa: "12月 月間ランキング",
   titleEn: "December Monthly",
-  ruleJa: "ピックアップのスコア · 全員",
-  ruleEn: "Pickup score · everyone",
+  ruleJa: "ピックアップのスコア · 全員 · 同点は最多得点者的中が多い人",
+  ruleEn: "Pickup score · everyone · ties: more top-scorer hits",
   targetJa: "対象：12月のピックアップ試合",
   targetEn: "December Pickup games",
-  footerJa: "Unit はいつもどおり配布。賞品はメールで連絡します",
-  footerEn: "Units as usual. Prizes emailed",
+  footerJa: `Unit はいつもどおり配布。100位・500位ぴったりにもパック×3。${DECEMBER_2026_SCORE_TIEBREAK_JA}賞品はメールで連絡します`,
+  footerEn: `Units as usual. Exact 100th & 500th get packs×3. ${DECEMBER_2026_SCORE_TIEBREAK_EN} Prizes emailed`,
   prizes: [
     {
       place: 1,
@@ -65,6 +69,22 @@ const MONTHLY: EventModalLayout = {
       hintJa: "Toops Mega Box のパック",
       hintEn: "Packs from a Toops Mega Box",
     },
+    {
+      place: 100,
+      kind: "packs",
+      labelJa: "Mega パック ×3",
+      labelEn: "Mega packs ×3",
+      hintJa: "ちょうど100位",
+      hintEn: "Exact 100th",
+    },
+    {
+      place: 500,
+      kind: "packs",
+      labelJa: "Mega パック ×3",
+      labelEn: "Mega packs ×3",
+      hintJa: "ちょうど500位",
+      hintEn: "Exact 500th",
+    },
   ],
 };
 
@@ -73,12 +93,12 @@ const CUP: EventModalLayout = {
   kickerEn: "EVENT",
   titleJa: "NBAカップ ノックアウト",
   titleEn: "NBA Cup Knockout",
-  ruleJa: "ノックアウトステージのスコア · 全員",
-  ruleEn: "Knockout stage score · everyone",
+  ruleJa: "ノックアウトステージのスコア · 全員 · 同点は最多得点者的中が多い人",
+  ruleEn: "Knockout stage score · everyone · ties: more top-scorer hits",
   targetJa: "対象：ノックアウトステージ全7試合",
   targetEn: "All 7 knockout-stage games",
-  footerJa: "賞品は登録メールで連絡します",
-  footerEn: "Winners are emailed",
+  footerJa: `${DECEMBER_2026_SCORE_TIEBREAK_JA}賞品は登録メールで連絡します`,
+  footerEn: `${DECEMBER_2026_SCORE_TIEBREAK_EN} Winners are emailed`,
   prizes: [
     {
       place: 1,
@@ -112,12 +132,12 @@ const CHRISTMAS: EventModalLayout = {
   kickerEn: "EVENT",
   titleJa: "クリスマス",
   titleEn: "Christmas",
-  ruleJa: "クリスマスゲームのスコア · 全員",
-  ruleEn: "Christmas games score · everyone",
+  ruleJa: "クリスマスゲームのスコア · 全員 · 同点は最多得点者的中が多い人",
+  ruleEn: "Christmas games score · everyone · ties: more top-scorer hits",
   targetJa: "対象：クリスマスゲームすべて",
   targetEn: "All Christmas games",
-  footerJa: "賞品は登録メールで連絡します",
-  footerEn: "Winners are emailed",
+  footerJa: `${DECEMBER_2026_SCORE_TIEBREAK_JA}賞品は登録メールで連絡します`,
+  footerEn: `${DECEMBER_2026_SCORE_TIEBREAK_EN} Winners are emailed`,
   prizes: [
     {
       place: 1,

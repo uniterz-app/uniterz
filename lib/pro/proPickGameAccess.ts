@@ -3,8 +3,8 @@
  *
  * - 初回: 新ビルド以降、Free の最初の PRO PICK は広告なしで解除（アカウントで 1 回だけ。`proPickLaunchFreeUsedAt` で判定）
  * - 2 試合目以降: 試合ごとに広告 1 本で、その試合だけ解除
- * - 本番の広告は AdMob SSV（`/api/ads/admob-ssv`）が署名つきで届いたときだけ解除する。
- *   `PRO_PICK_AD_MOCK=1` のときだけ、クライアントの `adWatched` でも付与できる。
+ * - 本番の広告は AdMob SSV（`/api/ads/admob-ssv`）が先に書けばそれを使う。
+ *   SSV が届かない実機でも、SDK が見終わったあとの `adWatched: true` でその試合だけ解除する。
  *
  * 解除の有無は API の応答で出し分けるだけで、クライアントの判定は信用しない。
  */
@@ -22,7 +22,7 @@ export const PRO_PICK_AD_REWARDS_COLLECTION = "proPickAdRewards";
  */
 export const PRO_PICK_LAUNCH_FREE_FIELD = "proPickLaunchFreeUsedAt";
 
-export type ProPickUnlockVia = "first_free" | "ad_sdk" | "ad_mock";
+export type ProPickUnlockVia = "first_free" | "ad_sdk" | "ad_mock" | "ad_watched";
 
 export function proPickUnlockDocId(uid: string, gameId: string): string {
   return `${uid}_${gameId}`;
@@ -165,17 +165,18 @@ export async function claimProPickAdReward(
   });
 }
 
-/** 広告（モック）で、この試合だけ解除する */
+/** 広告を見終わったあとの確認で、この試合だけ解除する */
 export async function grantProPickAdUnlock(
   db: AdminDb,
   uid: string,
-  gameId: string
+  gameId: string,
+  via: Extract<ProPickUnlockVia, "ad_mock" | "ad_watched"> = "ad_watched"
 ): Promise<void> {
   await db
     .collection(PRO_PICK_UNLOCK_COLLECTION)
     .doc(proPickUnlockDocId(uid, gameId))
     .set(
-      { uid, gameId, via: "ad_mock" satisfies ProPickUnlockVia, createdAt: FieldValue.serverTimestamp() },
+      { uid, gameId, via, createdAt: FieldValue.serverTimestamp() },
       { merge: true }
     );
 }

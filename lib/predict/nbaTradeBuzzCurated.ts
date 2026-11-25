@@ -1,5 +1,5 @@
 /**
- * トレード Buzz — 手で集めた 2026-11-12〜24 の動き（日本時間）。
+ * トレード Buzz — 手で集めた 2026-11-08〜25 の動き（日本時間）。
  * 確度順（rank 1 が最も確度が高い）。手更新。
  *
  * 出典の記者名・媒体は取材メモのまま。記事は二次配信（まとめ・X・転載）のものも含む。
@@ -8,7 +8,7 @@
 import type { NbaTradeBuzzItem } from "@/lib/predict/nbaTradeBuzz";
 
 /** 取材の基準時刻（JST の表示用） */
-export const NBA_TRADE_BUZZ_AS_OF_JST = "2026-11-24 09:00";
+export const NBA_TRADE_BUZZ_AS_OF_JST = "2026-11-25 13:40";
 
 export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
   {
@@ -19,8 +19,17 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     fromTeamAbbr: "NOP",
     confidence: "official",
     headlineJa:
-      "地元紙の関係者情報では Suns と継続的に協議中。ほかの関心は薄く、急がない。Green 交換は進展なし。来季約3200万ドル。要求後はアリーナに来ていない。",
+      "Pelicans は積極的に移籍先を探していて、動いているのは代理人のリッチ・ポール。ウォリアーズにも連絡したが興味なし。今季約3270万ドルで宙ぶらりん、という関係者情報。",
     events: [
+      {
+        day: "2026-11-25",
+        time: "06:14",
+        kind: "report",
+        textJa:
+          "番組で関係者情報として伝えたところでは、Pelicans は積極的に移籍先を探していて、動いているのは代理人のリッチ・ポール。ポールは「ほかの数チームと並んで Warriors にも連絡した」と、ある関係者から聞いたという。Warriors は興味がない。今季の年俸約3270万ドルは多くのチームが引き受けにくく、Murray は宙ぶらりんの状態だと話している。昨日までは話している相手は実質 Suns だけだった。ほかのチームは慎重なまま、という内容。大きな成立やシャムス級の速報ではない。",
+        sourceLabel: "Brett Siegel（ClutchPoints）",
+        sourceUrl: "https://x.com/ClutchPoints/status/2125337218281566598",
+      },
       {
         day: "2026-11-23",
         time: "00:17",
@@ -138,8 +147,30 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     ],
   },
   {
-    id: "vincent",
+    id: "porzingis",
     rank: 2,
+    playerId: null,
+    playerName: "Kristaps Porzingis",
+    fromTeamAbbr: "GSW",
+    confidence: "multi",
+    headlineJa:
+      "Warriors は契約を 12/16 までに動かしたい。来季の一部保証とバイアウトの意思が材料。Moody は出さない見込み。",
+    events: [
+      {
+        day: "2026-11-08",
+        time: null,
+        kind: "report",
+        textJa:
+          "Stein と Fischer によると、Porzingis がバスケットから離れると発表したあと、Warriors は契約を動かす道を探っている。12/16 までに動かしたい。来季の保証が一部であることと、バイアウトを話す意思があることが相手にとっての材料になりうる。条件が高ければ自前でバイアウトする選択肢もある。指名権を付けて出すことは排除していないが、取る選手は選ぶ。Moody はケガ明け後も戦力になると見て、シーズン途中のトレードには入れない見込み。",
+        sourceLabel: "Marc Stein / Jake Fischer（The Stein Line・Hoops Rumors）",
+        sourceUrl:
+          "https://www.hoopsrumors.com/2026/11/steins-latest-warriors-clifford-trade-vincent-porter-sochan-dillingham.html",
+      },
+    ],
+  },
+  {
+    id: "vincent",
+    rank: 3,
     playerId: null,
     playerName: "Gabe Vincent",
     fromTeamAbbr: null,
@@ -341,10 +372,30 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     playerId: null,
     playerName: "Rui Hachimura / Max Strus / Derrick Jones Jr. / Brook Lopez",
     fromTeamAbbr: "LAC",
-    confidence: "single",
+    confidence: "multi",
     headlineJa:
-      "スタインによると、ベテラン先発で関心を集めている「確実な売り手」。八村、Jones Jr.、Lopez、Strus が対象。Strus / Jones / Lopez / Dunn は今季切れ、八村は来季1400万ドルのチームオプション。",
+      "リーグでは確実な売り手と見られているが、Fischer によるとまだオファーを受ける段階ではない。Lopez と Jones Jr. にはすでに電話。差し迫った成立はない。",
     events: [
+      {
+        day: "2026-11-24",
+        time: null,
+        kind: "report",
+        textJa:
+          "Fischer によると、Clippers はまだオファーを受ける段階ではないと静かに主張している。Ingram がラインナップに入る様子を見たい。Lopez と Derrick Jones Jr. にはすでに他球団から電話がある。差し迫ったトレードはない。GM の Redden は動かす権限があるとされるが、Ballmer オーナーと Frank 社長が出場停止中で大きな取引ができるか、他球団の幹部には懐疑的な声もある。",
+        sourceLabel: "Jake Fischer（Bleacher Report 経由）",
+        sourceUrl:
+          "https://bleacherreport.com/articles/25537450-new-nba-rumors-reveal-clippers-stance-trade-market-amid-brook-lopez-max-strus-kris-dunn-buzz",
+      },
+      {
+        day: "2026-11-25",
+        time: "02:05",
+        kind: "market",
+        textJa:
+          "Last Word on Sports が Yahoo Sports に載せた記事。スタインが以前伝えた内容の整理が中心で、Clippers がベテランを売りに出す構え、という話。新しい取材ではない。",
+        sourceLabel: "Last Word on Sports（Yahoo Sports）",
+        sourceUrl:
+          "https://sports.yahoo.com/articles/bulls-roster-move-plus-nba-170501710.html",
+      },
       {
         day: "2026-11-23",
         time: "13:58",
@@ -415,8 +466,18 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     fromTeamAbbr: "WAS",
     confidence: "single",
     headlineJa:
-      "Wizards は20〜30試合ほど様子を見てから延長を考える。この24時間に記者の新報はなし。",
+      "Fischer によると、Wizards にすぐ動かす予定はなく、Davis も移籍を求めていない。候補として Warriors / Hawks / Raptors の名前は出ている。",
     events: [
+      {
+        day: "2026-11-24",
+        time: null,
+        kind: "report",
+        textJa:
+          "Fischer によると、Wizards にすぐ Davis を動かす予定はない。2月11日の期限までに変わる可能性はある。Murray と違って本人も移籍を求めていない。代理人は同じ Klutch。候補として Warriors、Hawks、Raptors の名前が出ている。",
+        sourceLabel: "Jake Fischer（Bleacher Report 経由）",
+        sourceUrl:
+          "https://bleacherreport.com/articles/25537454-new-anthony-davis-trade-rumors-updated-landing-spots-wizards-stance-amid-warriors-hawks-buzz",
+      },
       {
         day: "2026-11-18",
         time: null,
@@ -592,8 +653,18 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     fromTeamAbbr: "DAL",
     confidence: "single",
     headlineJa:
-      "SNY の Begley が「Jazz が潜在候補として内部で検討」と報道。ただし本人が「誇張されている」と修正し、Dallas との交渉は報じられていない。",
+      "Jazz は内部検討の報道のあと、現地紙が「本気の関心はない」と訂正。Dallas との交渉は報じられていない。",
     events: [
+      {
+        day: "2026-11-23",
+        time: null,
+        kind: "report",
+        textJa:
+          "Salt Lake Tribune が Jazz 関係者複数に確認。カイリー獲得に本気の関心はない、という話。Begley が以前伝えた内部検討は、読みすぎないように、という訂正に沿う。",
+        sourceLabel: "Shreyas Laddha（Salt Lake Tribune・Hoops Rumors）",
+        sourceUrl:
+          "https://www.hoopsrumors.com/2026/11/jazz-notes-trade-rumors-dunn-hardy-mykhauliuk-more.html",
+      },
       {
         day: "2026-11-19",
         time: "23:24",
@@ -697,8 +768,18 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
     fromTeamAbbr: "DAL",
     confidence: "opinion",
     headlineJa:
-      "最後の枠を Dwight Powell ではなく Musa Cisse にした理由の一つが、後半にトレードで使えること。Clayton を2ウェイから本契約に上げる枠のため、Cisse 放出の可能性。",
+      "まとめ記事でも、Mavs で一番出されそうなのは Musa Cisse、というスタインの見立てが再掲されている。新しい取材ではない。",
     events: [
+      {
+        day: "2026-11-25",
+        time: "02:05",
+        kind: "opinion",
+        textJa:
+          "Last Word on Sports のまとめ。スタインが以前伝えた内容の整理で、Mavs で一番出されそうなのは Musa Cisse、という話。新しい取材ではない。",
+        sourceLabel: "Last Word on Sports（Yahoo Sports）",
+        sourceUrl:
+          "https://sports.yahoo.com/articles/bulls-roster-move-plus-nba-170501710.html",
+      },
       {
         day: "2026-11-23",
         time: "13:58",
@@ -708,6 +789,48 @@ export const NBA_TRADE_BUZZ_CURATED: readonly NbaTradeBuzzItem[] = [
         sourceLabel: "Marc Stein（X）・Hoops Rumors まとめ",
         sourceUrl:
           "https://www.hoopsrumors.com/2026/11/steins-latest-grimes-clippers-nets-clayton.html",
+      },
+    ],
+  },
+  {
+    id: "zion",
+    rank: 21,
+    playerId: null,
+    playerName: "Zion Williamson",
+    fromTeamAbbr: "NOP",
+    confidence: "opinion",
+    headlineJa:
+      "Hornets 行きという案が話題。受け取る案は Schroder、Grant Williams、Salaun と1巡目1本・2巡目2本。元記事の URL は未確認で、記者の取材ではない憶測。",
+    events: [
+      {
+        day: "2026-11-25",
+        time: null,
+        kind: "opinion",
+        textJa:
+          "Zion Williamson を Hornets へ、という案。Pelicans が受け取る案は Dennis Schroder、Grant Williams、Tidjane Salaun と、1巡目1本、2巡目2本。元の記事の URL は確認できておらず、記者の取材ではない憶測。",
+        sourceLabel: "出所未確認（憶測）",
+        sourceUrl: null,
+      },
+    ],
+  },
+  {
+    id: "allen",
+    rank: 22,
+    playerId: null,
+    playerName: "Jarrett Allen",
+    fromTeamAbbr: "CLE",
+    confidence: "opinion",
+    headlineJa:
+      "Warriors か Lakers へ、という話がポッドキャストなどに出ている。どれも憶測で、記者の取材ではない。",
+    events: [
+      {
+        day: "2026-11-25",
+        time: null,
+        kind: "opinion",
+        textJa:
+          "Cavaliers の Jarrett Allen を Warriors か Lakers へ、という話がポッドキャストなどに出ている。どれも憶測。",
+        sourceLabel: "ポッドキャスト等（憶測）",
+        sourceUrl: null,
       },
     ],
   },

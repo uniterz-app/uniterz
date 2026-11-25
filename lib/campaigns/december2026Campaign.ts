@@ -40,9 +40,15 @@ export const DECEMBER_2026_CAMPAIGN_ID = DECEMBER_2026_MONTHLY_NOTICE_ID;
 
 const SHARED_FOOTER_JA = "賞品は登録メールでご連絡します。";
 const SHARED_FOOTER_EN = "Winners are contacted at the email on their account.";
-const MONTHLY_UNITS_JA = "Unit はいつもどおり順位で配布します。賞品は上位3名への追加です。";
+/** 賞品のタイブレーク。Unit はいつもどおり同点同順位 */
+export const DECEMBER_2026_SCORE_TIEBREAK_JA =
+  "同点は最多得点者的中が多い人です。";
+export const DECEMBER_2026_SCORE_TIEBREAK_EN =
+  "Ties go to whoever hit more top scorers.";
+const MONTHLY_UNITS_JA =
+  "Unit はいつもどおり順位で配布します。賞品は上位3名への追加。100位と500位ぴったりにもパック×3です。";
 const MONTHLY_UNITS_EN =
-  "Units still pay out by rank as usual. Merch is extra for the top 3.";
+  "Units still pay out by rank as usual. Merch is extra for the top 3, plus packs×3 for exact 100th and 500th.";
 const SHARED_SCORE_JA = "ピックアップのスコアで競います。対象は全員です。";
 const SHARED_SCORE_EN = "Scored with Pickup points. Open to everyone.";
 
@@ -52,8 +58,11 @@ export const DECEMBER_2026_MONTHLY_BODY_JA = `${SHARED_SCORE_JA}
 1位　NBA Mega Mystery Box
 2位　NBA Ballers ×2
 3位　NBA Mega Mystery Box パック ×5
+100位ぴったり　NBA Mega Mystery Box パック ×3
+500位ぴったり　NBA Mega Mystery Box パック ×3
 
 ${MONTHLY_UNITS_JA}
+${DECEMBER_2026_SCORE_TIEBREAK_JA}
 ${SHARED_FOOTER_JA}`;
 
 export const DECEMBER_2026_MONTHLY_BODY_EN = `${SHARED_SCORE_EN}
@@ -62,8 +71,11 @@ Games: December Pickup games
 1st  NBA Mega Mystery Box
 2nd  NBA Ballers ×2
 3rd  NBA Mega Mystery Box packs ×5
+Exact 100th  NBA Mega Mystery Box packs ×3
+Exact 500th  NBA Mega Mystery Box packs ×3
 
 ${MONTHLY_UNITS_EN}
+${DECEMBER_2026_SCORE_TIEBREAK_EN}
 ${SHARED_FOOTER_EN}`;
 
 export const DECEMBER_2026_CUP_BODY_JA = `ノックアウトステージのスコアで競います。対象は全員です。
@@ -73,6 +85,7 @@ export const DECEMBER_2026_CUP_BODY_JA = `ノックアウトステージのス�
 2位　NBA Ballers ×2
 3位　NBA Mega Mystery Box パック ×3
 
+${DECEMBER_2026_SCORE_TIEBREAK_JA}
 ${SHARED_FOOTER_JA}`;
 
 export const DECEMBER_2026_CUP_BODY_EN = `Scored with knockout-stage points. Open to everyone.
@@ -82,6 +95,7 @@ Games: all 7 NBA Cup knockout-stage games
 2nd  NBA Ballers ×2
 3rd  NBA Mega Mystery Box packs ×3
 
+${DECEMBER_2026_SCORE_TIEBREAK_EN}
 ${SHARED_FOOTER_EN}`;
 
 export const DECEMBER_2026_CHRISTMAS_BODY_JA = `クリスマスゲームのスコアで競います。対象は全員です。
@@ -89,6 +103,7 @@ export const DECEMBER_2026_CHRISTMAS_BODY_JA = `クリスマスゲームのス�
 対象：クリスマスゲームすべて
 1位のみ　NBA Ballers ×3
 
+${DECEMBER_2026_SCORE_TIEBREAK_JA}
 ${SHARED_FOOTER_JA}`;
 
 export const DECEMBER_2026_CHRISTMAS_BODY_EN = `Scored with Christmas-game points. Open to everyone.
@@ -96,6 +111,7 @@ export const DECEMBER_2026_CHRISTMAS_BODY_EN = `Scored with Christmas-game point
 Games: all Christmas games
 1st only  NBA Ballers ×3
 
+${DECEMBER_2026_SCORE_TIEBREAK_EN}
 ${SHARED_FOOTER_EN}`;
 
 /** 管理画面・YouTube / X 用（3イベントまとめた文面） */
@@ -103,10 +119,11 @@ export const DECEMBER_2026_NOTICE_TITLE_JA = "12月 月間ランキング";
 export const DECEMBER_2026_NOTICE_BODY_JA = DECEMBER_2026_MONTHLY_BODY_JA;
 
 export const DECEMBER_2026_X_COPY_JA = `UNITERZ 12月チャレンジ
-指標はピックアップのスコア。対象は全員。
+指標はピックアップのスコア。対象は全員。同点は最多得点者的中が多い人。
 
 月間
 1位 Mega Mystery Box / 2位 Ballers×2 / 3位 パック×5
+100位ぴったり パック×3 / 500位ぴったり パック×3
 
 NBAカップ ノックアウト（ノックアウトステージ全7試合）
 1位 優勝チームのTシャツ / 2位 Ballers×2 / 3位 パック×3
@@ -116,12 +133,14 @@ NBAカップ ノックアウト（ノックアウトステージ全7試合）
 
 export const DECEMBER_2026_YOUTUBE_COPY_JA = `UNITERZ の12月チャレンジ、賞品が決まりました。
 
-指標はいつもどおりピックアップのスコアです。対象は全員です。
+指標はいつもどおりピックアップのスコアです。対象は全員です。同点は最多得点者的中が多い人です。
 
 月間ランキング（12月のピックアップ）
 1位 NBA Mega Mystery Box
 2位 NBA Ballers 2個
 3位 Mega Mystery Box のパック 5個
+100位ぴったり Mega Mystery Box のパック 3個
+500位ぴったり Mega Mystery Box のパック 3個
 
 NBAカップのノックアウト（ノックアウトステージ全7試合）
 1位 優勝チームのTシャツ
@@ -155,8 +174,8 @@ export const DECEMBER_2026_MONTHLY_NOTICE: EventNoticeContent = {
   periodEn: "December 2026 (notice through Dec 3)",
   target: "12月のピックアップ試合・全員",
   targetEn: "December Pickup games · everyone",
-  reward: "1位 Mega Box / 2位 Ballers×2 / 3位 パック×5",
-  rewardEn: "1st Mega Box / 2nd Ballers×2 / 3rd packs×5",
+  reward: "1位 Mega Box / 2位 Ballers×2 / 3位 パック×5 / 100位・500位ぴったり パック×3",
+  rewardEn: "1st Mega Box / 2nd Ballers×2 / 3rd packs×5 / exact 100th & 500th packs×3",
   postedAtMs: jstMs(2026, 11, 22, 18, 0),
   visibleFromMs: jstMs(2026, 11, 22),
   visibleUntilMs: jstMs(2026, 12, 4),
@@ -222,10 +241,10 @@ export type December2026PlannedPhysical = {
 
 /** 現物の予定個数（実費の円は管理画面で入れる） */
 export const DECEMBER_2026_PLANNED_PHYSICAL: December2026PlannedPhysical = {
-  monthly: { megaBox: 1, ballers: 2, megaPacks: 5, tee: 0 },
+  monthly: { megaBox: 1, ballers: 2, megaPacks: 11, tee: 0 },
   cup: { megaBox: 0, ballers: 2, megaPacks: 3, tee: 1 },
   christmas: { megaBox: 0, ballers: 3, megaPacks: 0, tee: 0 },
-  totals: { megaBox: 1, ballers: 7, megaPacks: 8, tee: 1 },
+  totals: { megaBox: 1, ballers: 7, megaPacks: 14, tee: 1 },
 };
 
 export type December2026CostInputs = {

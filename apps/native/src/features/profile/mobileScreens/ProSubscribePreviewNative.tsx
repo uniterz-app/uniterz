@@ -5,6 +5,8 @@
 import type { ComponentProps } from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Image,
+  type ImageSourcePropType,
   Linking,
   Modal,
   Platform,
@@ -12,6 +14,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -41,11 +44,6 @@ import {
   type ProSubscribePreviewPlanId,
 } from "../../../../../../lib/pro/proSubscribePreviewPlans";
 import {
-  PRO_SUBSCRIBE_PLAN_DIFF_ROWS,
-  planDiffCellLabel,
-  planDiffColLabel,
-  planDiffRowLabel,
-  planDiffTitle,
   proLegalLinkLabel,
   proSubscribeAfterTrialPriceNote,
   proSubscribeBackLabel,
@@ -55,15 +53,19 @@ import {
   proSubscribeChooseSkinLabel,
   proSubscribeFreeThenPrefix,
   proSubscribeIncludedTitle,
-  proSubscribeLead,
+  proSubscribeNoAdsLabel,
   proSubscribeNoTrialLiveMicroNote,
   proSubscribeProcessingLabel,
   proSubscribeStartTrialLabel,
   proSubscribeSuccessTitle,
+  proSubscribeTrialHeroRest,
+  proSubscribeTrialHeroSub,
+  proSubscribeTrialHeroTitle,
   proSubscribeTrialLiveMicroNote,
   proSubscribeTrialModalPoints,
   proSubscribeTrialModalSelected,
   proSubscribeTrialModalTitle,
+  proSubscribeTrialZeroLead,
   purchaseDisclaimer,
   restorePurchasesLabel,
   seasonPassBlurb,
@@ -85,7 +87,12 @@ import {
   acquireAppBrandShelfHidden,
   setAppBrandShelfHidden,
 } from "../../../../../../lib/ui/appBrandShelfVisibility";
-import { OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
+import { JP_600, JP_700, OXANIUM_700, OXANIUM_800 } from "../reports/reportThemeNative";
+import { UNITERZ_PRO_BADGE_GOLD } from "../../../../../../lib/units/uniterzProBadge";
+
+const GET_PRO_HERO = require("../../../assets/pro/get-pro-hero.jpg") as ImageSourcePropType;
+const GET_PRO_HERO_MAX_H = 96;
+const GET_PRO_HERO_WIDTH_RATIO = 0.28;
 
 const successCardEntering = new Keyframe({
   0: {
@@ -129,6 +136,7 @@ const FEATURE_ICONS: Record<
   ComponentProps<typeof MaterialCommunityIcons>["name"]
 > = {
   insight: "lightbulb-outline",
+  noAds: "advertisements-off",
   alert: "bell-outline",
   rank: "chart-bar",
   badge: "medal-outline",
@@ -212,6 +220,11 @@ export default function ProSubscribePreviewNative({
   const priceFor = (id: ProSubscribePreviewPlanId) =>
     storePrice(id) ?? proSubscribePreviewPlanById(id).price;
   const { bottomContentReserveY } = useBottomTabBarInsets();
+  const { width: winW } = useWindowDimensions();
+  const heroH = Math.min(
+    GET_PRO_HERO_MAX_H,
+    Math.round((winW - 52) * GET_PRO_HERO_WIDTH_RATIO),
+  );
   const scrollPadBottom = bottomContentReserveY + 24;
 
   useFocusEffect(
@@ -295,12 +308,28 @@ export default function ProSubscribePreviewNative({
       >
         <View style={styles.card}>
             <View style={styles.header}>
-              <ProCyberBadgeNative premium />
               <Text style={styles.h1}>Get Pro</Text>
-              <Text style={styles.lead}>{proSubscribeLead(lang)}</Text>
+              <View
+                style={styles.trialHeroLine}
+                accessible
+                accessibilityRole="header"
+                accessibilityLabel={proSubscribeTrialHeroTitle(lang)}
+              >
+                <Text style={styles.trialHeroNum}>7</Text>
+                <Text style={styles.trialHeroRest}>
+                  {proSubscribeTrialHeroRest(lang)}
+                </Text>
+              </View>
+              <Image
+                source={GET_PRO_HERO}
+                style={[styles.hero, { height: heroH }]}
+                resizeMode="cover"
+                accessibilityIgnoresInvertColors
+              />
+              <Text style={styles.trialHeroSub}>
+                {proSubscribeTrialHeroSub(lang)}
+              </Text>
             </View>
-
-            <PlanDiffTableNative lang={lang} />
 
             <View style={styles.planList}>
               {PRO_SUBSCRIBE_PREVIEW_PLANS.map((plan) => {
@@ -334,6 +363,11 @@ export default function ProSubscribePreviewNative({
                           accent={accent.fill}
                         />
                         <View style={styles.planTopRight}>
+                          <View style={styles.noAdsChip}>
+                            <Text style={styles.noAdsChipText}>
+                              {proSubscribeNoAdsLabel(lang)}
+                            </Text>
+                          </View>
                           {plan.badge || plan.recommended ? (
                             <View
                               style={[
@@ -375,6 +409,11 @@ export default function ProSubscribePreviewNative({
                             : L(lang, plan.period)}
                         </Text>
                       </View>
+                      {showTrialFor(plan.id) ? (
+                        <Text style={styles.trialZero}>
+                          {proSubscribeTrialZeroLead(lang)}
+                        </Text>
+                      ) : null}
                       <Text style={styles.blurb}>
                         {plan.id === "season"
                           ? seasonBlurbText
@@ -556,44 +595,6 @@ const LEGAL_URLS: Record<ProLegalLinkKind, string> = {
   privacy: PRIVACY_POLICY_URL,
   tokushoho: TOKUSHOHO_URL,
 };
-
-function PlanDiffTableNative({
-  lang,
-}: {
-  lang: import("@/lib/i18n/localize").LocalizedLang;
-}) {
-  const cols = ["weekly", "monthly", "season"] as const;
-  return (
-    <View style={styles.diffWrap} accessibilityLabel={planDiffTitle(lang)}>
-      <Text style={styles.diffTitle}>{planDiffTitle(lang)}</Text>
-      <View style={styles.diffHeadRow}>
-        <View style={styles.diffLabelCol} />
-        {cols.map((col) => (
-          <Text key={col} style={styles.diffHeadCell}>
-            {planDiffColLabel(col, lang)}
-          </Text>
-        ))}
-      </View>
-      {PRO_SUBSCRIBE_PLAN_DIFF_ROWS.map((row) => (
-        <View key={row.id} style={styles.diffRow}>
-          <Text style={styles.diffLabel}>{planDiffRowLabel(row, lang)}</Text>
-          {cols.map((col) => {
-            const cell = row[col];
-            const on = cell === "yes";
-            return (
-              <Text
-                key={`${row.id}-${col}`}
-                style={[styles.diffCell, on ? styles.diffCellOn : null]}
-              >
-                {planDiffCellLabel(cell, lang)}
-              </Text>
-            );
-          })}
-        </View>
-      ))}
-    </View>
-  );
-}
 
 function PurchaseFootnotesNative({
   lang,
@@ -987,74 +988,43 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: 20,
+    gap: 10,
   },
-  diffWrap: {
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-    backgroundColor: "rgba(0,0,0,0.3)",
+  trialHeroLine: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: 2,
+  },
+  trialHeroNum: {
+    fontFamily: OXANIUM_800,
+    fontSize: 42,
+    lineHeight: 46,
+    color: UNITERZ_PRO_BADGE_GOLD.bright,
+    letterSpacing: -1,
+  },
+  trialHeroRest: {
+    fontFamily: JP_700,
+    fontSize: 24,
+    lineHeight: 32,
+    color: UNITERZ_PRO_BADGE_GOLD.bright,
+    letterSpacing: 2.2,
+  },
+  hero: {
+    alignSelf: "stretch",
+    width: "100%",
+    borderRadius: 2,
     overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(244,223,154,0.28)",
   },
-  diffTitle: {
-    fontFamily: OXANIUM_800,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.6,
-    textTransform: "uppercase",
-    color: "rgba(253,230,138,0.85)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.1)",
-  },
-  diffHeadRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-  },
-  diffLabelCol: {
-    flex: 1.2,
-  },
-  diffHeadCell: {
-    flex: 0.9,
-    fontFamily: OXANIUM_800,
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    color: "rgba(255,255,255,0.55)",
+  trialHeroSub: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: "rgba(255,255,255,0.68)",
     textAlign: "center",
-  },
-  diffRow: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.06)",
-  },
-  diffLabel: {
-    flex: 1.2,
-    fontSize: 11,
-    lineHeight: 15,
-    color: "rgba(255,255,255,0.7)",
-  },
-  diffCell: {
-    flex: 0.9,
-    fontFamily: OXANIUM_800,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.4,
-    textAlign: "center",
-    color: "rgba(255,255,255,0.3)",
-  },
-  diffCellOn: {
-    color: "#fde68a",
   },
   footnotes: {
     marginTop: 18,
@@ -1122,17 +1092,11 @@ const styles = StyleSheet.create({
   },
   h1: {
     fontFamily: OXANIUM_800,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: 2.8,
-    color: "#ffffff",
-    textTransform: "uppercase",
-  },
-  lead: {
     fontSize: 12,
-    lineHeight: 18,
-    color: "rgba(255,255,255,0.5)",
-    textAlign: "center",
+    fontWeight: "800",
+    letterSpacing: 3.2,
+    color: "rgba(255,255,255,0.55)",
+    textTransform: "uppercase",
   },
   planList: {
     gap: 10,
@@ -1151,10 +1115,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+    flexWrap: "wrap",
   },
   planTopRight: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
+    flexShrink: 1,
+    flexWrap: "wrap",
     gap: 6,
   },
   scanLabel: {
@@ -1179,9 +1147,32 @@ const styles = StyleSheet.create({
     color: "#050508",
     textTransform: "uppercase",
   },
+  trialZero: {
+    marginTop: 4,
+    fontFamily: JP_700,
+    fontSize: 12,
+    lineHeight: 16,
+    color: UNITERZ_PRO_BADGE_GOLD.mid,
+  },
+  noAdsChip: {
+    height: 20,
+    paddingHorizontal: 7,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: "rgba(244,223,154,0.4)",
+    backgroundColor: "rgba(244,223,154,0.1)",
+    justifyContent: "center",
+  },
+  noAdsChipText: {
+    fontFamily: JP_600,
+    fontSize: 10,
+    lineHeight: 14,
+    color: UNITERZ_PRO_BADGE_GOLD.bright,
+    letterSpacing: 0.4,
+  },
   planBadge: {
-    height: 18,
-    paddingHorizontal: 6,
+    height: 20,
+    paddingHorizontal: 8,
     borderRadius: 2,
     justifyContent: "center",
   },
@@ -1192,7 +1183,7 @@ const styles = StyleSheet.create({
   },
   planBadgeAccentText: {
     fontFamily: OXANIUM_800,
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.8,
     color: "#120e08",
@@ -1220,17 +1211,18 @@ const styles = StyleSheet.create({
   },
   price: {
     fontFamily: OXANIUM_800,
-    fontSize: 22,
+    fontSize: 32,
     fontWeight: "900",
     color: "#ffffff",
+    letterSpacing: -0.4,
   },
   period: {
     flexShrink: 1,
     fontFamily: OXANIUM_700,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.6,
-    color: "rgba(255,255,255,0.45)",
+    letterSpacing: 0.4,
+    color: "rgba(255,255,255,0.55)",
   },
   blurb: {
     marginTop: 8,

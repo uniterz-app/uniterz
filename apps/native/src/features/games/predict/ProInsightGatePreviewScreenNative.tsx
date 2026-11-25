@@ -1,6 +1,6 @@
 /**
  * __DEV__ — 初回無料の案内モーダル + ゲート。
- * 本番のモーダルは予想オーバーレイを開いたとき（PRO PICK タブの前）。
+ * 本番の案内は予想ページを開いたとき（PRO PICK タブの前）。
  */
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -10,6 +10,19 @@ import ProPickFirstFreeModalNative from "./ProPickFirstFreeModalNative";
 import { useBottomTabBarInsets } from "../../../navigation/useBottomTabBarInsets";
 import { L, resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { JP_600 } from "../../profile/reports/reportThemeNative";
+import type { ProInsightPredictKitRecord } from "../../../../../../lib/nba/insights/predictKit/predictKitTypes";
+
+/** DEV プレビュー用。数字は今季の公開 kitRecord（検証 + 本番採点）に合わせる */
+const PREVIEW_KIT_RECORD: ProInsightPredictKitRecord = {
+  games: 248,
+  hits: 165,
+  strongGames: 68,
+  strongHits: 58,
+  scorerGames: 248,
+  scorerHits: 111,
+  basis: "backtest",
+  liveGames: 78,
+};
 
 type Props = {
   language: string;
@@ -24,7 +37,7 @@ export default function ProInsightGatePreviewScreenNative({
 }: Props) {
   const lang = resolveLocalizedLang(language);
   const { bottomContentReserveY } = useBottomTabBarInsets();
-  const [modalOpen, setModalOpen] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
 
   return (
     <MobilePageShell
@@ -39,13 +52,13 @@ export default function ProInsightGatePreviewScreenNative({
       })}
       eyebrow="DEV"
       subtitle={L(lang, {
-        ja: "予想送信直後。次の試合案内の代わり。既読には書かない。",
-        en: "Right after a pick, instead of next-game. Preview does not mark it seen.",
-        ko: "예상 직후. 다음 경기 안내 대신. 미리보기는 읽음으로 쓰지 않음.",
-        zh: "提交预测后、代替下一场提示。预览不记已读。",
-        es: "Tras el palpite, en lugar del siguiente partido. El preview no marca leído.",
-        pt: "Após o palpite, no lugar do próximo jogo. O preview não marca como visto.",
-        fr: "Juste après le pronostic, à la place du match suivant. L’aperçu ne marque pas lu.",
+        ja: "予想ページを開いたとき。PRO PICK タブの前。既読には書かない。",
+        en: "When the pick page opens, before the PRO PICK tab. Preview does not mark it seen.",
+        ko: "예상 페이지를 열 때. PRO PICK 탭 앞. 미리보기는 읽음으로 쓰지 않음.",
+        zh: "打开预测页时、在 PRO PICK 标签前。预览不记已读。",
+        es: "Al abrir el palpite, antes de la pestaña PRO PICK. El preview no marca leído.",
+        pt: "Ao abrir o palpite, antes da aba PRO PICK. O preview não marca como visto.",
+        fr: "À l’ouverture de la page de pronostic, avant l’onglet PRO PICK. L’aperçu ne marque pas lu.",
       })}
       onClose={onClose}
       appBackground
@@ -82,9 +95,8 @@ export default function ProInsightGatePreviewScreenNative({
             homeTeamName={lang === "ja" ? "レイカーズ" : "Lakers"}
             awayTeamName={lang === "ja" ? "セルティックス" : "Celtics"}
             locked
-            firstFreeAvailable
             onPressProPickUnlock={() => {
-              /* preview: 初回無料 CTA */
+              /* preview: 広告 CTA */
             }}
             onPressUpgrade={
               onPressSubscribe ??
@@ -92,6 +104,7 @@ export default function ProInsightGatePreviewScreenNative({
                 /* preview */
               })
             }
+            kitRecord={PREVIEW_KIT_RECORD}
           />
         </View>
       </ScrollView>

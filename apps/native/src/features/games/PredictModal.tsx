@@ -69,6 +69,9 @@ import { useAppActiveNative } from "../../hooks/useAppActiveNative";
 import CountryFlagNative from "./CountryFlagNative";
 import NbaTopScorerPickerNative from "./predict/NbaTopScorerPickerNative";
 import PredictTopScorerMissingNativeOverlay from "./predict/PredictTopScorerMissingNativeOverlay";
+import ProPickFirstFreeModalNative, {
+  type ProPickFirstFreeMatch,
+} from "./predict/ProPickFirstFreeModalNative";
 import {
   normalizeNbaTopScorerCandidates,
   normalizeNbaTopScorerPick,
@@ -832,8 +835,12 @@ type PredictModalProps = {
     userId: string;
   }) => Promise<ProPickRewardedResult>;
   resumeAfterRewardedAd?: boolean;
-  /** この試合で初回無料が使える（送信後の案内用） */
+  /** この試合で初回無料が使える（開いたときの案内用） */
   onFirstFreeOffer?: (available: boolean) => void;
+  /** 予想ページを開いたときの PRO PICK 初回無料案内 */
+  firstFreeNoticeMatch?: ProPickFirstFreeMatch | null;
+  onFirstFreeLater?: () => void;
+  onFirstFreeOpen?: () => void;
 };
 
 /** モバイル `PredictionFormV2`：glassCard（form）/ glassCardStatsPanel（tool） */
@@ -945,6 +952,9 @@ export default function PredictModal({
   presentRewardedAd,
   resumeAfterRewardedAd = false,
   onFirstFreeOffer,
+  firstFreeNoticeMatch = null,
+  onFirstFreeLater,
+  onFirstFreeOpen,
 }: PredictModalProps) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion() ?? false;
@@ -1892,7 +1902,13 @@ export default function PredictModal({
       visible={modalChromeVisible}
       transparent
       animationType="none"
-      onRequestClose={scheduleCloseAfterExitAnimation}
+      onRequestClose={() => {
+        if (firstFreeNoticeMatch && onFirstFreeLater) {
+          onFirstFreeLater();
+          return;
+        }
+        scheduleCloseAfterExitAnimation();
+      }}
     >
       {modalChromeVisible ? (
         <View
@@ -2064,10 +2080,14 @@ export default function PredictModal({
                         return toDateOrNull(raw)?.getTime() ?? null;
                       })()}
                       homeTeamId={
-                        rawTeamIdFromGameSide(matchPreview?.homeSide) ?? ""
+                        rawTeamIdFromGameSide(matchPreview?.homeSide) ??
+                        rawTeamIdFromGameSide(predictData?.subjectGame?.home) ??
+                        ""
                       }
                       awayTeamId={
-                        rawTeamIdFromGameSide(matchPreview?.awaySide) ?? ""
+                        rawTeamIdFromGameSide(matchPreview?.awaySide) ??
+                        rawTeamIdFromGameSide(predictData?.subjectGame?.away) ??
+                        ""
                       }
                       homeTeamName={
                         predictHomeTeamLabel || matchPreview?.homeCompact || "HOME"
@@ -2386,6 +2406,16 @@ export default function PredictModal({
                   setTopScorerConfirmOpen(false);
                   onSubmit();
                 }}
+              />
+            ) : null}
+            {firstFreeNoticeMatch && onFirstFreeLater && onFirstFreeOpen ? (
+              <ProPickFirstFreeModalNative
+                embedded
+                visible
+                language={language}
+                match={firstFreeNoticeMatch}
+                onLater={onFirstFreeLater}
+                onOpenFree={onFirstFreeOpen}
               />
             ) : null}
             </>

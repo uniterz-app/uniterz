@@ -21,6 +21,7 @@ import {
   Image,
   Lightbulb,
   Medal,
+  MegaphoneOff,
   Radar,
   Swords,
 } from "lucide-react";
@@ -83,6 +84,7 @@ const FEATURE_ICONS: Record<
   typeof Lightbulb
 > = {
   insight: Lightbulb,
+  noAds: MegaphoneOff,
   alert: Bell,
   rank: ChartNoAxesColumn,
   badge: Medal,

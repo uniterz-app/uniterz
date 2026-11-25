@@ -51,6 +51,15 @@ function openSource(url: string | null | undefined) {
   void Linking.openURL(url).catch(() => {});
 }
 
+/** `A / B / C` は1人ずつ。切らずに全部出す */
+function buzzPlayerNameLines(name: string): string[] {
+  const parts = name
+    .split(/\s*\/\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : [name];
+}
+
 function EventRow({
   event,
 }: {
@@ -131,9 +140,11 @@ function BuzzCard({
 
       <View style={styles.nameRow}>
         <View style={styles.nameSlant}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.playerName}
-          </Text>
+          {buzzPlayerNameLines(item.playerName).map((line) => (
+            <Text key={line} style={styles.name}>
+              {line}
+            </Text>
+          ))}
         </View>
         <View style={styles.rightRail}>
           {item.fromTeamAbbr ? (
@@ -301,13 +312,14 @@ const styles = StyleSheet.create({
   },
   nameRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     minHeight: 24,
   },
   nameSlant: {
     flex: 1,
     minWidth: 0,
     marginRight: 8,
+    gap: 2,
     transform: [{ skewX: "-6deg" }],
   },
   name: {
@@ -318,6 +330,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     textTransform: "uppercase",
     lineHeight: 22,
+    flexShrink: 1,
   },
   headline: {
     fontSize: 13,

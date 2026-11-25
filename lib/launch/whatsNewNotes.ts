@@ -181,10 +181,24 @@ export const WHATS_NEW_EVENT_PREVIEW_NOTES: readonly WhatsNewNote[] = [
           en: "NBA Mega Mystery Box pack ×5",
         },
       },
+      {
+        place: { ja: "100位ぴったり", en: "Exact 100th" },
+        prize: {
+          ja: "NBA Mega Mystery Box パック ×3",
+          en: "NBA Mega Mystery Box pack ×3",
+        },
+      },
+      {
+        place: { ja: "500位ぴったり", en: "Exact 500th" },
+        prize: {
+          ja: "NBA Mega Mystery Box パック ×3",
+          en: "NBA Mega Mystery Box pack ×3",
+        },
+      },
     ],
     footnote: {
-      ja: "賞品は登録メールでご連絡します。",
-      en: "Prizes will be sent to your registered email.",
+      ja: "同点は最多得点者的中が多い人。賞品は登録メールでご連絡します。",
+      en: "Ties go to whoever hit more top scorers. Prizes emailed.",
     },
     action: {
       label: {

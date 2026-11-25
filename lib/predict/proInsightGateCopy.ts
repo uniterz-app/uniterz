@@ -27,7 +27,7 @@ export type ProInsightGateCopy = {
   firstFreeKicker: string;
   firstFreeTitle: string;
   firstFreeBody: string;
-  /** 予想送信直後の案内（次の試合と同じ聞き方） */
+  /** 予想ページを開いたときの案内 */
   firstFreeAskTitle: string;
   firstFreeAskBody: string;
   firstFreeDeck: string;
@@ -37,6 +37,10 @@ export type ProInsightGateCopy = {
   cta: string;
   /** Native: 無料トライアル誘導のボタン文言 */
   trialCta: string;
+  /** ゲート上部のチップ */
+  trialKicker: string;
+  /** 的中を保証しない注意 */
+  disclaimer: string;
   /** ゲート下に出す実画面サンプルの見出し */
   exampleLabel: string;
   /** ゲート下に出すこの試合の伏せ字カードの見出し */
@@ -95,26 +99,26 @@ export function proInsightGateCopy(
       ar: "يمكنك مشاهدة PRO PICK لهذه المباراة",
     }),
     firstFreeAskTitle: L(lang, {
-      ja: "今予想した試合の PRO PICK を見ますか？",
-      en: "See PRO PICK for the game you just picked?",
-      ko: "방금 예측한 경기의 PRO PICK을 볼까요?",
-      zh: "要看刚才预测的这场 PRO PICK 吗？",
-      es: "¿Ves el PRO PICK del partido que acabas de pronosticar?",
-      pt: "Ver o PRO PICK do jogo que você acabou de prever?",
-      fr: "Voir le PRO PICK du match que tu viens de pronostiquer ?",
-      de: "PRO PICK zum Spiel sehen, das du gerade getippt hast?",
-      ar: "هل تريد مشاهدة PRO PICK للمباراة التي توقعتها للتو؟",
+      ja: "この試合の PRO PICK",
+      en: "This game's PRO PICK",
+      ko: "이 경기의 PRO PICK",
+      zh: "本场 PRO PICK",
+      es: "PRO PICK de este partido",
+      pt: "PRO PICK deste jogo",
+      fr: "PRO PICK de ce match",
+      de: "PRO PICK dieses Spiels",
+      ar: "PRO PICK لهذه المباراة",
     }),
     firstFreeAskBody: L(lang, {
-      ja: "最初の1試合だけ、広告なしで見られます。",
-      en: "The first game is free — no ad.",
-      ko: "첫 경기만 광고 없이 볼 수 있습니다.",
-      zh: "仅第一场可免广告查看。",
-      es: "El primer partido es gratis, sin anuncio.",
-      pt: "Só o primeiro jogo é grátis, sem anúncio.",
-      fr: "Le premier match est gratuit, sans pub.",
-      de: "Nur das erste Spiel ist ohne Werbung kostenlos.",
-      ar: "المباراة الأولى فقط مجانًا وبدون إعلان.",
+      ja: "勝つ確率・予想スコア・得点王。広告なし。",
+      en: "Win chance, projected score, top scorer. No ads.",
+      ko: "승리 확률·예상 스코어·득점왕. 광고 없음.",
+      zh: "胜率、预测比分、得分王。无广告。",
+      es: "Probabilidad, marcador y máximo anotador. Sin anuncios.",
+      pt: "Chance, placar e cestinha. Sem anúncios.",
+      fr: "Probabilité, score projeté, meilleur marqueur. Sans pub.",
+      de: "Siegchance, Prognosescore, Topscorer. Keine Werbung.",
+      ar: "احتمال الفوز والنتيجة وأفضل مسجل. بدون إعلان.",
     }),
     firstFreeDeck: L(lang, {
       ja: "今の予想",
@@ -150,22 +154,26 @@ export function proInsightGateCopy(
       ar: "افتح مرة واحدة احتمالية الفوز والنتيجة المتوقعة وأفضل مسجل لهذه المباراة — بدون إعلان.",
     }),
     title: L(lang, {
-      ja: "この試合の PRO PICK を見る",
-      en: "See this game's PRO PICK",
-      ko: "이 경기의 PRO PICK 보기",
-      zh: "查看本场 PRO PICK",
-      es: "Ver el PRO PICK de este partido",
-      pt: "Ver o PRO PICK deste jogo",
-      fr: "Voir le PRO PICK de ce match",
+      ja: "この試合の PRO PICK",
+      en: "This game's PRO PICK",
+      ko: "이 경기의 PRO PICK",
+      zh: "本场 PRO PICK",
+      es: "PRO PICK de este partido",
+      pt: "PRO PICK deste jogo",
+      fr: "PRO PICK de ce match",
+      de: "PRO PICK dieses Spiels",
+      ar: "PRO PICK لهذه المباراة",
     }),
     body: L(lang, {
-      ja: "勝つ確率・予想スコア・得点王。広告 1 本でこの試合だけ開きます。",
-      en: "Win chance, projected score, top scorer. One ad unlocks this game.",
-      ko: "승리 확률·예상 스코어·득점왕. 광고 1편으로 이 경기만 엽니다.",
-      zh: "胜率、预测比分、得分王。看一条广告即可打开本场。",
-      es: "Probabilidad, marcador previsto y máximo anotador. Un anuncio abre este partido.",
-      pt: "Chance de vitória, placar previsto e cestinha. Um anúncio abre este jogo.",
-      fr: "Probabilité, score projeté, meilleur marqueur. Une pub ouvre ce match.",
+      ja: "勝つ確率・予想スコア・得点王。",
+      en: "Win chance, projected score, top scorer.",
+      ko: "승리 확률·예상 스코어·득점왕.",
+      zh: "胜率、预测比分、得分王。",
+      es: "Probabilidad, marcador y máximo anotador.",
+      pt: "Chance, placar e cestinha.",
+      fr: "Probabilité, score projeté, meilleur marqueur.",
+      de: "Siegchance, Prognosescore, Topscorer.",
+      ar: "احتمال الفوز والنتيجة وأفضل مسجل.",
     }),
     bullets: [
       {
@@ -255,13 +263,33 @@ export function proInsightGateCopy(
     ],
     cta: "Explore Pro",
     trialCta: L(lang, {
-      ja: "7日無料で試す",
-      en: "Try 7 days free",
-      ko: "7일 무료 체험",
+      ja: "7日間無料で試す",
+      en: "Start 7 days free",
+      ko: "7일 무료로 시작",
       zh: "免费试用 7 天",
-      es: "Prueba 7 días gratis",
-      pt: "Teste 7 dias grátis",
-      fr: "Essai gratuit 7 jours",
+      es: "Empieza 7 días gratis",
+      pt: "Começar 7 dias grátis",
+      fr: "Commencer 7 jours gratuits",
+    }),
+    trialKicker: L(lang, {
+      ja: "7日間無料",
+      en: "7 DAYS FREE",
+      ko: "7일 무료",
+      zh: "免费 7 天",
+      es: "7 DÍAS GRATIS",
+      pt: "7 DIAS GRÁTIS",
+      fr: "7 JOURS OFFERTS",
+      de: "7 TAGE GRATIS",
+      ar: "7 أيام مجاناً",
+    }),
+    disclaimer: L(lang, {
+      ja: "PRO PICK は試合の読みの参考です。勝者を推奨するものではありません。的中を保証しません。",
+      en: "PRO PICK is a read of the matchup, not a recommendation of a winner. Hits are not guaranteed.",
+      ko: "PRO PICK은 경기의 참고 읽기입니다. 승자를 추천하지 않으며 적중을 보장하지 않습니다.",
+      zh: "PRO PICK 仅供赛前参考，不构成胜者推荐，亦不保证命中。",
+      es: "PRO PICK es una lectura del duelo, no una recomendación de ganador. No garantiza aciertos.",
+      pt: "O PRO PICK é uma leitura do confronto, não uma recomendação de vencedor. Não garante acertos.",
+      fr: "PRO PICK est une lecture du match, pas une reco de vainqueur. Les bons pronos ne sont pas garantis.",
     }),
     exampleLabel: L(lang, {
       ja: "表示イメージ（例）",

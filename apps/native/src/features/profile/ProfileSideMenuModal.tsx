@@ -117,6 +117,7 @@ type Props = {
     | "teamAbbrBadgePreview"
     | "resultPickupPreview"
     | "proInsightGatePreview"
+    | "proSubscribePreview"
     | "proInsightNarrativePreview"
     | "matchupTeamStatsPreview"
     | "rankingCommentDesignPreview"
@@ -319,6 +320,7 @@ export default function ProfileSideMenuModal({
       | "teamAbbrBadgePreview"
       | "resultPickupPreview"
       | "proInsightGatePreview"
+      | "proSubscribePreview"
       | "proInsightNarrativePreview"
       | "matchupTeamStatsPreview"
       | "rankingCommentDesignPreview"
@@ -715,12 +717,28 @@ export default function ProfileSideMenuModal({
                           12月イベントモーダル
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
+                          icon="star-four-points-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proInsightGatePreview")}
+                        >
+                          PRO PICK 初回案内
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
                           icon="lightbulb-on-outline"
                           dense
                           labelStyle={labelStyle}
                           onPress={() => openUserPage("proInsightGatePreview")}
                         >
-                          PRO PICK 初回無料
+                          PRO PICK ゲート
+                        </SideMenuItemButtonNative>
+                        <SideMenuItemButtonNative
+                          icon="crown-outline"
+                          dense
+                          labelStyle={labelStyle}
+                          onPress={() => openUserPage("proSubscribePreview")}
+                        >
+                          GET PRO
                         </SideMenuItemButtonNative>
                         <SideMenuItemButtonNative
                           icon="bell-ring-outline"

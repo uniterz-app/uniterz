@@ -224,13 +224,13 @@ export function trialConditionLines(
 
 export function purchaseDisclaimer(lang: LocalizedLang | string): string {
   return L(asLang(lang), {
-    ja: "他人の予想は見せません。勝者は断言しません。",
-    en: "We never show others’ picks or declare winners.",
-    ko: "타인의 예측은 보여주지 않습니다. 승자를 단정하지 않습니다.",
-    zh: "不会展示他人预测，也不会断言胜者。",
-    es: "Nunca mostramos picks ajenos ni declaramos ganadores.",
-    pt: "Nunca mostramos palpites de outros nem declaramos vencedores.",
-    fr: "Nous ne montrons jamais les picks des autres ni ne déclarons de gagnants.",
+    ja: "PRO PICK は試合の読みの参考です。勝者を推奨するものではありません。的中を保証しません。他人の予想は見せません。",
+    en: "PRO PICK is a read of the matchup, not a recommendation of a winner. Hits are not guaranteed. We never show other users’ picks.",
+    ko: "PRO PICK은 경기의 참고 읽기입니다. 승자를 추천하지 않으며 적중을 보장하지 않습니다. 다른 사람의 예측은 보여주지 않습니다.",
+    zh: "PRO PICK 仅供赛前参考，不构成胜者推荐，亦不保证命中。不会展示他人预测。",
+    es: "PRO PICK es una lectura del duelo, no una recomendación de ganador. No garantiza aciertos. No mostramos picks ajenos.",
+    pt: "O PRO PICK é uma leitura do confronto, não uma recomendação de vencedor. Não garante acertos. Não mostramos palpites de outros.",
+    fr: "PRO PICK est une lecture du match, pas une reco de vainqueur. Les bons pronos ne sont pas garantis. Nous ne montrons pas les picks des autres.",
   });
 }
 
@@ -319,13 +319,110 @@ export function currentSeasonPassKey(): string {
 
 export function proSubscribeLead(lang: LocalizedLang | string): string {
   return L(asLang(lang), {
-    ja: "プランをタップして、できることを確認。もう一度タップで閉じます。",
-    en: "Tap a plan to see what’s included. Tap again to close.",
-    ko: "플랜을 탭해 포함 내용을 확인하세요. 다시 탭하면 닫힙니다.",
-    zh: "点击方案查看包含内容，再次点击可收起。",
-    es: "Toca un plan para ver qué incluye. Toca otra vez para cerrar.",
-    pt: "Toque num plano para ver o que inclui. Toque de novo para fechar.",
-    fr: "Touchez un plan pour voir son contenu. Touchez à nouveau pour fermer.",
+    ja: "Weekly と Monthly は、最初の 7 日間が無料です。期間中に解約すれば料金はかかりません。",
+    en: "Weekly and Monthly start with 7 days free. Cancel during the trial and you won't be charged.",
+    ko: "Weekly와 Monthly는 첫 7일이 무료입니다. 기간 중 해지하면 요금이 없습니다.",
+    zh: "Weekly 与 Monthly 前 7 天免费。试用期内取消不收费。",
+    es: "Weekly y Monthly empiezan con 7 días gratis. Si cancelas en la prueba, no se cobra.",
+    pt: "Weekly e Monthly começam com 7 dias grátis. Cancele no teste e não será cobrado.",
+    fr: "Weekly et Monthly commencent par 7 jours offerts. Annulez pendant l’essai, rien n’est facturé.",
+  });
+}
+
+export function proSubscribeTrialHeroKicker(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "FREE TRIAL",
+    en: "FREE TRIAL",
+    ko: "FREE TRIAL",
+    zh: "FREE TRIAL",
+    es: "FREE TRIAL",
+    pt: "FREE TRIAL",
+    fr: "FREE TRIAL",
+  });
+}
+
+export function proSubscribeTrialHeroTitle(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "7日間無料",
+    en: "7 days free",
+    ko: "7일 무료",
+    zh: "免费 7 天",
+    es: "7 días gratis",
+    pt: "7 dias grátis",
+    fr: "7 jours offerts",
+  });
+}
+
+/** 「7」のあとに続く見出し（数字は Oxanium、ここは JP） */
+export function proSubscribeTrialHeroRest(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "日間無料",
+    en: "DAYS FREE",
+    ko: "일 무료",
+    zh: "天免费",
+    es: "DÍAS GRATIS",
+    pt: "DIAS GRÁTIS",
+    fr: "JOURS OFFERTS",
+  });
+}
+
+export function proSubscribeTrialHeroSub(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "Weekly と Monthly の初回のみ。期間中に解約すれば課金されません。",
+    en: "First time on Weekly or Monthly. Cancel during the trial and you won't be charged.",
+    ko: "Weekly·Monthly 첫 회만. 기간 중 해지하면 과금되지 않습니다.",
+    zh: "仅限 Weekly / Monthly 首次。试用期内取消不扣费。",
+    es: "Solo la 1ª vez en Weekly o Monthly. Si cancelas en la prueba, no se cobra.",
+    pt: "Só a 1ª vez no Weekly ou Monthly. Cancele no teste e não será cobrado.",
+    fr: "1re fois seulement sur Weekly ou Monthly. Annulez pendant l’essai, rien n’est facturé.",
+  });
+}
+
+export function proSubscribeTrialDaysLabel(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "7日間",
+    en: "7 days",
+    ko: "7일",
+    zh: "7 天",
+    es: "7 días",
+    pt: "7 dias",
+    fr: "7 jours",
+  });
+}
+
+export function proSubscribeNoAdsLabel(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "広告なし",
+    en: "No ads",
+    ko: "광고 없음",
+    zh: "无广告",
+    es: "Sin anuncios",
+    pt: "Sem anúncios",
+    fr: "Sans pub",
+  });
+}
+
+export function proSubscribeTrialZeroLead(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "最初の 7 日は無料",
+    en: "First 7 days free",
+    ko: "첫 7일은 무료",
+    zh: "前 7 天免费",
+    es: "Primeros 7 días gratis",
+    pt: "Primeiros 7 dias grátis",
+    fr: "7 premiers jours offerts",
+  });
+}
+
+export function proSubscribeThenPaidHint(lang: LocalizedLang | string): string {
+  return L(asLang(lang), {
+    ja: "8 日目から",
+    en: "from day 8",
+    ko: "8일째부터",
+    zh: "第 8 天起",
+    es: "desde el día 8",
+    pt: "a partir do dia 8",
+    fr: "à partir du 8e jour",
   });
 }
 

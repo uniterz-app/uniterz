@@ -3,7 +3,15 @@
  */
 import type { ReactNode } from "react";
 import { useMemo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  type ImageSourcePropType,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import {
   briefEdgeDetail,
   briefLineText,
@@ -24,8 +32,6 @@ import PredictProInsightKitNative, {
   PredictKitAccuracyHeroNative,
 } from "./PredictProInsightKitNative";
 import type { ProInsightPredictKitRecord } from "../../../../../../lib/nba/insights/predictKit/predictKitTypes";
-
-const GATE_KIT_SAMPLE = PRO_INSIGHT_PREDICT_KIT_SAMPLES[0]!;
 import { resolveLocalizedLang } from "../../../../../../lib/i18n/localize";
 import { getMobileTeamName } from "../../../../../../lib/team-name-split-mobile";
 import { NBA_TEAM_NAME_BY_ID } from "../../../../../../lib/nba-team-names";
@@ -37,10 +43,16 @@ import {
   OXANIUM_800,
   JP_400,
   JP_600,
+  JP_700,
 } from "../../profile/reports/reportThemeNative";
 import { MATCH_CARD_TEAM_NAME_FONT } from "../matchCardTypography";
 import type { GamesLanguage } from "../gamesI18n";
 import { UNITERZ_PRO_BADGE_GOLD } from "../../../../../../lib/units/uniterzProBadge";
+
+const GATE_KIT_SAMPLE = PRO_INSIGHT_PREDICT_KIT_SAMPLES[0]!;
+const GATE_HERO_MAX_H = 128;
+const GATE_HERO_WIDTH_RATIO = 0.44;
+const GATE_HERO = require("../../../assets/pro/pro-pick-hero.jpg") as ImageSourcePropType;
 
 type Props = {
   brief?: PredictProBrief | null;
@@ -91,23 +103,29 @@ function teamNick(teamId: string, fallback: string): string {
 }
 
 function TitleWithBrandFontsNative({ title }: { title: string }) {
+  const parts = title.split(/(PRO PICK)/);
   return (
-    <View style={styles.gateTitleRow}>
-      {title.split(/(PRO PICK|Pro)/).map((part, i) => {
-        if (!part) return null;
-        if (part === "PRO PICK" || part === "Pro") {
-          return (
-            <Text key={i} style={[styles.gateTitle, styles.gateTitlePro]}>
-              {part}
-            </Text>
-          );
-        }
-        return (
-          <Text key={i} style={styles.gateTitle}>
+    <Text style={styles.gateTitle}>
+      {parts.map((part, i) =>
+        part === "PRO PICK" ? (
+          <Text key={i} style={styles.gateTitlePro}>
             {part}
           </Text>
-        );
-      })}
+        ) : (
+          <Text key={i}>{part}</Text>
+        )
+      )}
+    </Text>
+  );
+}
+
+function GatePeekCell({ label, veil }: { label: string; veil: string }) {
+  return (
+    <View style={styles.gatePeekCell}>
+      <Text style={styles.gatePeekLab} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.gatePeekVeil}>{veil}</Text>
     </View>
   );
 }
@@ -408,6 +426,8 @@ export default function PredictProBriefPanelNative({
   unlockConfirming = false,
   kitRecord = null,
 }: Props) {
+  const { width: winW } = useWindowDimensions();
+  const gateHeroH = Math.min(GATE_HERO_MAX_H, Math.round((winW - 48) * GATE_HERO_WIDTH_RATIO));
   const gate = proInsightGateCopy(language);
   const unlockCopy = proPickAdCopy(language);
   const homeNick = teamNick(homeTeamId, homeTeamName).toUpperCase();
@@ -547,9 +567,16 @@ export default function PredictProBriefPanelNative({
           <View style={styles.gateMessageWrap}>
             <View style={styles.gateMessage}>
               <View style={styles.gateCenter}>
-                <View style={styles.gateEyebrowBlock}>
-                  <ProCyberBadgeNative premium />
+                <View style={styles.gateKickerFill}>
+                  <Text style={styles.gateKickerFillLabel}>
+                    {firstFreeAvailable
+                      ? gate.firstFreeKicker
+                      : gate.trialKicker}
+                  </Text>
                 </View>
+                <TitleWithBrandFontsNative
+                  title={firstFreeAvailable ? gate.firstFreeAskTitle : gate.title}
+                />
                 {homeTeamId || awayTeamId ? (
                   <View style={styles.gateMatch}>
                     <Text
@@ -567,21 +594,34 @@ export default function PredictProBriefPanelNative({
                     </Text>
                   </View>
                 ) : null}
-                {firstFreeAvailable ? (
-                  <View style={styles.gateKicker}>
-                    <Text style={styles.gateKickerLabel}>{gate.firstFreeKicker}</Text>
-                  </View>
-                ) : null}
-                <TitleWithBrandFontsNative
-                  title={firstFreeAvailable ? gate.firstFreeTitle : gate.title}
-                />
+                <View style={[styles.gateHero, { height: gateHeroH }]}>
+                  <Image
+                    source={GATE_HERO}
+                    style={styles.gateHeroImg}
+                    resizeMode="cover"
+                    accessibilityIgnoresInvertColors
+                  />
+                </View>
+                <View style={styles.gatePeek}>
+                  <GatePeekCell
+                    label={gate.bullets[0]?.title ?? ""}
+                    veil="??%"
+                  />
+                  <View style={styles.gatePeekRule} />
+                  <GatePeekCell
+                    label={gate.bullets[1]?.title ?? ""}
+                    veil="??–??"
+                  />
+                  <View style={styles.gatePeekRule} />
+                  <GatePeekCell
+                    label={(gate.bullets[2]?.title ?? "").replace(/の候補$/, "")}
+                    veil="???"
+                  />
+                </View>
                 <Text style={styles.gateBody}>
-                  {firstFreeAvailable ? gate.firstFreeBody : gate.body}
+                  {firstFreeAvailable ? gate.firstFreeAskBody : gate.body}
                 </Text>
-                {kitRecord ? (
-                  <PredictKitAccuracyHeroNative record={kitRecord} language={language} />
-                ) : null}
-                {onPressProPickUnlock ? (
+                {firstFreeAvailable && onPressProPickUnlock ? (
                   <Pressable
                     onPress={onPressProPickUnlock}
                     disabled={unlockBusy}
@@ -593,49 +633,65 @@ export default function PredictProBriefPanelNative({
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={
-                      unlockConfirming
-                        ? unlockCopy.confirmingCta
-                        : firstFreeAvailable
-                          ? unlockCopy.firstFreeCta
-                          : unlockCopy.adCta
+                      unlockConfirming ? unlockCopy.confirmingCta : unlockCopy.firstFreeCta
                     }
                   >
                     <Text style={[styles.ctaLabel, styles.ctaFilledLabel]}>
-                      {unlockConfirming
-                        ? unlockCopy.confirmingCta
-                        : firstFreeAvailable
-                          ? unlockCopy.firstFreeCta
-                          : unlockCopy.adCta}
+                      {unlockConfirming ? unlockCopy.confirmingCta : unlockCopy.firstFreeCta}
                     </Text>
                   </Pressable>
-                ) : null}
-                {onPressUpgrade ? (
-                  <Pressable
-                    onPress={onPressUpgrade}
-                    disabled={unlockBusy}
-                    style={({ pressed }) => [
-                      styles.ctaGhost,
-                      pressed ? styles.ctaGhostPressed : null,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={gate.trialCta}
-                  >
-                    <Text style={styles.ctaGhostLabel}>{gate.trialCta}</Text>
-                  </Pressable>
-                ) : null}
+                ) : (
+                  <>
+                    {onPressUpgrade ? (
+                      <Pressable
+                        onPress={onPressUpgrade}
+                        disabled={unlockBusy}
+                        style={({ pressed }) => [
+                          styles.cta,
+                          styles.ctaFilled,
+                          pressed ? styles.ctaFilledPressed : null,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={gate.trialCta}
+                      >
+                        <Text style={[styles.ctaLabel, styles.ctaFilledLabel]}>
+                          {gate.trialCta}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    {onPressProPickUnlock ? (
+                      <Pressable
+                        onPress={onPressProPickUnlock}
+                        disabled={unlockBusy}
+                        style={({ pressed }) => [
+                          styles.ctaAdText,
+                          pressed || unlockBusy ? styles.ctaAdTextPressed : null,
+                          unlockBusy ? styles.ctaBusy : null,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          unlockConfirming ? unlockCopy.confirmingCta : unlockCopy.adCta
+                        }
+                      >
+                        <Text style={styles.ctaAdTextLabel}>
+                          {unlockConfirming ? unlockCopy.confirmingCta : unlockCopy.adCta}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </>
+                )}
+                <Text style={styles.gateDisclaimer}>{gate.disclaimer}</Text>
               </View>
             </View>
           </View>
 
           {homeTeamId.startsWith("nba-") && awayTeamId.startsWith("nba-") ? (
-            <View style={styles.gateFeatures} pointerEvents="none">
-              {gate.bullets.slice(0, 3).map((b) => (
-                <View key={b.icon} style={styles.gateFeature}>
-                  <Text style={styles.gateFeatureTitle}>{b.title}</Text>
-                  <Text style={styles.gateFeatureDetail}>{b.detail}</Text>
-                </View>
-              ))}
-            </View>
+            kitRecord ? (
+              <PredictKitAccuracyHeroNative
+                record={kitRecord}
+                language={language}
+              />
+            ) : null
           ) : (
             <View style={styles.exampleBlock} pointerEvents="none">
               <Text style={styles.exampleLabel}>{gate.exampleLabel}</Text>
@@ -816,10 +872,7 @@ const styles = StyleSheet.create({
   },
   gateCenter: {
     alignItems: "center",
-    gap: 10,
-  },
-  gateEyebrowBlock: {
-    alignItems: "center",
+    gap: 8,
   },
   gateMatch: {
     flexDirection: "row",
@@ -840,54 +893,81 @@ const styles = StyleSheet.create({
   gateMatchVs: {
     fontFamily: OXANIUM_600,
     fontSize: 11,
+    letterSpacing: 1,
     color: "rgba(255,255,255,0.4)",
     textTransform: "lowercase",
   },
-  gateFeatures: {
-    gap: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.08)",
-  },
-  gateFeature: {
-    gap: 2,
-  },
-  gateFeatureTitle: {
-    fontFamily: JP_600,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.9)",
-  },
-  gateFeatureDetail: {
-    fontFamily: JP_400,
-    fontSize: 12,
-    lineHeight: 17,
-    color: "rgba(255,255,255,0.55)",
-  },
-  gateTitleRow: {
+  gateHero: {
+    alignSelf: "stretch",
     width: "100%",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: "hidden",
+    backgroundColor: "#05070c",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,245,255,0.28)",
   },
-  gateKicker: {
+  gateHeroImg: {
+    position: "absolute",
+    width: "170%",
+    height: "200%",
+    left: "-18%",
+    top: "-32%",
+  },
+  gatePeek: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    alignSelf: "stretch",
     borderWidth: 1,
-    borderColor: "rgba(252,211,77,0.55)",
-    backgroundColor: "rgba(252,211,77,0.12)",
+    borderColor: "rgba(244,223,154,0.22)",
+    backgroundColor: "rgba(244,223,154,0.05)",
+  },
+  gatePeekCell: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    gap: 3,
+  },
+  gatePeekLab: {
+    fontFamily: JP_600,
+    fontSize: 10,
+    lineHeight: 14,
+    color: "rgba(255,255,255,0.58)",
+    textAlign: "center",
+  },
+  gatePeekVeil: {
+    fontFamily: OXANIUM_800,
+    fontSize: 16,
+    letterSpacing: 0.6,
+    color: UNITERZ_PRO_BADGE_GOLD.bright,
+    opacity: 0.45,
+  },
+  gatePeekRule: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(244,223,154,0.22)",
+  },
+  gateDisclaimer: {
+    fontFamily: JP_400,
+    fontSize: 11,
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.42)",
+    textAlign: "center",
+  },
+  gateKickerFill: {
+    backgroundColor: UNITERZ_PRO_BADGE_GOLD.bright,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  gateKickerLabel: {
+  gateKickerFillLabel: {
     fontFamily: OXANIUM_800,
     fontSize: 10,
-    letterSpacing: 1.6,
+    letterSpacing: 1.8,
     textTransform: "uppercase",
-    color: "#fde68a",
+    color: "#120e08",
   },
   gateTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    lineHeight: 24,
+    fontFamily: JP_700,
+    fontSize: 20,
+    lineHeight: 26,
     color: "#fff",
     textAlign: "center",
   },
@@ -897,8 +977,9 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   gateBody: {
+    fontFamily: JP_400,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 19,
     color: "rgba(255,255,255,0.72)",
     textAlign: "center",
   },
@@ -954,30 +1035,19 @@ const styles = StyleSheet.create({
   ctaFilledLabelPressed: {
     color: "#120e08",
   },
-  ctaGhost: {
+  ctaAdText: {
     alignSelf: "stretch",
-    minHeight: 44,
     alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "transparent",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 6,
   },
-  ctaGhostPressed: {
-    transform: [{ scale: 0.94 }],
-    backgroundColor: "rgba(255,255,255,0.08)",
+  ctaAdTextPressed: {
+    opacity: 0.55,
   },
-  ctaGhostLabel: {
-    fontFamily: JP_600,
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-    color: "rgba(255,255,255,0.72)",
-  },
-  ctaGhostLabelPressed: {
-    color: "#fff",
+  ctaAdTextLabel: {
+    fontFamily: JP_400,
+    fontSize: 13,
+    letterSpacing: 0.2,
+    color: "rgba(255,255,255,0.48)",
   },
   exampleBlock: {
     gap: 8,

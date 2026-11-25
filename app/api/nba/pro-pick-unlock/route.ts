@@ -17,8 +17,8 @@ import {
  * 1. Pro → 解除不要（`via: "pro"`）
  * 2. 既に解除済み → そのまま
  * 3. 新ビルド以降の初回の無料解除が使えれば付与（`via: "first_free"`）
- * 4. ほかは `needsAd: true` を返す。`adWatched: true` が来たら広告（モック）として付与
- *    （`PRO_PICK_AD_MOCK=1` のときだけ。SDK 導入までは本番では 503）
+ * 4. ほかは `needsAd: true`。`adWatched: true` ならその試合を解除する
+ *    （SSV が遅れても、SDK が見終わったあとの確認で開けるようにする）
  */
 export async function POST(req: Request) {
   try {
@@ -66,11 +66,17 @@ export async function POST(req: Request) {
     if (!adWatched) {
       return NextResponse.json({ ok: true, unlocked: false, needsAd: true });
     }
-    if (!isProPickAdMockEnabled()) {
-      return NextResponse.json({ ok: false, error: "ad_unavailable" }, { status: 503 });
-    }
-    await grantProPickAdUnlock(db, uid, gameId);
-    return NextResponse.json({ ok: true, unlocked: true, via: "ad_mock" });
+    await grantProPickAdUnlock(
+      db,
+      uid,
+      gameId,
+      isProPickAdMockEnabled() ? "ad_mock" : "ad_watched"
+    );
+    return NextResponse.json({
+      ok: true,
+      unlocked: true,
+      via: isProPickAdMockEnabled() ? "ad_mock" : "ad_watched",
+    });
   } catch (e) {
     return clientErrorResponse(e, "POST /api/nba/pro-pick-unlock");
   }

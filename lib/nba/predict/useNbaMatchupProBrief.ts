@@ -87,81 +87,80 @@ export function useNbaMatchupProBrief(opts: {
     }
 
     let cancelled = false;
-    (async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          if (!cancelled) {
-            setBrief(null);
-            setNarrative(null);
-            setPredictKit(null);
-            setUpdatedAt(null);
-            setStatus("empty");
-          }
-          return;
-        }
-        const token = await user.getIdToken();
-        const path = `/api/nba/matchup-insight?gameId=${encodeURIComponent(gameId)}`;
-        const url = apiBase ? `${apiBase}${path}` : path;
-        const res = await fetch(url, {
-          credentials: "same-origin",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          if (!cancelled) {
-            setBrief(null);
-            setNarrative(null);
-            setPredictKit(null);
-            setUpdatedAt(null);
-            setStatus("empty");
-          }
-          return;
-        }
-        const json = (await res.json()) as {
-          ok?: boolean;
-          brief?: PredictProBrief | null;
-          narrative?: unknown;
-          predictKit?: unknown;
-          status?: ProInsightNarrativeStatus;
-          updatedAt?: unknown;
-        };
+    const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+    const applyEmpty = () => {
+      setBrief(null);
+      setNarrative(null);
+      setPredictKit(null);
+      setUpdatedAt(null);
+      setStatus("empty");
+    };
+    const load = async (user: { getIdToken: () => Promise<string> }) => {
+      const path = `/api/nba/matchup-insight?gameId=${encodeURIComponent(gameId)}`;
+      const url = apiBase ? `${apiBase}${path}` : path;
+      for (let i = 0; i < 6; i++) {
         if (cancelled) return;
-        const nextNarrative = sanitizeProInsightNarrativeForDisplay(
-          json.narrative
-        );
-        const nextKit = sanitizeProInsightPredictKit(json.predictKit);
-        setNarrative(nextNarrative);
-        setPredictKit(nextKit);
-        setUpdatedAt(
-          (nextNarrative || nextKit) && typeof json.updatedAt === "string"
-            ? json.updatedAt
-            : null
-        );
-        setBrief(sanitizeProBriefForDisplay(json.brief) ?? null);
-        setStatus(
-          json.status === "ready" ||
-            json.status === "pending" ||
-            json.status === "empty"
-            ? json.status
-            : nextNarrative
-              ? "ready"
-              : "empty"
-        );
-      } catch {
-        if (!cancelled) {
-          setBrief(null);
-          setNarrative(null);
-          setPredictKit(null);
-          setUpdatedAt(null);
-          setStatus("empty");
+        if (i > 0) await sleep(1_200);
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch(url, {
+            cache: "no-store",
+            credentials: "same-origin",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            if (res.status === 401 || res.status === 403) continue;
+            break;
+          }
+          const json = (await res.json()) as {
+            ok?: boolean;
+            brief?: PredictProBrief | null;
+            narrative?: unknown;
+            predictKit?: unknown;
+            status?: ProInsightNarrativeStatus;
+            updatedAt?: unknown;
+          };
+          if (cancelled) return;
+          const nextNarrative = sanitizeProInsightNarrativeForDisplay(
+            json.narrative
+          );
+          const nextKit = sanitizeProInsightPredictKit(json.predictKit);
+          setNarrative(nextNarrative);
+          setPredictKit(nextKit);
+          setUpdatedAt(
+            (nextNarrative || nextKit) && typeof json.updatedAt === "string"
+              ? json.updatedAt
+              : null
+          );
+          setBrief(sanitizeProBriefForDisplay(json.brief) ?? null);
+          setStatus(
+            json.status === "ready" ||
+              json.status === "pending" ||
+              json.status === "empty"
+              ? json.status
+              : nextNarrative
+                ? "ready"
+                : "empty"
+          );
+          setReadyScope(fetchScope);
+          return;
+        } catch {
+          continue;
         }
-      } finally {
-        if (!cancelled) setReadyScope(fetchScope);
       }
-    })();
+      if (!cancelled) {
+        applyEmpty();
+        setReadyScope(fetchScope);
+      }
+    };
+    const unsub = auth.onIdTokenChanged((user) => {
+      if (!user) return;
+      void load(user);
+    });
 
     return () => {
       cancelled = true;
+      unsub();
     };
   }, [
     enabled,

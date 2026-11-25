@@ -24,6 +24,8 @@ type TeaserState = {
   unlocked: boolean;
   /** 初回の無料解除がまだ使える（ボタンを「無料」にする） */
   firstFreeAvailable: boolean;
+  /** キット生成時刻（未読点の番号。中身は含まない） */
+  updatedAt: string | null;
 };
 
 const EMPTY: TeaserState = {
@@ -32,6 +34,7 @@ const EMPTY: TeaserState = {
   kitRecord: null,
   unlocked: false,
   firstFreeAvailable: false,
+  updatedAt: null,
 };
 
 export function useNbaMatchupInsightTeaser(opts: {
@@ -49,32 +52,42 @@ export function useNbaMatchupInsightTeaser(opts: {
   useEffect(() => {
     if (!want) return;
     let cancelled = false;
-    (async () => {
+    const load = async (user: { getIdToken: () => Promise<string> }) => {
       let next: TeaserState = EMPTY;
       try {
-        const user = auth.currentUser;
-        if (user) {
-          const token = await user.getIdToken();
-          const path = `/api/nba/matchup-insight?gameId=${encodeURIComponent(gameId)}&teaser=1`;
-          const res = await fetch(apiBase ? `${apiBase}${path}` : path, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const json = (await res.json()) as {
-              teaser?: unknown;
-              hasKit?: unknown;
-              kitRecord?: unknown;
-              unlocked?: unknown;
-              firstFreeAvailable?: unknown;
-            };
-            next = {
-              teaser: sanitizeProInsightPreviewTeaser(json.teaser),
-              hasKit: json.hasKit === true,
-              kitRecord: sanitizePredictKitRecord(json.kitRecord),
-              unlocked: json.unlocked === true,
-              firstFreeAvailable: json.firstFreeAvailable === true,
-            };
-          }
+        const token = await user.getIdToken();
+        // v=2: キット作成前の teaser 403 が CDN に残っていることがある
+        const path = `/api/nba/matchup-insight?gameId=${encodeURIComponent(gameId)}&teaser=1&v=2`;
+        const res = await fetch(apiBase ? `${apiBase}${path}` : path, {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = (await res.json()) as {
+            teaser?: unknown;
+            hasKit?: unknown;
+            kitRecord?: unknown;
+            unlocked?: unknown;
+            firstFreeAvailable?: unknown;
+            predictKit?: unknown;
+            updatedAt?: unknown;
+          };
+          const hasKit =
+            json.hasKit === true ||
+            (json.predictKit != null && typeof json.predictKit === "object");
+          next = {
+            teaser: sanitizeProInsightPreviewTeaser(json.teaser),
+            hasKit,
+            kitRecord: sanitizePredictKitRecord(json.kitRecord),
+            unlocked: json.unlocked === true,
+            firstFreeAvailable: json.firstFreeAvailable === true,
+            updatedAt:
+              typeof json.updatedAt === "string" && json.updatedAt
+                ? json.updatedAt
+                : hasKit
+                  ? "kit"
+                  : null,
+          };
         }
       } catch {
         next = EMPTY;
@@ -82,9 +95,19 @@ export function useNbaMatchupInsightTeaser(opts: {
       if (cancelled) return;
       setState(next);
       setReadyScope(scope);
-    })();
+    };
+    const unsub = auth.onIdTokenChanged((user) => {
+      if (cancelled) return;
+      if (!user) {
+        setState(EMPTY);
+        setReadyScope(scope);
+        return;
+      }
+      void load(user);
+    });
     return () => {
       cancelled = true;
+      unsub();
     };
   }, [want, gameId, apiBase, scope]);
 
