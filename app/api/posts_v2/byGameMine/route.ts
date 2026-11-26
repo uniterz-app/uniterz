@@ -32,6 +32,7 @@ export async function GET(req: Request) {
       .where("authorUid", "==", uid)
       .where("gameId", "==", gameId)
       .where("schemaVersion", "==", 2)
+      .select("startAtMillis")
       .limit(1)
       .get();
 

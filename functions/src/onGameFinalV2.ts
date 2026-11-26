@@ -81,9 +81,10 @@ async function claimSettlementStep(
   });
 }
 
+/** 起動は `gameFinalTriggers/{gameId}`。`games/{id}` のライブ書き込みでは起こさない */
 export const onGameFinalV2 = onDocumentWritten(
   {
-    document: "games/{gameId}",
+    document: "gameFinalTriggers/{gameId}",
     region: "asia-northeast1",
     /** 投稿数が多い試合でヒープ不足（signal 6）になりやすいため明示 */
     memory: "1GiB",
@@ -91,14 +92,16 @@ export const onGameFinalV2 = onDocumentWritten(
   },
   async (event) => {
     const firestore = db();
-    const before = event.data?.before?.data();
-    const after = event.data?.after?.data();
-    if (!after) return;
+    if (!event.data?.after?.exists) return;
 
     const gameId = event.params.gameId;
+    const gameSnap = await firestore.doc(`games/${gameId}`).get();
+    if (!gameSnap.exists) return;
+    const after = gameSnap.data();
+    if (!after?.final) return;
 
-    const becameFinal = !before?.final && !!after?.final;
-    if (!becameFinal) return;
+    /** トリガーが来た = 精算してよい（posts の settledAt / claim で冪等） */
+    const becameFinal = true;
 
     /* ===== ① context 取得 ===== */
     const ctx = await fetchGameContext({

@@ -35,7 +35,7 @@ export type IngestNbaGamesResult = {
 
 /**
  * BDL games → Firestore `games/{nba-bdl-*}`.
- * 過去の Final でも `final: true` は立てない（onGameFinalV2 暴発防止）。
+ * 過去の Final でも `final: true` は立てない（精算トリガー暴発防止）。
  * 表示は `status: "final"` + scores で足りる。
  */
 export async function ingestNbaGamesFromBdl(
@@ -83,8 +83,7 @@ export async function ingestNbaGamesFromBdl(
 
   if (!dryRun) {
     // 前回書いた内容（ingestHash）と同じ試合は書かない。
-    // 書くたびに onGameFinalV2（1GiB）が起動し、書き込み課金も発生するため。
-    // final はライブ ingest だけが立てる。merge で false に戻すと onGameFinalV2 が再発火する
+    // final はライブ ingest だけが立てる。merge で false に戻さない。
     const entries = mapped.map((g) => {
       const { startAtMs, startAtJstIso, id: _id, final: _final, ...rest } = g;
       return {

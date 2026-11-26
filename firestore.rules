@@ -694,5 +694,14 @@ service cloud.firestore {
     match /nbaAskQuestionLogs/{docId} {
       allow read, write: if false;
     }
+
+    // 試合確定トリガー — Admin SDK / ingest 専用。クライアント直叩き禁止
+    match /gameFinalTriggers/{gameId} {
+      allow read, write: if false;
+    }
+
+    match /gameSettlementClaims/{gameId} {
+      allow read, write: if false;
+    }
   }
 }

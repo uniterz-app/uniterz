@@ -27,14 +27,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { useBottomTabBarInsets } from "../../navigation/useBottomTabBarInsets";
-import {
-  collection,
-  doc,
-  getDoc,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { nativeBlurViewExtraProps } from "../../ui/nativeBlurProps";
@@ -112,6 +105,7 @@ import {
   PredictionApiError,
   updatePredictionPostApi,
 } from "./submitPredictionApi";
+import { fetchMyPostsForGameIdsNative } from "../../lib/myPostsApiNative";
 import PredictNextGameNativeModal from "./PredictNextGameNativeModal";
 import PredictOverlaySubmitButtonNative from "./PredictOverlaySubmitButtonNative";
 import {
@@ -1925,56 +1919,8 @@ export default function GamesHomeScreen({
   useEffect(() => {
     let alive = true;
     async function fetchPostsForGameIds(need: string[]): Promise<ScheduleMyPostsMap> {
-      const found: ScheduleMyPostsMap = {};
-      if (need.length === 0) return found;
-      const snaps = [];
-      const IN_LIMIT = 30;
-      for (let i = 0; i < need.length; i += IN_LIMIT) {
-        const chunk = need.slice(i, i + IN_LIMIT);
-        snaps.push(
-          getDocs(
-            query(
-              collection(db, "posts"),
-              where("authorUid", "==", fUser!.uid),
-              where("gameId", "in", chunk),
-              where("schemaVersion", "==", 2)
-            )
-          )
-        );
-      }
-      const settled = await Promise.all(snaps);
-      for (const snap of settled) {
-        snap.docs.forEach((row) => {
-          const rowData = row.data();
-          const gameId = String(rowData?.gameId ?? "");
-          if (!gameId) return;
-          const winnerRaw = rowData?.prediction?.winner;
-          const homeRaw = rowData?.prediction?.score?.home;
-          const awayRaw = rowData?.prediction?.score?.away;
-          found[gameId] = {
-            postId: row.id,
-            winner:
-              winnerRaw === "home" ||
-              winnerRaw === "away" ||
-              winnerRaw === "draw"
-                ? winnerRaw
-                : undefined,
-            score:
-              typeof homeRaw === "number" && typeof awayRaw === "number"
-                ? { home: homeRaw, away: awayRaw }
-                : undefined,
-            comment:
-              typeof rowData?.comment === "string" ? rowData.comment : "",
-            updatedAt: rowData?.updatedAt ?? null,
-            goalScorer: rowData?.prediction?.goalScorer ?? null,
-            postStats:
-              rowData?.stats && typeof rowData.stats === "object"
-                ? (rowData.stats as Record<string, unknown>)
-                : null,
-          };
-        });
-      }
-      return found;
+      if (need.length === 0) return {};
+      return fetchMyPostsForGameIdsNative(need);
     }
     async function loadMyPredictions() {
       if (!fUser) {

@@ -20,7 +20,7 @@ export type MappedNbaGameDoc = {
   season: string;
   seasonPhase: NbaGameSeasonPhase;
   status: "scheduled" | "live" | "final";
-  /** Bulk ingest では過去試合でも false（onGameFinalV2 暴発防止）。live sync で true にする */
+  /** Bulk ingest では過去試合でも false（精算トリガー暴発防止）。live sync で true にする */
   final: boolean;
   startAtMs: number;
   startAtJstIso: string;

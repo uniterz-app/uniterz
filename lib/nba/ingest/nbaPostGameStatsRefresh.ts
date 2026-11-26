@@ -7,7 +7,7 @@
  *   player … 両チームの最長出場選手のシーズン平均がその試合を含んだ（`/stats` の出場数と一致）
  * どちらかが新しく揃ったら `runNbaStatsSnapshotSteps` + 直近試合ログを 1 回だけ回す
  * （全ステップは 30 分に 1 回まで。league hub は player が揃ったときだけ）。
- * 進捗は `nbaPostGameStatsRefresh/{bdlGameId}`（games doc には書かない — onGameFinalV2 を起こさない）。
+ * 進捗は `nbaPostGameStatsRefresh/{bdlGameId}`（games doc には書かない）。
  * final から 6 時間で諦める（日次 18:00 が拾う）。
  */
 import type { Firestore } from "firebase-admin/firestore";

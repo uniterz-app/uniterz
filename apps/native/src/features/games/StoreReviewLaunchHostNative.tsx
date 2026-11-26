@@ -4,17 +4,8 @@
  */
 import { useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  Timestamp,
-  where,
-} from "firebase/firestore";
 import { useFirebaseUser } from "../../auth/FirebaseUserProvider";
-import { db } from "../../lib/firebase";
+import { fetchRecentWinFlagsNative } from "../../lib/myPostsApiNative";
 import { isTabTransitionBusy } from "../../navigation/tabTransitionLockNative";
 import { trackProFunnelNative } from "../billing/proFunnelNative";
 import {
@@ -45,22 +36,11 @@ const RELEASE_SLOT_MS = 1500;
 const RECENT_FETCH_LIMIT = 20;
 const CHECKED_DAY_PREFIX = "uniterz.storeReview.checkedDay.v1";
 
-async function loadRecentResults(uid: string, nowMs: number): Promise<boolean[]> {
-  const q = query(
-    collection(db, "posts"),
-    where("authorUid", "==", uid),
-    where("schemaVersion", "==", 2),
-    where("settledAt", ">=", Timestamp.fromMillis(nowMs - STORE_REVIEW_RECENT_WINDOW_MS)),
-    orderBy("settledAt", "desc"),
-    limit(RECENT_FETCH_LIMIT)
+async function loadRecentResults(_uid: string, nowMs: number): Promise<boolean[]> {
+  return fetchRecentWinFlagsNative(
+    nowMs - STORE_REVIEW_RECENT_WINDOW_MS,
+    RECENT_FETCH_LIMIT
   );
-  const snap = await getDocs(q);
-  const out: boolean[] = [];
-  for (const d of snap.docs) {
-    const isWin = (d.get("stats") as { isWin?: unknown } | undefined)?.isWin;
-    if (typeof isWin === "boolean") out.push(isWin);
-  }
-  return out;
 }
 
 export default function StoreReviewLaunchHostNative() {

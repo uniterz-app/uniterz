@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
 import { AppState } from "react-native";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  Timestamp,
-  where,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { fetchLatestSettledAtMsNative } from "../lib/myPostsApiNative";
 import { useFirebaseUser } from "../auth/FirebaseUserProvider";
 import {
   markNavRankingSeenNative,
@@ -38,17 +29,7 @@ async function ensureResultSeenBaseline(uid: string): Promise<number> {
 
   const baselineMs = Date.now();
   try {
-    const q = query(
-      collection(db, "posts"),
-      where("authorUid", "==", uid),
-      where("schemaVersion", "==", 2),
-      orderBy("settledAt", "desc"),
-      limit(1)
-    );
-    const snap = await getDocs(q);
-    const latestMs = snap.empty
-      ? baselineMs
-      : firestoreTsToMs(snap.docs[0]?.data()?.settledAt) ?? baselineMs;
+    const latestMs = (await fetchLatestSettledAtMsNative()) ?? baselineMs;
     await markNavResultSeenNative(uid, latestMs);
     return latestMs;
   } catch {
@@ -159,20 +140,15 @@ export function useNativeNavTabNotificationBadges(options: Options = {}) {
     }
 
     let cancelled = false;
-    const q = query(
-      collection(db, "posts"),
-      where("authorUid", "==", uid),
-      where("schemaVersion", "==", 2),
-      where("settledAt", ">", Timestamp.fromMillis(resultSeenMs)),
-      orderBy("settledAt", "desc"),
-      limit(1)
-    );
+    const seenMs = resultSeenMs;
 
     const refresh = async () => {
       if (AppState.currentState !== "active") return;
       try {
-        const snap = await getDocs(q);
-        if (!cancelled) setHasNewSettledPost(snap.size > 0);
+        const latest = await fetchLatestSettledAtMsNative();
+        if (!cancelled) {
+          setHasNewSettledPost(latest != null && latest > seenMs);
+        }
       } catch {
         if (!cancelled) setHasNewSettledPost(false);
       }

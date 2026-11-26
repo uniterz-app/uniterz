@@ -7,12 +7,19 @@ import type { PostWithMillis } from "@/lib/result/result-page-data";
 
 const LIST_TTL_MS = 45 * 1000;
 
+export type ResultPostsListCursor = {
+  createdAtMs: number;
+  id: string;
+};
+
 export type ResultPostsListCacheEntry = {
   at: number;
   posts: PostWithMillis[];
   /** 次ページがあるか（初回ページ時点） */
   hasMore: boolean;
   lastDoc: DocumentSnapshot | null;
+  /** Native API ページング。Web は lastDoc のまま */
+  lastCursor?: ResultPostsListCursor | null;
 };
 
 const listCache = new Map<string, ResultPostsListCacheEntry>();

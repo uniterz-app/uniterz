@@ -1,21 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  where,
-  type DocumentSnapshot,
-  type Query,
-  type QuerySnapshot,
-} from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import {
   formatResultDateLabel,
   groupPostsByResultDay,
-  mapDocToPostWithMillis,
   RESULT_INITIAL_PAGE_SIZE,
   RESULT_NEXT_PAGE_SIZE,
   RESULT_POSTS_MAX_CACHED,
@@ -30,12 +16,12 @@ import {
   setResultPostsListCache,
   setResultPostsListInflight,
   type ResultPostsListCacheEntry,
+  type ResultPostsListCursor,
 } from "@/lib/result/resultPostsListCache";
+import { fetchMyResultPostsNative } from "../../lib/myPostsApiNative";
 
 /** リザルトを開いたとき、日付帯がこの日数そろうまで取る */
 const RESULT_OPEN_DAY_COUNT = 2;
-/** 2日分を探す上限（1ページ10件） */
-const RESULT_OPEN_MAX_PAGES = 8;
 
 function resultPostDayLabel(
   post: PostWithMillis,
@@ -73,7 +59,9 @@ export function useNativeResultPosts(
   const fetchEnabled = options?.enabled !== false && league !== null;
 
   const [posts, setPosts] = useState<PostWithMillis[]>([]);
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+  const [lastCursor, setLastCursor] = useState<ResultPostsListCursor | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   /** 初回（またはリーグ切替後）の reset 取得が1回完了するまで NO DATA を出さない */
   const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
@@ -81,12 +69,11 @@ export function useNativeResultPosts(
 
   const resetGenRef = useRef(0);
   const loadingRef = useRef(false);
-  /** loadPage を安定させ、focus 効果の無限再取得を防ぐ */
-  const lastDocRef = useRef<DocumentSnapshot | null>(null);
+  const lastCursorRef = useRef<ResultPostsListCursor | null>(null);
   const hasMoreRef = useRef(true);
   const postsLenRef = useRef(0);
   const languageRef = useRef(language);
-  lastDocRef.current = lastDoc;
+  lastCursorRef.current = lastCursor;
   hasMoreRef.current = hasMore;
   postsLenRef.current = posts.length;
   languageRef.current = language;
@@ -100,8 +87,9 @@ export function useNativeResultPosts(
   const applyListEntry = useCallback((entry: ResultPostsListCacheEntry) => {
     setPosts(entry.posts);
     postsLenRef.current = entry.posts.length;
-    setLastDoc(entry.lastDoc);
-    lastDocRef.current = entry.lastDoc;
+    const cursor = entry.lastCursor ?? null;
+    setLastCursor(cursor);
+    lastCursorRef.current = cursor;
     setHasMore(entry.hasMore);
     hasMoreRef.current = entry.hasMore;
     setHasFetchedOnce(true);
@@ -160,69 +148,26 @@ export function useNativeResultPosts(
         const pageLimit = reset
           ? RESULT_INITIAL_PAGE_SIZE
           : RESULT_NEXT_PAGE_SIZE;
-        const base = [
-          where("authorUid", "==", uid),
-          where("league", "==", league),
-          orderBy("createdAt", "desc"),
-          limit(pageLimit),
-        ] as const;
 
         if (reset) {
           const gen = ++resetGenRef.current;
           const isStale = () => gen !== resetGenRef.current;
 
           const fetchPromise = (async (): Promise<ResultPostsListCacheEntry | null> => {
-            const lang = languageRef.current;
-            const labels = new Set<string>();
-            const merged: PostWithMillis[] = [];
-            const seen = new Set<string>();
-            let cursor: DocumentSnapshot | null = null;
-            let hasMore = false;
-            let pages = 0;
-
-            while (pages < RESULT_OPEN_MAX_PAGES && merged.length < RESULT_POSTS_MAX_CACHED) {
-              const pageLimit =
-                pages === 0 ? RESULT_INITIAL_PAGE_SIZE : RESULT_NEXT_PAGE_SIZE;
-              const pageQuery: Query = cursor
-                ? query(
-                    collection(db, "posts"),
-                    ...base.slice(0, 3),
-                    startAfter(cursor),
-                    limit(pageLimit)
-                  )
-                : query(collection(db, "posts"), ...base.slice(0, 3), limit(pageLimit));
-              const snap: QuerySnapshot = await getDocs(pageQuery);
-              if (isStale()) return null;
-              pages += 1;
-              let crossedDay = false;
-              for (const doc of snap.docs) {
-                const post = mapDocToPostWithMillis(doc.id, doc.data());
-                const label = resultPostDayLabel(post, lang);
-                if (!labels.has(label) && labels.size >= RESULT_OPEN_DAY_COUNT) {
-                  crossedDay = true;
-                  break;
-                }
-                if (!seen.has(post.id)) {
-                  seen.add(post.id);
-                  labels.add(label);
-                  merged.push(post);
-                }
-                cursor = doc;
-              }
-              const fullPage = snap.docs.length === pageLimit;
-              hasMore =
-                (crossedDay || fullPage) && merged.length < RESULT_POSTS_MAX_CACHED;
-              if (crossedDay || !fullPage || snap.docs.length === 0) break;
-              if (labels.size < RESULT_OPEN_DAY_COUNT) continue;
-            }
-
-            const next = capPosts(merged);
-            if (next.length < merged.length) hasMore = false;
+            const data = await fetchMyResultPostsNative({
+              league,
+              lang: languageRef.current,
+              limit: RESULT_INITIAL_PAGE_SIZE,
+              fillDays: RESULT_OPEN_DAY_COUNT,
+            });
+            if (isStale()) return null;
+            const next = capPosts(data.posts);
             const entry: ResultPostsListCacheEntry = {
               at: Date.now(),
               posts: next,
-              hasMore,
-              lastDoc: cursor,
+              hasMore: data.hasMore && next.length >= data.posts.length,
+              lastDoc: null,
+              lastCursor: data.nextCursor,
             };
             setResultPostsListCache(uid, league, entry);
             return entry;
@@ -237,20 +182,17 @@ export function useNativeResultPosts(
           return;
         }
 
-        const cursor = lastDocRef.current;
+        const cursor = lastCursorRef.current;
         if (!cursor) return;
 
-        const q = query(collection(db, "posts"), ...base, startAfter(cursor));
-        const snap = await getDocs(q);
+        const data = await fetchMyResultPostsNative({
+          league,
+          lang: languageRef.current,
+          limit: pageLimit,
+          beforeMs: cursor.createdAtMs,
+        });
 
-        const list = snap.docs.map((d) =>
-          mapDocToPostWithMillis(d.id, d.data())
-        );
-
-        const newLast = snap.docs.length
-          ? snap.docs[snap.docs.length - 1]
-          : null;
-
+        const list = data.posts;
         let nextPostsLength = 0;
         setPosts((prev) => {
           const seen = new Set(prev.map((p) => p.id));
@@ -265,11 +207,10 @@ export function useNativeResultPosts(
           return next;
         });
 
-        setLastDoc(newLast);
-        lastDocRef.current = newLast;
+        setLastCursor(data.nextCursor);
+        lastCursorRef.current = data.nextCursor;
         const cappedAfterLoad = nextPostsLength >= RESULT_POSTS_MAX_CACHED;
-        const fullPage = snap.docs.length === pageLimit;
-        const nextHasMore = !cappedAfterLoad && fullPage;
+        const nextHasMore = !cappedAfterLoad && data.hasMore;
         setHasMore(nextHasMore);
         hasMoreRef.current = nextHasMore;
       } catch {
@@ -285,8 +226,8 @@ export function useNativeResultPosts(
   useEffect(() => {
     if (!uid || !fetchEnabled || !league) {
       setPosts([]);
-      setLastDoc(null);
-      lastDocRef.current = null;
+      setLastCursor(null);
+      lastCursorRef.current = null;
       setHasMore(true);
       hasMoreRef.current = true;
       postsLenRef.current = 0;
@@ -337,7 +278,8 @@ export function useNativeResultPosts(
             setResultPostsListCache(uid, league, {
               posts: next.slice(0, RESULT_INITIAL_PAGE_SIZE),
               hasMore: cached.hasMore,
-              lastDoc: cached.lastDoc,
+              lastDoc: null,
+              lastCursor: cached.lastCursor,
             });
           } else {
             invalidateResultPostsListCache(uid, league);

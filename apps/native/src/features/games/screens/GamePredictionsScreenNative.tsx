@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { fetchMyPostExistsForGameNative } from "../../../lib/myPostsApiNative";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import MobilePageShell from "../../profile/mobileScreens/MobilePageShell";
@@ -14,7 +14,6 @@ import GameMarketDistributionNative from "../GameMarketDistributionNative";
 import { getGamesTexts, toNativeGamesLanguage } from "../gamesI18n";
 import { L } from "@/lib/i18n/localize";
 import { useFirebaseUser } from "../../../auth/FirebaseUserProvider";
-import { db } from "../../../lib/firebase";
 import {
   resolveGameScore,
   resolveGameStatus,
@@ -52,14 +51,11 @@ export default function GamePredictionsScreenNative() {
       return;
     }
     void (async () => {
-      const q = query(
-        collection(db, "posts"),
-        where("authorUid", "==", uid),
-        where("gameId", "==", gameId),
-        limit(1)
-      );
-      const snap = await getDocs(q);
-      setHasMyPost(!snap.empty);
+      try {
+        setHasMyPost(await fetchMyPostExistsForGameNative(gameId));
+      } catch {
+        setHasMyPost(false);
+      }
     })();
   }, [fUser?.uid, gameId]);
 

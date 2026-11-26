@@ -46,6 +46,10 @@ import {
   detectLiveDisciplineAlerts,
   type LiveDisciplineGame,
 } from "@/lib/nba/discipline/liveDisciplineAlerts";
+import {
+  gameFinalTriggerPayload,
+  gameFinalTriggerRef,
+} from "@/lib/games/gameFinalTrigger";
 
 /** 規律通知の play-by-play はこの間隔（分）ごと。ライブ ingest 自体は毎分 */
 const DISCIPLINE_CHECK_EVERY_MIN = 2;
@@ -156,7 +160,7 @@ function findMappedBox(
 
 /**
  * 直近 NY 日付の試合スコアを更新し、取れる試合は liveStats も書く。
- * `final: true` は status=final のときだけ（onGameFinalV2 用）。
+ * `final: true` は status=final のときだけ。精算は `gameFinalTriggers/{id}` へ書いて起こす。
  */
 export async function ingestNbaLiveGamesFromBdl(
   db: Firestore,
@@ -228,7 +232,7 @@ export async function ingestNbaLiveGamesFromBdl(
   const sampleGameIds: string[] = [];
   const disciplineGames: LiveDisciplineGame[] = [];
 
-  // 確定済みは再書き込みしない（onGameFinalV2 の再起動・final の巻き戻しを防ぐ）
+  // 確定済みは再書き込みしない（final の巻き戻しと無駄な書き込みを防ぐ）
   const prevByDocId = new Map<string, PrevGameState>();
   if (!dryRun) {
     const docIds = [
@@ -336,7 +340,7 @@ export async function ingestNbaLiveGamesFromBdl(
     const docId = nbaGameDocIdFromBdlId(g.id);
     const prev = prevByDocId.get(docId);
 
-    // onGameFinalV2 は final=true になった 1 回だけ採点する。得点者が揃うまで final を立てない
+    // 精算は final=true になった 1 回だけ。得点者が揃うまで final を立てない
     const leaders =
       isFinal && box?.phase === "final" && liveStats
         ? leadingScorersFromBox({
@@ -401,7 +405,6 @@ export async function ingestNbaLiveGamesFromBdl(
     if (!dryRun) {
       const { id: _id, startAtMs, startAtJstIso, ...rest } = mappedGame;
       // 時刻（updatedAt / liveSyncedAt / finalAt）を除いた中身が前回と同じなら書かない。
-      // 書くたびに onGameFinalV2 が起動し、試合一覧のキャッシュも捨てるため。
       // 確定する回（settleNow）は必ず書く。
       const {
         updatedAt: _updatedAt,
@@ -430,7 +433,9 @@ export async function ingestNbaLiveGamesFromBdl(
         continue;
       }
       const ref = db.collection("games").doc(docId);
-      await ref.set(
+      const batch = db.batch();
+      batch.set(
+        ref,
         {
           ...rest,
           startAt: Timestamp.fromMillis(startAtMs),
@@ -441,6 +446,14 @@ export async function ingestNbaLiveGamesFromBdl(
         },
         { merge: true }
       );
+      if (settleNow && !prev?.final) {
+        batch.set(
+          gameFinalTriggerRef(db, docId),
+          gameFinalTriggerPayload(docId),
+          { merge: true }
+        );
+      }
+      await batch.commit();
     }
     gamesUpdated += 1;
     if (liveStats) liveStatsWritten += 1;
@@ -492,7 +505,28 @@ export async function ingestNbaLiveGamesFromBdl(
           if (leaders.length > 0) patchBox.leadingScorers = leaders;
         }
       }
-      await ref.set(patchBox, { merge: true });
+      const {
+        updatedAt: _updatedAtBox,
+        liveSyncedAt: _liveSyncedAtBox,
+        finalAt: _finalAtBox,
+        ...boxContent
+      } = patchBox;
+      const liveHash = stableJsonHash(boxContent);
+      if (!isFinalBox && prevBox?.liveHash === liveHash) {
+        skipped += 1;
+        continue;
+      }
+      patchBox.liveHash = liveHash;
+      const batch = db.batch();
+      batch.set(ref, patchBox, { merge: true });
+      if (isFinalBox && !prevBox?.final) {
+        batch.set(
+          gameFinalTriggerRef(db, docId),
+          gameFinalTriggerPayload(docId),
+          { merge: true }
+        );
+      }
+      await batch.commit();
     }
     gamesUpdated += 1;
     liveStatsWritten += 1;
